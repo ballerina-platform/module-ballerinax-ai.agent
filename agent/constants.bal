@@ -4,4 +4,3 @@ const decimal DEFAULT_TEMPERATURE = 0.7;
 
 const int FINAL_THOUGHT_LINE_COUNT = 2;
 const int REGULAR_THOUGHT_LINE_COUNT = 3;
-
