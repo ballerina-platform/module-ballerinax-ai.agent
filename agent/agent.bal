@@ -30,11 +30,15 @@ public class Agent {
     # Initialize an Agent
     #
     # + model - LLM model instance
-    public function init(LLMModel model) {
+    public function init(LLMModel model, ActionLoader? actionLoader = ()) {
         self.prompt = "";
         self.actions = {};
         self.model = model;
-        self.actionStore = new;
+        if actionLoader is ActionLoader {
+            self.actionStore = actionLoader.getStore();
+        } else {
+            self.actionStore = new;
+        }
     }
 
     # Register actions to the agent. 
@@ -130,11 +134,11 @@ Thought:`;
     # + return - returns error, in case of a failure
     public function run(string query, int maxIter = 5) returns error? {
         self.initializaPrompt(query);
-        io:println(self.prompt);
 
         int iter = 0;
         LLMResponse action;
         while maxIter > iter {
+            io:println(self.prompt);
 
             string? response = check self.decideNextAction();
             if !(response is string) {
@@ -143,7 +147,7 @@ Thought:`;
             }
             string currentThought = response.toString().trim();
 
-            io:println("\n\nReasoning iteration: " + (iter+1).toString());
+            io:println("\n\nReasoning iteration: " + (iter + 1).toString());
             io:println("Thought: " + currentThought);
 
             action = check self.parseLLMResponse(currentThought);
