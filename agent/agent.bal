@@ -11,16 +11,6 @@
 import ballerina/io;
 import ballerina/regex;
 
-public type Parameters record {
-};
-
-public type Action record {|
-    string name;
-    string description;
-    Parameters? params;
-    function func;
-|};
-
 public type LLMResponse record {|
     string action;
     json actionInput;
@@ -35,6 +25,7 @@ public class Agent {
     private string prompt;
     private map<Action> actions;
     private LLMModel model;
+    private ActionStore actionStore;
 
     # Initialize an Agent
     #
@@ -43,6 +34,7 @@ public class Agent {
         self.prompt = "";
         self.actions = {};
         self.model = model;
+        self.actionStore = new;
     }
 
     # Register actions to the agent. 
@@ -50,44 +42,26 @@ public class Agent {
     #
     # + actions - A list of actions that are available to the LLM
     public function registerActions(Action... actions) {
-        foreach Action action in actions {
-            self.actions[action.name] = action;
-        }
-    }
-
-    # Build description for an action to generate prompts to the LLMs
-    #
-    # + action - action requires prompt decription
-    # + return - prompt description generated for the action
-    private function buildActionDescription(Action action) returns string {
-        if action.params == null { // case for functions with zero parameters 
-            return string `${action.name}: ${action.description}. Parameters should be empty {}`;
-        }
-        return string `${action.name}: ${action.description}. Parameters to this tool should be in the format of ${action.params.toString()}`;
+        self.actionStore.registerActions(...actions);
     }
 
     # Initialize the prompt during a single run for a given user query
     #
     # + query - user's query
     private function initializaPrompt(string query) {
-        string[] toolDescriptionList = [];
-        string[] toolNameList = [];
-        foreach Action action in self.actions {
-            toolNameList.push(action.name);
-            toolDescriptionList.push(self.buildActionDescription(action));
-        }
-        string toolDescriptions = string:'join("\n", ...toolDescriptionList);
-        string toolNames = toolNameList.toString();
+        generatedOutput output = self.actionStore.generateDescriptions();
+        string actionDescriptions = output.actionDescriptions;
+        string actionNames = output.actionNames;
 
         string promptTemplate = string `
-Answer the following questions as best you can without making any assumptions. You have access to the following tools: 
+Answer the following questions as best you can without making any assumptions. You have access to the following ${ACTION_KEYWORD}s: 
 
-${toolDescriptions}
+${actionDescriptions}
 
 Use the following format:
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action: the action to take, should be one of ${toolNames}.
+Action: the action to take, should be one of ${actionNames}.
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
@@ -149,34 +123,6 @@ Thought:`;
         return error(string `Error while parsing LLM response: ${rawResponse}`);
     }
 
-    # execute the action decided by the LLM 
-    #
-    # + llmResponse - Formated response record by the LLM
-    # + return - string observation by the action or an error if the action fails 
-    private function executeAction(LLMResponse llmResponse) returns string|error {
-        if !(self.actions.hasKey(llmResponse.action)) {
-            // TODO instead we can return string error to the LLM so it can correct its mistake
-            return error(string `Found undefined action: ${llmResponse.action}`);
-        }
-        Action action = self.actions.get(llmResponse.action);
-
-        map<json> & readonly actionInput = check llmResponse.actionInput.fromJsonWithType();
-
-        // try to execute the action
-        any|error observation;
-        if actionInput.length() > 0 {
-            observation = function:call(action.func, actionInput);
-        } else {
-            observation = function:call(action.func);
-        }
-
-        if (observation is error) {
-            return observation.message();
-        }
-        return observation.toString();
-
-    }
-
     # Execute the agent for a given user's query
     #
     # + query - natural langauge commands to the agent
@@ -184,6 +130,7 @@ Thought:`;
     # + return - returns error, in case of a failure
     public function run(string query, int maxIter = 5) returns error? {
         self.initializaPrompt(query);
+        io:println(self.prompt);
 
         int iter = 0;
         LLMResponse action;
@@ -196,7 +143,7 @@ Thought:`;
             }
             string currentThought = response.toString().trim();
 
-            io:println("\n\nReasoning iteration: " + iter.toString());
+            io:println("\n\nReasoning iteration: " + (iter+1).toString());
             io:println("Thought: " + currentThought);
 
             action = check self.parseLLMResponse(currentThought);
@@ -204,7 +151,7 @@ Thought:`;
                 break;
             }
 
-            string currentObservation = check self.executeAction(action);
+            string currentObservation = check self.actionStore.executeAction(action.action, action.actionInput);
             self.buildNextPrompt(currentThought, currentObservation);
             iter = iter + 1;
 
