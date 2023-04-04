@@ -49,14 +49,14 @@ public function main() returns error? {
         name: "Search",
         description: " A search engine. Useful for when you need to answer questions about current events",
         inputs: {"query": "string search query"},
-        method: searchActionMock
+        caller: searchActionMock
     };
 
     Action action2 = {
         name: "Calculator",
         description: "Useful for when you need to answer questions about math.",
         inputs: {"expression": "string mathematical expression"},
-        method: calculatorActionMock
+        caller: calculatorActionMock
     };
 
     agent.registerActions(action1, action2);
