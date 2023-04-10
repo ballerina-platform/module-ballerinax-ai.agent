@@ -133,10 +133,6 @@ class OpenAPIParser {
 
                 }
                 _ => {
-                    // if property.hasKey(OPENAPI_DEFAULT_VALUE_KEY) {
-                    //     string defaultValue = property.get(OPENAPI_DEFAULT_VALUE_KEY).toString();
-                    //     propertyType += "?default=" + defaultValue;
-                    // }
                     schema[propertyName] = propertyType;
                 }
             }
