@@ -1,0 +1,14 @@
+[package]
+org = "nadheesh"
+name = "sample_agent_with_openapi_loader"
+version = "0.1.0"
+distribution = "2201.4.0"
+
+[[dependency]]
+org = "ballerinax"
+name = "agent"
+version = "0.1.0"
+repository = "local"
+
+[build-options]
+observabilityIncluded = true

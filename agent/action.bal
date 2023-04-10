@@ -1,12 +1,18 @@
-// Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com). All Rights Reserved.
-
-// This software is the property of WSO2 LLC. and its suppliers, if any.
-// Dissemination of any information or reproduction of any material contained
-// herein is strictly forbidden, unless permitted by WSO2 in accordance with
-// the WSO2 Commercial License available at http://wso2.com/licenses.
-// For specific language governing the permissions and limitations under
-// this license, please see the license as well as any agreement you’ve
-// entered into with WSO2 governing the purchase of this software and any
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+//
+// WSO2 Inc. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
 import ballerina/log;
 
@@ -16,7 +22,7 @@ public type InputSchema record {
 public type Action record {|
     string name;
     string description;
-    InputSchema? inputs;
+    InputSchema? inputs = ();
     function caller;
 |};
 
@@ -25,7 +31,7 @@ public type generatedOutput record {|
     string actionDescriptions;
 |};
 
-public class ActionStore {
+class ActionStore {
     map<Action> actions;
     string actionInstructions;
 
@@ -75,6 +81,8 @@ public class ActionStore {
         return observation.toString();
     }
 
+    # Generate descriptions for the actions registered
+    # + return - Return a record with action names and descriptions
     function generateDescriptions() returns generatedOutput {
         string[] actionDescriptionList = [];
         string[] actionNameList = [];
@@ -89,12 +97,18 @@ public class ActionStore {
 
     # Build description for an action to generate prompts to the LLMs
     #
-    # + action - action requires prompt decription
-    # + return - prompt description generated for the action
+    # + action - Action requires prompt decription
+    # + return - Prompt description generated for the action
     private function buildActionDescription(Action action) returns string {
         if action.inputs == null { // case for functions with zero parameters 
             return string `${action.name}: ${action.description}. Parameters should be empty {}`;
         }
         return string `${action.name}: ${action.description}. Parameters to this ${ACTION_KEYWORD} should be in the format of ${action.inputs.toString()}`;
+    }
+
+    function mergeActionStore(ActionStore actionStore) {
+        foreach Action action in actionStore.actions {
+            self.actions[action.name] = action;
+        }
     }
 }

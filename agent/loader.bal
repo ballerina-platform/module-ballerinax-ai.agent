@@ -1,8 +1,30 @@
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+//
+// WSO2 Inc. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import ballerina/http;
+
+public type HttpClientConfig http:ClientConfiguration;
 
 public enum HttpMethod {
     GET, POST, DELETE
 }
+
+public type Json record {|
+    string|string[]|map<json>...;
+|};
 
 public type Headers record {|
     string|string[]...;
@@ -18,7 +40,7 @@ public type HttpAction record {|
     string path;
     HttpMethod method;
     Parameters queryParams = {};
-    json payloadSchema = {};
+    json requestBody = {};
 |};
 
 type HttpInput record {
@@ -31,7 +53,8 @@ type HttpInput record {
 
 public type ActionLoader distinct object {
     ActionStore actionStore;
-    function getStore() returns ActionStore;
+    function initializeLoader(ActionStore store);
+
 };
 
 public class HttpLoader {
@@ -39,14 +62,15 @@ public class HttpLoader {
     private Headers headers;
     private http:Client httpClient;
 
-    public function init(http:Client httpClient, Headers headers = {}) {
+    public function init(string serviceUrl, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
         self.actionStore = new;
         self.headers = headers;
-        self.httpClient = httpClient;
+        self.httpClient = check new (serviceUrl, clientConfig);
     }
 
-    function getStore() returns ActionStore {
-        return self.actionStore;
+    function initializeLoader(ActionStore store) {
+        store.mergeActionStore(self.actionStore);
+        self.actionStore = store;
     }
 
     public function registerActions(HttpAction... httpActions) returns error? {
@@ -61,12 +85,12 @@ public class HttpLoader {
                     // do nothing (default)
                 }
                 POST => {
-                    httpIn.payload = httpAction.payloadSchema;
+                    httpIn.payload = httpAction.requestBody;
                     httpCaller = self.post;
 
                 }
                 DELETE => {
-                    httpIn.payload = httpAction.payloadSchema;
+                    httpIn.payload = httpAction.requestBody;
                     httpCaller = self.delete;
 
                 }
@@ -77,7 +101,7 @@ public class HttpLoader {
 
             Action action = {
                 name: httpAction.name,
-                description: httpAction.description + " Path parameters should be replaced with appropriate values",
+                description: httpAction.description + ". Path parameters should be replaced with appropriate values",
                 inputs: httpIn,
                 caller: httpCaller
             };
@@ -86,7 +110,7 @@ public class HttpLoader {
 
     }
 
-    function get(*HttpInput httpInput) returns string|error {
+    private function get(*HttpInput httpInput) returns string|error {
         // TODO need a way to use query params. Waiting for an solution in discord channel.
         http:Response|http:ClientError getResult = self.httpClient->get(httpInput.path, headers = self.headers);
         if getResult is http:Response {
@@ -96,7 +120,7 @@ public class HttpLoader {
         }
     }
 
-    function post(*HttpInput httpInput) returns string|error {
+    private function post(*HttpInput httpInput) returns string|error {
         // TODO need a way to use query params. Waiting for an solution in discord channel.
         http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput.payload, headers = self.headers);
         if getResult is http:Response {
@@ -106,7 +130,7 @@ public class HttpLoader {
         }
     }
 
-    function delete(*HttpInput httpInput) returns string|error {
+    private function delete(*HttpInput httpInput) returns string|error {
         // TODO need a way to use query params. Waiting for an solution in discord channel.
         http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput.payload, headers = self.headers);
         if getResult is http:Response {
@@ -114,6 +138,34 @@ public class HttpLoader {
         } else {
             return getResult.message();
         }
+    }
+
+}
+
+public class OpenAPILoader {
+    *ActionLoader;
+    HttpLoader httpLoader;
+
+    public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
+        self.actionStore = new;
+        OpenAPIParser parser = check new (filePath);
+
+        string serverUrl;
+        if serviceUrl is string {
+            serverUrl = serviceUrl;
+        } else {
+            serverUrl = check parser.resolveServerURL();
+        }
+
+        self.httpLoader = check new (serverUrl, clientConfig, headers);
+        OpenAPIAction[] listResult = check parser.resolvePaths();
+        check self.httpLoader.registerActions(...listResult);
+    }
+
+    function initializeLoader(ActionStore store) {
+        store.mergeActionStore(self.actionStore);
+        self.actionStore = store;
+        self.httpLoader.initializeLoader(store);
     }
 
 }
