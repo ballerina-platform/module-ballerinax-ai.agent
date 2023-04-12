@@ -38,7 +38,7 @@ function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
 
 public function main(string wifiOwnerEmail, string wifiUsername, string wifiPassword, string recipientEmail) returns error? {
 
-    string queryTemplate = string `create a new guest wifi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the avaialbe list of wifi accounts for that email to ${recipientEmail}`;
+    string queryTemplate = string `create a new guest wifi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the available list of wifi accounts for that email to ${recipientEmail}`;
 
     agent:Action sendEmailAction = {
         name: "Send mail",

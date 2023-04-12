@@ -125,7 +125,7 @@ check agent.run(queryTemplate, maxIter = 5);
 
 Let us go through output produced by the above example. Assume the following natural langauge (NL) command to the agent,
 
-NL Command : `create a new guest wifi account for email john@gmail.com with user guest123 and password john123. Send the avaialbe list of wifi accounts for that email to alexa@gmail.com`
+NL Command : `create a new guest wifi account for email john@gmail.com with user guest123 and password john123. Send the available list of wifi accounts for that email to alexa@gmail.com`
 
 Agent will proceed with multiple reasoning-action interations following [ReAct Framework](https://arxiv.org/pdf/2210.03629.pdf).
 
@@ -151,6 +151,7 @@ Observation: ["guest123.guestOf.john", "alice.guestOf.john", "elon.guestOf.john"
 
 3) Agent send a mail to `alexa@gmail.com` with the information about existing accounts
 
+In this step, agent is responsible for generating the mail as well (We only provide the recipient's email).
 ```
 Reasoning iteration: 3
 Thought: I need to use the send mail tool to send the list of wifi accounts to the specified email
