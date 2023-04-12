@@ -14,7 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/agent;
+import nadheeshjihan/agent;
+
+configurable string openAIToken = ?;
 
 type SearchParams record {|
     string query;
@@ -47,32 +49,22 @@ function calculatorActionMock(*CalculatorParams params) returns string {
     }
 }
 
-configurable string openAIToken = ?;
-
-// agent is defined and used within the main function
 public function main() returns error? {
-    agent:GPT3Config config = {
-        model: "text-davinci-003"
-    };
-
-    agent:GPT3Model model = new (check new ({auth: {token: openAIToken}}), config);
-    agent:Agent agent = check new (model);
-
-    agent:Action action1 = {
+    agent:Action searchAction = {
         name: "Search",
         description: " A search engine. Useful for when you need to answer questions about current events",
         inputs: {"query": "string"},
         caller: searchActionMock
     };
 
-    agent:Action action2 = {
+    agent:Action calculatorAction = {
         name: "Calculator",
         description: "Useful for when you need to answer questions about math.",
         inputs: {"expression": "string mathematical expression"},
         caller: calculatorActionMock
     };
 
-    agent.registerActions(action1, action2);
-
+    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:Agent agent = check new (model, searchAction, calculatorAction);
     check agent.run("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?");
 }

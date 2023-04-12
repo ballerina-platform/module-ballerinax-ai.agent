@@ -14,7 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// model parameters 
+// model default parameters 
+const string DEFAULT_MODEL_NAME = "text-davinci-003";
 const string OBSERVATION_KEY = "Observation";
 const int COMPLETION_TOKEN_MIN_LIMIT = 128;
 const decimal DEFAULT_TEMPERATURE = 0.7;

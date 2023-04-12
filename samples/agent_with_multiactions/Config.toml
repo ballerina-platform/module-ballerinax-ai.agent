@@ -1,0 +1,7 @@
+wifiAPIUrl = "https://f2c7f522-ef47-48ce-a429-3fc2f15d2011-dev.e1-us-east-azure.choreoapis.dev/fgbx/wifiapi/1.0.0"
+wifiTokenUrl = "https://sts.choreo.dev/oauth2/token"
+wifiClientId = "FsKpmRfZfcdjDOO0CSLwCyVIYmYa"
+wifiClientSecret = "TCM1ghBLn9b3RVpXgb2VZ6KQFgsa"
+openAIToken = ""
+gmailToken = ""
+

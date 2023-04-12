@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/http;
-import ballerinax/agent;
+import nadheeshjihan/agent;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;
@@ -58,13 +58,9 @@ public function main() returns error? {
     string query = "create a new guest wifi with user newWifiacc and password abc123 and show available accounts. email is nad123new@wso2.com";
 
     // 1) Create the model (brain of the agent)
-    agent:GPT3Config config = {model: "text-davinci-003"};
-    agent:GPT3Model model = new (check new ({auth: {token: openAIToken}}), config);
+    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
 
-    // 2) Create the agent 
-    agent:Agent agent = check new (model);
-
-    // 3) Register the function defined abov as actions 
+    // 2) Define functions as actions 
     agent:Action listwifi = {
         name: "List_Wifi",
         description: "useful to list the guest wifi accounts",
@@ -78,8 +74,10 @@ public function main() returns error? {
         inputs: {"email": "string", "username": "string", "password": "string"},
         caller: addGuestWifi
     };
-    agent.registerActions(listwifi, addWifi);
 
-    // 4) Run the agent with user's query
+    // 2) Create the agent 
+    agent:Agent agent = check new (model, listwifi, addWifi);
+
+    // 3) Run the agent with user's query
     check agent.run(query);
 }

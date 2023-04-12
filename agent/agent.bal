@@ -41,12 +41,19 @@ public class Agent {
     #
     # + model - LLM model instance
     # + actionLoader - ActionLoader instance to load actions from (optional)
-    public function init(LLMModel model, ActionLoader... actionLoader) returns error? {
+    public function init(LLMModel model, (ActionLoader|Action)... actions) returns error? {
+        if actions.length() == 0 {
+            return error("No actions provided to the agent");
+        }
         self.prompt = "";
         self.model = model;
         self.actionStore = new;
-        if actionLoader.length() > 0 {
-            self.registerLoaders(...actionLoader);
+        foreach ActionLoader|Action action in actions {
+            if (action is ActionLoader) {
+                self.registerLoaders(<ActionLoader>action);
+            } else {
+                check self.actionStore.registerActions(<Action>action);
+            }
         }
     }
 
@@ -54,14 +61,6 @@ public class Agent {
         loaders.forEach(function(ActionLoader loader) {
             loader.initializeLoader(self.actionStore);
         });
-    }
-
-    # Register actions to the agent. 
-    # These actions will be by the LLM to perform tasks 
-    #
-    # + actions - A list of actions that are available to the LLM
-    public function registerActions(Action... actions) {
-        self.actionStore.registerActions(...actions);
     }
 
     # Initialize the prompt during a single run for a given user query
@@ -90,7 +89,7 @@ Final Answer: the final answer to the original input question
 
 Begin!
 
-${query}
+Question: ${query}
 Thought:`;
 
         self.prompt = promptTemplate.trim(); // reset the prompt during each run

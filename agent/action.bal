@@ -44,8 +44,12 @@ class ActionStore {
     # These actions will be by the LLM to perform tasks 
     #
     # + actions - A list of actions that are available to the LLM
-    function registerActions(Action... actions) {
+    # + return - An error if the action is already registered
+    function registerActions(Action... actions) returns error? {
         foreach Action action in actions {
+            if self.actions.hasKey(action.name) {
+                return error(string `Duplicated actions. Action '${action.name}' is already registered.`);
+            }
             self.actions[action.name] = action;
         }
     }

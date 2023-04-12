@@ -57,15 +57,16 @@ public type ActionLoader distinct object {
 
 };
 
-public class HttpLoader {
+public class HttpActionLoader {
     *ActionLoader;
     private Headers headers;
     private http:Client httpClient;
 
-    public function init(string serviceUrl, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
+    public function init(string serviceUrl, HttpAction[] actions, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
         self.actionStore = new;
         self.headers = headers;
         self.httpClient = check new (serviceUrl, clientConfig);
+        check self.registerActions(...actions);
     }
 
     function initializeLoader(ActionStore store) {
@@ -73,7 +74,7 @@ public class HttpLoader {
         self.actionStore = store;
     }
 
-    public function registerActions(HttpAction... httpActions) returns error? {
+    private function registerActions(HttpAction... httpActions) returns error? {
         foreach HttpAction httpAction in httpActions {
             HttpInput httpIn = {
                 path: httpAction.path,
@@ -105,7 +106,7 @@ public class HttpLoader {
                 inputs: httpIn,
                 caller: httpCaller
             };
-            self.actionStore.registerActions(action);
+            check self.actionStore.registerActions(action);
         }
 
     }
@@ -139,12 +140,11 @@ public class HttpLoader {
             return getResult.message();
         }
     }
-
 }
 
-public class OpenAPILoader {
+public class OpenAPIActionLoader {
     *ActionLoader;
-    HttpLoader httpLoader;
+    HttpActionLoader httpLoader;
 
     public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
         self.actionStore = new;
@@ -157,9 +157,8 @@ public class OpenAPILoader {
             serverUrl = check parser.resolveServerURL();
         }
 
-        self.httpLoader = check new (serverUrl, clientConfig, headers);
         OpenAPIAction[] listResult = check parser.resolvePaths();
-        check self.httpLoader.registerActions(...listResult);
+        self.httpLoader = check new (serverUrl, listResult, clientConfig, headers);
     }
 
     function initializeLoader(ActionStore store) {
