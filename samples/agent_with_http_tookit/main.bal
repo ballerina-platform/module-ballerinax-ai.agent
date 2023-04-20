@@ -22,17 +22,19 @@ configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 
-public function main() returns error? {
-    string query = "create a new guest wifi with user newWifi and password abc123 and show available accounts. email is john@gmail.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user newWifi and password abc123 and show available accounts. email is john@gmail.com";
 
-    // 1) Register the http actions to the Http loader
-    agent:HttpAction listAction = {
+public function main(string query = DEFAULT_QUERY) returns error? {
+
+    // 1) Register the http actions to the Http tookit
+    agent:HttpTool listWifiTool = {
         name: "List wifi",
         path: "/guest-wifi-accounts/{ownerEmail}",
         method: agent:GET,
         description: "useful to list the guest wifi accounts."
     };
-    agent:HttpAction createAction = {
+
+    agent:HttpTool createWifiTool = {
         name: "Create wifi",
         path: "/guest-wifi-accounts",
         method: agent:POST,
@@ -44,7 +46,7 @@ public function main() returns error? {
         }
     };
 
-    agent:HttpActionLoader loader = check new (wifiAPIUrl, [listAction, createAction], {
+    agent:HttpToolKit httpToolKit = check new (wifiAPIUrl, [listWifiTool, createWifiTool], {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,
@@ -55,7 +57,7 @@ public function main() returns error? {
     // 2) Create the model (brain of the agent)
     agent:GPT3Model model = check new ({auth: {token: openAIToken}});
     // 3) Create the agent
-    agent:Agent agent = check new (model, loader);
+    agent:Agent agent = check new (model, httpToolKit);
     // 4) Run the agent to execute user's query
     check agent.run(query, maxIter = 5);
 }

@@ -24,7 +24,7 @@ configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 configurable string gmailToken = ?;
 
-// define sendmail action as a function
+// define send mail tool as a function
 function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
     gmail:MessageRequest message = check messageRequest.cloneWithType();
     message["contentType"] = "text/plain";
@@ -36,11 +36,10 @@ function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
     return "Error while sending the email" + sendMessage.message();
 }
 
-public function main(string wifiOwnerEmail, string wifiUsername, string wifiPassword, string recipientEmail) returns error? {
+const string DEFAULT_QUERY = "create a new guest wifi account for email john@wso2.com with user newGuest and password jh123. Send the available list of wifi accounts for that email to nadheesh@wso2.com";
 
-    string queryTemplate = string `create a new guest wifi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the available list of wifi accounts for that email to ${recipientEmail}`;
-
-    agent:Action sendEmailAction = {
+public function main(string query = DEFAULT_QUERY) returns error? {
+    agent:Tool sendEmailTool = {
         name: "Send mail",
         description: "useful send emails to the recipients.",
         inputs: {
@@ -51,7 +50,7 @@ public function main(string wifiOwnerEmail, string wifiUsername, string wifiPass
         caller: sendMail
     };
 
-    agent:HttpAction[] httpActions = [
+    agent:HttpTool[] httpTools = [
         {
             name: "List wifi",
             path: "/guest-wifi-accounts/{ownerEmail}",
@@ -71,7 +70,7 @@ public function main(string wifiOwnerEmail, string wifiUsername, string wifiPass
         }
     ];
 
-    // 3) Create the HttpLoader (easily load http actions for a given API)
+    // 3) Create the HttpLoader (easily load http tools for a given API)
     agent:HttpClientConfig clientConfig = {
         auth: {
             tokenUrl: wifiTokenUrl,
@@ -79,8 +78,10 @@ public function main(string wifiOwnerEmail, string wifiUsername, string wifiPass
             clientSecret: wifiClientSecret
         }
     };
-    agent:HttpActionLoader wifiApiAction = check new (wifiAPIUrl, httpActions, clientConfig);
-    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
-    agent:Agent agent = check new (model, wifiApiAction, sendEmailAction);
-    check agent.run(queryTemplate, maxIter = 5);
+    agent:HttpToolKit wifiApiToolKit = check new (wifiAPIUrl, httpTools, clientConfig);
+    // agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:ChatGPTModel model = check new ({auth: {token: openAIToken}});
+
+    agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
+    check agent.run(query, maxIter = 5);
 }

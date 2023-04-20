@@ -54,21 +54,23 @@ public function addGuestWifi(*WifiCreateParams params) returns string|error {
     return response.getTextPayload();
 }
 
-public function main() returns error? {
-    string query = "create a new guest wifi with user newWifiacc and password abc123 and show available accounts. email is nad123new@wso2.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user newWifiacc and password abc123 and show available accounts." +
+" email is nad123new@wso2.com";
+
+public function main(string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
     agent:GPT3Model model = check new ({auth: {token: openAIToken}});
 
-    // 2) Define functions as actions 
-    agent:Action listwifi = {
+    // 2) Define functions as tools 
+    agent:Tool listwifi = {
         name: "List_Wifi",
         description: "useful to list the guest wifi accounts",
         inputs: {"email": "string"},
         caller: listGuestWifi
     };
 
-    agent:Action addWifi = {
+    agent:Tool addWifi = {
         name: "Add_Wifi",
         description: "useful to add a new guest wifi account",
         inputs: {"email": "string", "username": "string", "password": "string"},

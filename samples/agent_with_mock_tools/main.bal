@@ -26,8 +26,8 @@ type CalculatorParams record {|
     string expression;
 |};
 
-// create two mock actions 
-function searchActionMock(*SearchParams params) returns string {
+// create two mock tools 
+function searchToolMock(*SearchParams params) returns string {
     string query = params.query.trim().toLowerAscii();
     if query.matches(re `.*girlfriend.*`) {
         return "Camila Morrone";
@@ -40,7 +40,7 @@ function searchActionMock(*SearchParams params) returns string {
     }
 }
 
-function calculatorActionMock(*CalculatorParams params) returns string {
+function calculatorToolMock(*CalculatorParams params) returns string {
     string expression = params.expression.trim();
     if (expression == "25^0.43") {
         return "Answer: 3.991298452658078";
@@ -49,22 +49,24 @@ function calculatorActionMock(*CalculatorParams params) returns string {
     }
 }
 
-public function main() returns error? {
-    agent:Action searchAction = {
+const string DEFAULT_QUERY = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
+
+public function main(string query = DEFAULT_QUERY) returns error? {
+    agent:Tool searchTool = {
         name: "Search",
         description: " A search engine. Useful for when you need to answer questions about current events",
         inputs: {"query": "string"},
-        caller: searchActionMock
+        caller: searchToolMock
     };
 
-    agent:Action calculatorAction = {
+    agent:Tool calculatorTool = {
         name: "Calculator",
         description: "Useful for when you need to answer questions about math.",
         inputs: {"expression": "string mathematical expression"},
-        caller: calculatorActionMock
+        caller: calculatorToolMock
     };
 
     agent:GPT3Model model = check new ({auth: {token: openAIToken}});
-    agent:Agent agent = check new (model, searchAction, calculatorAction);
-    check agent.run("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?");
+    agent:Agent agent = check new (model, searchTool, calculatorTool);
+    check agent.run(query);
 }

@@ -24,14 +24,15 @@ configurable string wifiClientSecret = ?;
 
 final string OPENAPI_PATH = "openapi.json";
 
-public function main() returns error? {
-    string query = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts. email is johnw@gmail.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts. email is johnw@gmail.com";
+
+public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
     agent:GPT3Model model = check new ({auth: {token: openAIToken}});
 
-    // 2) Create the OpenAPI specification loader (load actions from openApi specification)
-    agent:OpenAPIActionLoader loader = check new (OPENAPI_PATH, wifiAPIUrl, {
+    // 2) Create the OpenAPI specification toolkit (load tools from openApi specification)
+    agent:OpenAPIToolKit openAPIToolKit = check new (openAPIPath, wifiAPIUrl, {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,
@@ -40,9 +41,8 @@ public function main() returns error? {
     });
 
     // 3) Create the agent
-    agent:Agent agent = check new (model, loader);
+    agent:Agent agent = check new (model, openAPIToolKit);
 
     // 4) Execute the user's query
     check agent.run(query);
 }
-
