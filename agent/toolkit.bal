@@ -22,10 +22,6 @@ public enum HttpMethod {
     GET, POST, DELETE
 }
 
-public type Json record {|
-    string|string[]|map<json>...;
-|};
-
 public type Headers record {|
     string|string[]...;
 |};
@@ -34,7 +30,7 @@ public type Parameters record {|
     string|string[]...;
 |};
 
-public type HttpAction record {|
+public type HttpTool record {|
     string name;
     string description;
     string path;
@@ -51,47 +47,46 @@ type HttpInput record {
     json payload = {};
 };
 
-public type ActionLoader distinct object {
-    ActionStore actionStore;
-    function initializeLoader(ActionStore store);
-
+public type BaseToolKit distinct object {
+    ToolStore toolStore;
+    function initializeToolKit(ToolStore store);
 };
 
-public class HttpActionLoader {
-    *ActionLoader;
+public class HttpToolKit {
+    *BaseToolKit;
     private Headers headers;
     private http:Client httpClient;
 
-    public function init(string serviceUrl, HttpAction[] actions, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
-        self.actionStore = new;
+    public function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
+        self.toolStore = new;
         self.headers = headers;
         self.httpClient = check new (serviceUrl, clientConfig);
-        check self.registerActions(...actions);
+        check self.registerTools(...tools);
     }
 
-    function initializeLoader(ActionStore store) {
-        store.mergeActionStore(self.actionStore);
-        self.actionStore = store;
+    function initializeToolKit(ToolStore store) {
+        store.mergeToolStore(self.toolStore);
+        self.toolStore = store;
     }
 
-    private function registerActions(HttpAction... httpActions) returns error? {
-        foreach HttpAction httpAction in httpActions {
+    private function registerTools(HttpTool... httpTools) returns error? {
+        foreach HttpTool httpTool in httpTools {
             HttpInput httpIn = {
-                path: httpAction.path,
-                queryParams: httpAction.queryParams
+                path: httpTool.path,
+                queryParams: httpTool.queryParams
             };
             function httpCaller = self.get;
-            match httpAction.method {
+            match httpTool.method {
                 GET => {
                     // do nothing (default)
                 }
                 POST => {
-                    httpIn.payload = httpAction.requestBody;
+                    httpIn.payload = httpTool.requestBody;
                     httpCaller = self.post;
 
                 }
                 DELETE => {
-                    httpIn.payload = httpAction.requestBody;
+                    httpIn.payload = httpTool.requestBody;
                     httpCaller = self.delete;
 
                 }
@@ -100,13 +95,13 @@ public class HttpActionLoader {
                 }
             }
 
-            Action action = {
-                name: httpAction.name,
-                description: httpAction.description + ". Path parameters should be replaced with appropriate values",
+            Tool tool = {
+                name: httpTool.name,
+                description: httpTool.description + ". Path parameters should be replaced with appropriate values",
                 inputs: httpIn,
                 caller: httpCaller
             };
-            check self.actionStore.registerActions(action);
+            check self.toolStore.registerTools(tool);
         }
 
     }
@@ -142,12 +137,12 @@ public class HttpActionLoader {
     }
 }
 
-public class OpenAPIActionLoader {
-    *ActionLoader;
-    HttpActionLoader httpLoader;
+public class OpenAPIToolKit {
+    *BaseToolKit;
+    HttpToolKit httpToolKit;
 
     public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
-        self.actionStore = new;
+        self.toolStore = new;
         OpenAPIParser parser = check new (filePath);
 
         string serverUrl;
@@ -157,14 +152,14 @@ public class OpenAPIActionLoader {
             serverUrl = check parser.resolveServerURL();
         }
 
-        OpenAPIAction[] listResult = check parser.resolvePaths();
-        self.httpLoader = check new (serverUrl, listResult, clientConfig, headers);
+        HttpTool[] listResult = check parser.resolvePaths();
+        self.httpToolKit = check new (serverUrl, listResult, clientConfig, headers);
     }
 
-    function initializeLoader(ActionStore store) {
-        store.mergeActionStore(self.actionStore);
-        self.actionStore = store;
-        self.httpLoader.initializeLoader(store);
+    function initializeToolKit(ToolStore store) {
+        store.mergeToolStore(self.toolStore);
+        self.toolStore = store;
+        self.httpToolKit.initializeToolKit(store);
     }
 
 }

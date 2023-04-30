@@ -22,7 +22,7 @@ configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 
-final string OPENAPI_PATH = "openapi.json";
+const string OPENAPI_PATH = "openapi.json";
 
 const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts. email is johnw@gmail.com";
 

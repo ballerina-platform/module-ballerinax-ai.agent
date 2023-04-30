@@ -19,47 +19,47 @@ import ballerina/regex;
 
 # Parsed response from the LLM
 #
-# + action - Name of the action to be performed
-# + actionInput - Input to the action
+# + tool - Name of the tool to be performed
+# + toolInput - Input to the tool
 # + thought - Thought by the LLM
 # + finalThought - If the thought is the final one
 public type LLMResponse record {|
-    string action;
-    json actionInput;
+    string tool;
+    json toolInput;
     string thought;
     boolean finalThought;
 |};
 
-# Agent implementation to perform actions with LLMs to add computational power and knowledge to the LLMs
+# Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs
 public class Agent {
 
     private string prompt;
     private LLMModel model;
-    private ActionStore actionStore;
+    private ToolStore toolStore;
 
     # Initialize an Agent
     #
     # + model - LLM model instance
-    # + actionLoader - ActionLoader instance to load actions from (optional)
-    public function init(LLMModel model, (ActionLoader|Action)... actions) returns error? {
-        if actions.length() == 0 {
-            return error("No actions provided to the agent");
+    # + toolLoader - ToolLoader instance to load tools from (optional)
+    public function init(LLMModel model, (BaseToolKit|Tool)... tools) returns error? {
+        if tools.length() == 0 {
+            return error("No tools provided to the agent");
         }
         self.prompt = "";
         self.model = model;
-        self.actionStore = new;
-        foreach ActionLoader|Action action in actions {
-            if (action is ActionLoader) {
-                self.registerLoaders(<ActionLoader>action);
+        self.toolStore = new;
+        foreach BaseToolKit|Tool tool in tools {
+            if (tool is BaseToolKit) {
+                self.registerLoaders(<BaseToolKit>tool);
             } else {
-                check self.actionStore.registerActions(<Action>action);
+                check self.toolStore.registerTools(<Tool>tool);
             }
         }
     }
 
-    private function registerLoaders(ActionLoader... loaders) {
-        loaders.forEach(function(ActionLoader loader) {
-            loader.initializeLoader(self.actionStore);
+    private function registerLoaders(BaseToolKit... loaders) {
+        loaders.forEach(function(BaseToolKit loader) {
+            loader.initializeToolKit(self.toolStore);
         });
     }
 
@@ -67,23 +67,22 @@ public class Agent {
     #
     # + query - User's query
     private function initializaPrompt(string query) {
-        generatedOutput output = self.actionStore.generateDescriptions();
-        string actionDescriptions = output.actionDescriptions;
-        string actionNames = output.actionNames;
+        generatedOutput output = self.toolStore.generateDescriptions();
+        string toolDescriptions = output.toolDescriptions;
+        string toolNames = output.toolNames;
 
         string promptTemplate = string `
-Answer the following questions as best you can without making any assumptions. You have access to the following ${ACTION_KEYWORD}s: 
+Answer the following questions as best you can without making any assumptions. You have access to the following ${TOOL_KEYWORD}s: 
 
-${actionDescriptions}
-${self.actionStore.actionInstructions}
+${toolDescriptions}
 
 Use the following format:
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action: the action to take, should be one of ${actionNames}.
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
+Tool: the tool to take, should be one of ${toolNames}.
+Tool Input: the input to the tool
+Observation: the result of the tool
+... (this Thought/Tool/Tool Input/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
@@ -98,7 +97,7 @@ Thought:`;
     # Build the prompts during each decision iterations 
     #
     # + thoughts - Thoughts by the model during the previous iterations
-    # + observation - Observations returned by the performed action
+    # + observation - Observations returned by the performed tool
     private function buildNextPrompt(string thoughts, string observation) {
 
         self.prompt = string `${self.prompt} ${thoughts}
@@ -107,15 +106,15 @@ Thought:`;
 
     }
 
-    # Use LLMs to decide the next action 
+    # Use LLMs to decide the next tool 
     # + return - Decision by the LLM or an error if call to the LLM fails
-    private function decideNextAction() returns string?|error {
+    private function decideNextTool() returns string?|error {
         return self.model.complete(self.prompt);
     }
 
     # Parse the LLM response in string form to an LLMResponse record
     #
-    # + rawResponse - String form LLM response including new action 
+    # + rawResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
     private function parseLLMResponse(string rawResponse) returns LLMResponse|error {
         string replaceChar = "=";
@@ -125,17 +124,17 @@ Thought:`;
         if content.length() == FINAL_THOUGHT_LINE_COUNT {
             return {
                 thought: thought,
-                action: content[1].trim(),
-                actionInput: null,
+                tool: content[1].trim(),
+                toolInput: null,
                 finalThought: true
             };
         }
         if content.length() == REGULAR_THOUGHT_LINE_COUNT {
-            json actionInput = check regex:split(regex:replace(content[2], splitChar, replaceChar), replaceChar).pop().fromJsonString();
+            json toolInput = check regex:split(regex:replace(content[2], splitChar, replaceChar), replaceChar).pop().fromJsonString();
             return {
                 thought: thought,
-                action: regex:split(content[1], splitChar).pop().trim(),
-                actionInput: actionInput,
+                tool: regex:split(content[1], splitChar).pop().trim(),
+                toolInput: toolInput,
                 finalThought: false
             };
         }
@@ -150,9 +149,9 @@ Thought:`;
     public function run(string query, int maxIter = 5) returns error? {
         self.initializaPrompt(query);
         int iter = 0;
-        LLMResponse action;
+        LLMResponse tool;
         while maxIter > iter {
-            string? response = check self.decideNextAction();
+            string? response = check self.decideNextTool();
             if !(response is string) {
                 io:println(string `Model returns invalid response: ${response.toString()}`);
                 break;
@@ -162,12 +161,12 @@ Thought:`;
             io:println("\n\nReasoning iteration: " + (iter + 1).toString());
             io:println("Thought: " + currentThought);
 
-            action = check self.parseLLMResponse(currentThought);
-            if action.finalThought {
+            tool = check self.parseLLMResponse(currentThought);
+            if tool.finalThought {
                 break;
             }
 
-            string currentObservation = check self.actionStore.executeAction(action.action, action.actionInput);
+            string currentObservation = check self.toolStore.runTool(tool.tool, tool.toolInput);
             self.buildNextPrompt(currentThought, currentObservation);
             iter = iter + 1;
 

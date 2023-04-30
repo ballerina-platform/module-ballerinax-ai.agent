@@ -2,13 +2,7 @@
 org = "nadheesh"
 name = "sample_agent_without_loaders"
 version = "0.1.0"
-distribution = "2201.4.0"
-
-[[dependency]]
-org = "ballerinax"
-name = "agent"
-version = "0.1.0"
-repository = "local"
+distribution = "2201.5.0"
 
 [build-options]
 observabilityIncluded = true

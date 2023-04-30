@@ -17,8 +17,8 @@
 import ballerina/regex;
 import ballerina/io;
 
-type OpenAPIAction record {|
-    *HttpAction;
+type OpenAPITool record {|
+    *HttpTool;
 |};
 
 class OpenAPIParser {
@@ -37,12 +37,12 @@ class OpenAPIParser {
 
     }
 
-    function resolvePaths() returns OpenAPIAction[]|error {
+    function resolvePaths() returns OpenAPITool[]|error {
         if !self.specification.hasKey(OPENAPI_PATHS_KEY) {
             return error("No paths are defined in the OpenAPI specification.");
         }
 
-        OpenAPIAction[] pathActions = [];
+        OpenAPITool[] pathActions = [];
         map<json> paths = check self.specification.get(OPENAPI_PATHS_KEY).ensureType();
         foreach string path in paths.keys() {
             map<json> pathItems = check paths.get(path).ensureType();
@@ -61,7 +61,7 @@ class OpenAPIParser {
                     requestBody = check self.resolveRequestBody(check httpMethodItem.get(OPENAPI_REQUEST_BODY_KEY).ensureType());
                 }
 
-                OpenAPIAction pathAction = {
+                OpenAPITool pathAction = {
                     name: name,
                     description: description,
                     path: path,

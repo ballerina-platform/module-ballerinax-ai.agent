@@ -24,17 +24,21 @@ public type GPT3ConnectionConfig text:ConnectionConfig;
 
 public type ChatGPTConnectionConfig chat:ConnectionConfig;
 
-public type ConnectionConfig GPT3ConnectionConfig|ChatGPTConnectionConfig;
-
 public type GPT3ModelConfig record {|
     *text:CreateCompletionRequest;
-    string model = DEFAULT_MODEL_NAME;
+    string model = GPT3_MODEL_NAME;
     decimal? temperature = DEFAULT_TEMPERATURE;
     int? max_tokens = COMPLETION_TOKEN_MIN_LIMIT;
     string|string[]?? stop = OBSERVATION_KEY;
 |};
 
-public type ChatGPTModelConfig chat:CreateChatCompletionRequest;
+public type ChatGPTModelConfig record {|
+    *chat:CreateChatCompletionRequest;
+    string model = GPT3_5_MODEL_NAME;
+    decimal? temperature = DEFAULT_TEMPERATURE;
+    string|string[]?? stop = OBSERVATION_KEY;
+    chat:ChatCompletionRequestMessage[] messages = [];
+|};
 
 public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
 
@@ -43,26 +47,47 @@ public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
 # + llmClient - A remote client object to access LLM models
 # + modelConfig - Required model configs to use do the completion
 public type LLMModel distinct object {
-    public LLMRemoteClient llmClient;
-    public ModelConfig modelConfig;
+    LLMRemoteClient llmClient;
+    ModelConfig modelConfig;
     function complete(string query) returns string|error;
 };
 
 public class GPT3Model {
     *LLMModel;
-    public GPT3ModelConfig modelConfig;
+    text:Client llmClient;
+    GPT3ModelConfig modelConfig;
 
     public function init(GPT3ConnectionConfig connectionConfig, GPT3ModelConfig modelConfig = {}) returns error? {
-        text:Client gpt3Client = check new (connectionConfig);
-        self.llmClient = gpt3Client;
+        self.llmClient = check new (connectionConfig);
         modelConfig.stop = OBSERVATION_KEY;
         self.modelConfig = modelConfig;
     }
 
     function complete(string query) returns string|error {
         self.modelConfig.prompt = query;
-        text:Client gpt3Client = check self.llmClient.ensureType();
-        text:CreateCompletionResponse reponse = check gpt3Client->/completions.post(self.modelConfig);
-        return reponse.choices[0].text ?: error("Empty response from the model");
+        text:CreateCompletionResponse response = check self.llmClient->/completions.post(self.modelConfig);
+        return response.choices[0].text ?: error("Empty response from the model");
+    }
+}
+
+public class ChatGPTModel {
+    *LLMModel;
+    chat:Client llmClient;
+    ChatGPTModelConfig modelConfig;
+
+    public function init(ChatGPTConnectionConfig connectionConfig, ChatGPTModelConfig modelConfig = {}) returns error? {
+        self.llmClient = check new (connectionConfig);
+        modelConfig.stop = OBSERVATION_KEY;
+        self.modelConfig = modelConfig;
+    }
+
+    function complete(string query) returns string|error {
+        self.modelConfig.messages = [{role: "agent", content: query}];
+        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(self.modelConfig);
+        chat:ChatCompletionResponseMessage? message = response.choices[0].message;
+        if message is () {
+            return error("Empty response from the model");
+        }
+        return message.content;
     }
 }

@@ -1,8 +1,8 @@
 [package]
 org = "nadheeshjihan"
 name = "agent"
-version = "0.1.5"
-distribution = "2201.4.0"
+version = "0.1.7"
+distribution = "2201.5.0"
 
 [build-options]
 observabilityIncluded = true

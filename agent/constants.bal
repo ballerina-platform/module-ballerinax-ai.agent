@@ -15,7 +15,8 @@
 // under the License.
 
 // model default parameters 
-const string DEFAULT_MODEL_NAME = "text-davinci-003";
+const string GPT3_MODEL_NAME = "text-davinci-003";
+const string GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
 const string OBSERVATION_KEY = "Observation";
 const int COMPLETION_TOKEN_MIN_LIMIT = 128;
 const decimal DEFAULT_TEMPERATURE = 0.7;
@@ -25,7 +26,7 @@ const int FINAL_THOUGHT_LINE_COUNT = 2;
 const int REGULAR_THOUGHT_LINE_COUNT = 3;
 
 // keywords 
-const string ACTION_KEYWORD = "tool";
+const string TOOL_KEYWORD = "tool";
 
 // openapi
 const string OPENAPI_KEY = "openapi";
