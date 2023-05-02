@@ -82,7 +82,7 @@ public class ChatGPTModel {
     }
 
     function complete(string query) returns string|error {
-        self.modelConfig.messages = [{role: "agent", content: query}];
+        self.modelConfig.messages = [{role: "user", content: query}];
         chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(self.modelConfig);
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         if message is () {

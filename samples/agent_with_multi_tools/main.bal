@@ -79,9 +79,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     };
     agent:HttpToolKit wifiApiToolKit = check new (wifiAPIUrl, httpTools, clientConfig);
-    // agent:GPT3Model model = check new ({auth: {token: openAIToken}});
-    agent:ChatGPTModel model = check new ({auth: {token: openAIToken}});
-
+    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
     agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
     check agent.run(query, maxIter = 5);
 }

@@ -332,7 +332,7 @@ modules = [
 [[package]]
 org = "nadheeshjihan"
 name = "agent"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
