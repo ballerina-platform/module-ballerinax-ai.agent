@@ -1,7 +1,7 @@
 [package]
 org = "nadheeshjihan"
 name = "agent"
-version = "0.1.9"
+version = "0.1.10"
 distribution = "2201.5.0"
 
 [build-options]

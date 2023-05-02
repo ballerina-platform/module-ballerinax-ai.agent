@@ -47,10 +47,17 @@ public class HttpToolKit {
             InputSchema? queryParams = httpTool.queryParams;
             InputSchema? requestBody = httpTool.requestBody;
 
-            if (queryParams is JsonInputSchema && requestBody is SimpleInputSchema) ||
-            (queryParams is SimpleInputSchema && requestBody is JsonInputSchema) {
+            if (queryParams is JsonInputSchema && (requestBody is SimpleInputSchema && requestBody != {})) ||
+            ((queryParams is SimpleInputSchema && queryParams != {}) && requestBody is JsonInputSchema) {
                 return error("Unsupported input schema combination. " +
                 "Both `queryParams` and `requestBody` should be either `JsonInputSchema` or `SimpleInputSchema`");
+            }
+
+            if queryParams == {} {
+                queryParams = ();
+            }
+            if requestBody == {} {
+                requestBody = ();
             }
 
             if queryParams is JsonInputSchema || requestBody is JsonInputSchema {
@@ -192,16 +199,21 @@ public class OpenAPIToolKit {
 
     public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
         self.toolStore = new;
-        OpenAPIParser parser = check new (filePath);
+        OpenAPISpec openAPISchema = check parseOpenAPISpec(filePath);
+        OpenAPISpecVisitor visitor = new;
+        check visitor.visit(openAPISchema);
 
         string serverUrl;
         if serviceUrl is string {
             serverUrl = serviceUrl;
         } else {
-            serverUrl = check parser.resolveServerURL();
+            if visitor.serverURL is string {
+                serverUrl = <string>visitor.serverURL;
+            } else {
+                return error("server url is not provided");
+            }
         }
-
-        HttpTool[] listResult = check parser.resolvePaths();
+        HttpTool[] listResult = visitor.tools;
         self.httpToolKit = check new (serverUrl, listResult, clientConfig, headers);
     }
 

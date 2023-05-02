@@ -30,3 +30,4 @@ Config.toml
 tests
 .DS_store
 sample.bal
+sample_openapi.bal
