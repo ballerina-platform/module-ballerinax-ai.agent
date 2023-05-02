@@ -28,7 +28,7 @@ public type GPT3ModelConfig record {|
     *text:CreateCompletionRequest;
     string model = GPT3_MODEL_NAME;
     decimal? temperature = DEFAULT_TEMPERATURE;
-    int? max_tokens = COMPLETION_TOKEN_MIN_LIMIT;
+    int? max_tokens = DEFAULT_MAX_TOKEN_COUNT;
     string|string[]?? stop = OBSERVATION_KEY;
 |};
 

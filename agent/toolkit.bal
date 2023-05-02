@@ -18,35 +18,6 @@ import ballerina/http;
 
 public type HttpClientConfig http:ClientConfiguration;
 
-public enum HttpMethod {
-    GET, POST, DELETE
-}
-
-public type Headers record {|
-    string|string[]...;
-|};
-
-public type Parameters record {|
-    string|string[]...;
-|};
-
-public type HttpTool record {|
-    string name;
-    string description;
-    string path;
-    HttpMethod method;
-    Parameters queryParams = {};
-    json requestBody = {};
-|};
-
-type HttpInput record {
-    *InputSchema;
-    string path;
-    Parameters queryParams?;
-    Headers headers?;
-    json payload = {};
-};
-
 public type BaseToolKit distinct object {
     ToolStore toolStore;
     function initializeToolKit(ToolStore store);
@@ -54,10 +25,10 @@ public type BaseToolKit distinct object {
 
 public class HttpToolKit {
     *BaseToolKit;
-    private Headers headers;
+    private map<string|string[]> headers;
     private http:Client httpClient;
 
-    public function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
+    public function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
         self.toolStore = new;
         self.headers = headers;
         self.httpClient = check new (serviceUrl, clientConfig);
@@ -70,24 +41,63 @@ public class HttpToolKit {
     }
 
     private function registerTools(HttpTool... httpTools) returns error? {
+        InputSchema inputSchema;
+
         foreach HttpTool httpTool in httpTools {
-            HttpInput httpIn = {
-                path: httpTool.path,
-                queryParams: httpTool.queryParams
-            };
+            InputSchema? queryParams = httpTool.queryParams;
+            InputSchema? requestBody = httpTool.requestBody;
+
+            if (queryParams is JsonInputSchema && requestBody is SimpleInputSchema) ||
+            (queryParams is SimpleInputSchema && requestBody is JsonInputSchema) {
+                return error("Unsupported input schema combination. " +
+                "Both `queryParams` and `requestBody` should be either `JsonInputSchema` or `SimpleInputSchema`");
+            }
+
+            if queryParams is JsonInputSchema || requestBody is JsonInputSchema {
+                HttpJsonInputSchema jsonInputSchema = {
+                    properties: {
+                        path: {pattern: httpTool.path},
+                        queryParams: <JsonInputSchema?>queryParams ?: (),
+                        requestBody: <JsonInputSchema?>requestBody ?: ()
+                    }
+                };
+                inputSchema = jsonInputSchema;
+            } else {
+                HttpSimpleInputSchema httpInputSchema = {
+                    path: httpTool.path,
+                    queryParams: <SimpleInputSchema?>queryParams ?: (),
+                    requestBody: <SimpleInputSchema?>requestBody ?: ()
+                };
+                inputSchema = httpInputSchema;
+            }
+
             function httpCaller = self.get;
             match httpTool.method {
                 GET => {
                     // do nothing (default)
                 }
                 POST => {
-                    httpIn.payload = httpTool.requestBody;
                     httpCaller = self.post;
 
                 }
                 DELETE => {
-                    httpIn.payload = httpTool.requestBody;
                     httpCaller = self.delete;
+
+                }
+                PUT => {
+                    httpCaller = self.put;
+
+                }
+                PATCH => {
+                    httpCaller = self.patch;
+
+                }
+                HEAD => {
+                    httpCaller = self.head;
+
+                }
+                OPTIONS => {
+                    httpCaller = self.options;
 
                 }
                 _ => {
@@ -97,13 +107,12 @@ public class HttpToolKit {
 
             Tool tool = {
                 name: httpTool.name,
-                description: httpTool.description + ". Path parameters should be replaced with appropriate values",
-                inputs: httpIn,
+                description: httpTool.description,
+                inputs: inputSchema,
                 caller: httpCaller
             };
             check self.toolStore.registerTools(tool);
         }
-
     }
 
     private function get(*HttpInput httpInput) returns string|error {
@@ -118,7 +127,7 @@ public class HttpToolKit {
 
     private function post(*HttpInput httpInput) returns string|error {
         // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput.payload, headers = self.headers);
+        http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -128,7 +137,47 @@ public class HttpToolKit {
 
     private function delete(*HttpInput httpInput) returns string|error {
         // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput.payload, headers = self.headers);
+        http:Response|http:ClientError getResult = self.httpClient->delete(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        if getResult is http:Response {
+            return getResult.getTextPayload();
+        } else {
+            return getResult.message();
+        }
+    }
+
+    private function put(*HttpInput httpInput) returns string|error {
+        // TODO need a way to use query params. Waiting for an solution in discord channel.
+        http:Response|http:ClientError getResult = self.httpClient->put(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        if getResult is http:Response {
+            return getResult.getTextPayload();
+        } else {
+            return getResult.message();
+        }
+    }
+
+    private function patch(*HttpInput httpInput) returns string|error {
+        // TODO need a way to use query params. Waiting for an solution in discord channel.
+        http:Response|http:ClientError getResult = self.httpClient->patch(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        if getResult is http:Response {
+            return getResult.getTextPayload();
+        } else {
+            return getResult.message();
+        }
+    }
+
+    private function head(*HttpInput httpInput) returns string|error {
+        // TODO need a way to use query params. Waiting for an solution in discord channel.
+        http:Response|http:ClientError getResult = self.httpClient->head(httpInput.path, headers = self.headers);
+        if getResult is http:Response {
+            return getResult.getTextPayload();
+        } else {
+            return getResult.message();
+        }
+    }
+
+    private function options(*HttpInput httpInput) returns string|error {
+        // TODO need a way to use query params. Waiting for an solution in discord channel.
+        http:Response|http:ClientError getResult = self.httpClient->options(httpInput.path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -141,7 +190,7 @@ public class OpenAPIToolKit {
     *BaseToolKit;
     HttpToolKit httpToolKit;
 
-    public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, Headers headers = {}) returns error? {
+    public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
         self.toolStore = new;
         OpenAPIParser parser = check new (filePath);
 

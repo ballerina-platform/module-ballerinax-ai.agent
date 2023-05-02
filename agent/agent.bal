@@ -20,14 +20,12 @@ import ballerina/regex;
 # Parsed response from the LLM
 #
 # + tool - Name of the tool to be performed
-# + toolInput - Input to the tool
-# + thought - Thought by the LLM
-# + finalThought - If the thought is the final one
-public type LLMResponse record {|
+# + tool_input - Input to the tool
+# + isCompleted - Whether the task is completed
+type NextAction record {|
     string tool;
-    json toolInput;
-    string thought;
-    boolean finalThought;
+    map<json> tool_input = {};
+    boolean isCompleted = false;
 |};
 
 # Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs
@@ -67,28 +65,47 @@ public class Agent {
     #
     # + query - User's query
     private function initializaPrompt(string query) {
-        generatedOutput output = self.toolStore.generateDescriptions();
-        string toolDescriptions = output.toolDescriptions;
-        string toolNames = output.toolNames;
+        ToolInfo output = self.toolStore.extractToolInfo();
+        string blacktick = "`";
+        string toolDescriptions = output.toolIntro;
+        string toolNames = output.toolList;
 
-        string promptTemplate = string `
-Answer the following questions as best you can without making any assumptions. You have access to the following ${TOOL_KEYWORD}s: 
+        string instruction = "Answer the following questions as best you can without making any assumptions. " +
+        "You have access to the following tools. Use the JSON `inputSchema` to generate the input records";
 
-${toolDescriptions}
+        string formatInstruction =
+string ` Use a JSON blob with the following format to define the action and input. Do NOT return a list of multiple actions, the $JSON_BLOB should only contain a SINGLE action.
 
-Use the following format:
+${blacktick}${blacktick}${blacktick}
+{
+  "tool": the tool to take, should be one of [${toolNames}]",
+  "tool_input": the input to the tool 
+}
+${blacktick}${blacktick}${blacktick}
+
+ALWAYS use the following format:
+
 Question: the input question you must answer
 Thought: you should always think about what to do
-Tool: the tool to take, should be one of ${toolNames}.
-Tool Input: the input to the tool
-Observation: the result of the tool
-... (this Thought/Tool/Tool Input/Observation can repeat N times)
+Action:
+${blacktick}${blacktick}${blacktick}
+$JSON_BLOB
+${blacktick}${blacktick}${blacktick}
+Observation: the result of the action
+... (this Thought/Action/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin!
+Begin!`;
 
-Question: ${query}
+        string promptTemplate = string `
+${instruction}:
+
+${toolDescriptions.trim()}
+
+${formatInstruction.trim()}
+
+Question: ${query.trim()}
 Thought:`;
 
         self.prompt = promptTemplate.trim(); // reset the prompt during each run
@@ -105,7 +122,6 @@ Observation: ${observation}
 Thought:`;
 
     }
-
     # Use LLMs to decide the next tool 
     # + return - Decision by the LLM or an error if call to the LLM fails
     private function decideNextTool() returns string?|error {
@@ -114,31 +130,21 @@ Thought:`;
 
     # Parse the LLM response in string form to an LLMResponse record
     #
-    # + rawResponse - String form LLM response including new tool 
+    # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
-    private function parseLLMResponse(string rawResponse) returns LLMResponse|error {
-        string replaceChar = "=";
-        string splitChar = ":";
-        string[] content = regex:split(rawResponse, "\n");
-        string thought = content[0].trim();
-        if content.length() == FINAL_THOUGHT_LINE_COUNT {
+    private function parseLLMResponse(string llmResponse) returns NextAction|error {
+        if (llmResponse.includes("Final Answer")) {
             return {
-                thought: thought,
-                tool: content[1].trim(),
-                toolInput: null,
-                finalThought: true
+                tool: "complete",
+                isCompleted: true
             };
         }
-        if content.length() == REGULAR_THOUGHT_LINE_COUNT {
-            json toolInput = check regex:split(regex:replace(content[2], splitChar, replaceChar), replaceChar).pop().fromJsonString();
-            return {
-                thought: thought,
-                tool: regex:split(content[1], splitChar).pop().trim(),
-                toolInput: toolInput,
-                finalThought: false
-            };
+        string[] content = regex:split(llmResponse, "```");
+        NextAction|error nextAction = content[1].fromJsonStringWithType();
+        if nextAction is error {
+            return error(string `Error while extracting actions from LLM response. ${nextAction.toString()}`);
         }
-        return error(string `Error while parsing LLM response: ${rawResponse}`);
+        return nextAction;
     }
 
     # Execute the agent for a given user's query
@@ -148,9 +154,11 @@ Thought:`;
     # + return - Returns error, in case of a failure
     public function run(string query, int maxIter = 5) returns error? {
         self.initializaPrompt(query);
+        io:println(self.prompt);
         int iter = 0;
-        LLMResponse tool;
+        NextAction selectedTool;
         while maxIter > iter {
+            // io:println(self.prompt);
             string? response = check self.decideNextTool();
             if !(response is string) {
                 io:println(string `Model returns invalid response: ${response.toString()}`);
@@ -161,12 +169,12 @@ Thought:`;
             io:println("\n\nReasoning iteration: " + (iter + 1).toString());
             io:println("Thought: " + currentThought);
 
-            tool = check self.parseLLMResponse(currentThought);
-            if tool.finalThought {
+            selectedTool = check self.parseLLMResponse(currentThought);
+            if selectedTool.isCompleted {
                 break;
             }
 
-            string currentObservation = check self.toolStore.runTool(tool.tool, tool.toolInput);
+            string currentObservation = check self.toolStore.runTool(selectedTool.tool, selectedTool.tool_input);
             self.buildNextPrompt(currentThought, currentObservation);
             iter = iter + 1;
 

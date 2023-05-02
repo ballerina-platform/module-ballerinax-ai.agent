@@ -2,7 +2,7 @@
 org = "nadheesh"
 name = "sample_agent_with_mock_actions"
 version = "0.1.0"
-distribution = "2201.4.0"
+distribution = "2201.5.0"
 
 [build-options]
 observabilityIncluded = true

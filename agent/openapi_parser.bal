@@ -66,7 +66,7 @@ class OpenAPIParser {
                     description: description,
                     path: path,
                     method: httpMethod,
-                    requestBody: requestBody
+                    requestBody: check requestBody.ensureType()
                 };
                 pathActions.push(pathAction);
 

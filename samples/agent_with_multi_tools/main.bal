@@ -36,7 +36,8 @@ function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
     return "Error while sending the email" + sendMessage.message();
 }
 
-const string DEFAULT_QUERY = "create a new guest wifi account for email john@wso2.com with user newGuest and password jh123. Send the available list of wifi accounts for that email to nadheesh@wso2.com";
+const string DEFAULT_QUERY = "create a new guest wifi account for email john@wso2.com with user newGuest and password jh123. " +
+"Send the available list of wifi accounts for that email to nadheesh@wso2.com";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool sendEmailTool = {

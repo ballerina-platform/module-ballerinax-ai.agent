@@ -18,7 +18,7 @@
 const string GPT3_MODEL_NAME = "text-davinci-003";
 const string GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
 const string OBSERVATION_KEY = "Observation";
-const int COMPLETION_TOKEN_MIN_LIMIT = 128;
+const int DEFAULT_MAX_TOKEN_COUNT = 256;
 const decimal DEFAULT_TEMPERATURE = 0.7;
 
 // counters 
