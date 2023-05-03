@@ -71,7 +71,7 @@ public class Agent {
         string toolNames = output.toolList;
 
         string instruction = "Answer the following questions as best you can without making any assumptions. " +
-        "You have access to the following tools. Use the JSON `inputSchema` to generate the input records";
+        "You have access to the following tools.";
 
         string formatInstruction =
 string ` Use a JSON blob with the following format to define the action and input. Do NOT return a list of multiple actions, the $JSON_BLOB should only contain a SINGLE action.
@@ -79,7 +79,7 @@ string ` Use a JSON blob with the following format to define the action and inpu
 ${blacktick}${blacktick}${blacktick}
 {
   "tool": the tool to take, should be one of [${toolNames}]",
-  "tool_input": the input to the tool 
+  "tool_input": JSON input record to the tool
 }
 ${blacktick}${blacktick}${blacktick}
 
@@ -96,7 +96,7 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin!`;
+Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records.`;
 
         string promptTemplate = string `
 ${instruction}:
