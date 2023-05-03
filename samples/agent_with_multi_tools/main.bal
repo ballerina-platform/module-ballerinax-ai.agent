@@ -40,13 +40,17 @@ const string DEFAULT_QUERY = "create a new guest wifi account for email john@wso
 "Send the available list of wifi accounts for that email to nadheesh@wso2.com";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
+
     agent:Tool sendEmailTool = {
         name: "Send mail",
         description: "useful send emails to the recipients.",
         inputs: {
-            "recipient": "string",
-            "subject": "string",
-            "messageBody": "string"
+            'type: agent:OBJECT,
+            properties: {
+                recipient: {'type: agent:STRING},
+                subject: {'type: agent:STRING},
+                messageBody: {'type: agent:STRING}
+            }
         },
         caller: sendMail
     };
@@ -64,9 +68,12 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             method: agent:POST,
             description: "useful to create a guest wifi account.",
             requestBody: {
-                "email": "string",
-                "username": "string",
-                "password": "string"
+                'type: agent:OBJECT,
+                properties: {
+                    email: {'type: agent:STRING},
+                    username: {'type: agent:STRING},
+                    password: {'type: agent:STRING}
+                }
             }
         }
     ];

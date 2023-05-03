@@ -1,6 +1,5 @@
 import ballerina/io;
-
-// import ballerina/regex;
+import ballerina/log;
 
 function removeExtensions(json schema) {
     if schema is map<json> {
@@ -56,7 +55,7 @@ public class OpenAPISpecVisitor {
             return;
         }
         if servers.length() > 1 {
-            return error("Multiple server urls are defined in the OpenAPI specification.");
+            return log:printWarn("Multiple server urls are defined in the OpenAPI specification.");
         }
         self.serverURL = check servers[0].url.ensureType();
     }
@@ -318,43 +317,6 @@ public class OpenAPISpecVisitor {
     }
 }
 
-// public function main() returns error? {
 
-//     final string filePath = "tests/data/openapi2.json";
 
-//     // map<Schema> properties = {
-//     //     "password": {"type": "object"}
-//     // };
-//     // StringSchema schema = {'type: STRING};
-//     // Schema trimmedProperty = check schema.ensureType();
-//     // properties["password"] = trimmedProperty; 
-//     // io:println(properties);
-
-//     // Schema schema = {
-//     //     "allOf": [
-//     //         {"type": "object", "properties": {"email": {"type": "string"}, "username": {"type": "string"}}},
-//     //         {"type": "object", "properties": {"password": {"type": "string"}}}
-//     //     ]
-//     // };
-
-//     OpenAPISpec openAPISchema = check parseOpenAPISpec(filePath);
-
-//     OpenAPISpecVisitor visitor = new;
-//     check visitor.visit(openAPISchema);
-//     io:println(visitor.tools);
-//     // io:println(openAPISchema);
-
-//     //     // map<json> & readonly jsonSchema = {"type": "string", "default": "", "example": "This is a test."};
-//     //     // Schema schema1 = check jsonSchema.ensureType();
-//     //     // io:println(schema1);
-//     //     // io:println(schema1 is ObjectSchema);
-//     //     // io:println(schema1 is StringSchema);
-//     //     // io:println(schema1 is IntegerSchema);
-
-//     //     // IntegerSchema ss = check jsonSchema.ensureType();
-//     //     // io:println(ss);
-
-//     //     // io:println(regex:matches( "string", "^string$"));
-
-// }
 

@@ -32,54 +32,54 @@ public enum HttpMethod {
 }
 
 // input record definitions ----------------------------
-public type HttpInput record {|
+type HttpInput record {|
     string path;
     json queryParams?;
     json requestBody?;
 |};
 
 // input schema definitions ----------------------------
-type SimpleInputSchema record {|
+public type SimpleInputSchema record {|
     PrimitiveInputType 'type?; // avoid ambiguity with ArrayInputSchema and ObjectInputSchema
     string|SimpleInputSchema|SimpleInputSchema[]...;
 |};
 
-type PrimitiveInputSchema record {|
+public type PrimitiveInputSchema record {|
     PrimitiveInputType 'type;
     string format?;
     string pattern?;
 |};
 
-type AnyOfInputSchema record {|
+public type AnyOfInputSchema record {|
     SubSchema[] anyOf;
 |};
 
-type AllOfInputSchema record {|
+public type AllOfInputSchema record {|
     SubSchema[] allOf;
 |};
 
-type OneOfInputSchema record {|
+public type OneOfInputSchema record {|
     SubSchema[] oneOf;
 |};
 
-type NotInputSchema record {|
+public type NotInputSchema record {|
     SubSchema not;
 |};
 
-type ArrayInputSchema record {|
+public type ArrayInputSchema record {|
     ARRAY 'type = ARRAY;
     SubSchema items;
 |};
 
-type ObjectInputSchema record {|
+public type ObjectInputSchema record {|
     OBJECT 'type = OBJECT;
     string[] required?;
     map<SubSchema> properties;
 |};
 
-type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|OneOfInputSchema|AllOfInputSchema|NotInputSchema;
+public type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|OneOfInputSchema|AllOfInputSchema|NotInputSchema;
 
-type SubSchema JsonInputSchema|PrimitiveInputSchema;
+public type SubSchema JsonInputSchema|PrimitiveInputSchema;
 
 type HttpPathSchema record {|
     STRING 'type = STRING;
@@ -92,7 +92,7 @@ type HttpPropertiesSchema record {|
     JsonInputSchema requestBody?;
 |};
 
-type InputSchema SimpleInputSchema|JsonInputSchema;
+public type InputSchema SimpleInputSchema|JsonInputSchema;
 
 type HttpJsonInputSchema record {|
     *ObjectInputSchema;

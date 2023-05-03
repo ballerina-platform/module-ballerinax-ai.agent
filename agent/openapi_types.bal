@@ -53,7 +53,7 @@ type SecurityScheme record {|
     SecuritySchemeType 'type;
     string description?;
     string name;
-    string 'in;
+    SecuritySchemeLocation 'in;
     string scheme;
     string bearerFormat?;
     OAuthFlows flows;
