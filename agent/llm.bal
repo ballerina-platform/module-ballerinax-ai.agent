@@ -40,6 +40,19 @@ public type ChatGPTModelConfig record {|
     chat:ChatCompletionRequestMessage[] messages = [];
 |};
 
+public type ChatMessage chat:ChatCompletionRequestMessage;
+
+type History record {|
+    string thought;
+    string observation;
+|};
+
+type PromptConstruct record {|
+    string instruction;
+    string query;
+    History[] history;
+|};
+
 public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
 
 # Extendable LLM model object that can be used for completion tasks
@@ -49,7 +62,8 @@ public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
 public type LLMModel distinct object {
     LLMRemoteClient llmClient;
     ModelConfig modelConfig;
-    function complete(string query) returns string|error;
+    function _generate(PromptConstruct prompt) returns string|error;
+    // function initializePrompt(s)
 };
 
 public class GPT3Model {
@@ -63,11 +77,28 @@ public class GPT3Model {
         self.modelConfig = modelConfig;
     }
 
-    function complete(string query) returns string|error {
-        self.modelConfig.prompt = query;
+    function complete(string prompt) returns string|error {
+        self.modelConfig.prompt = prompt;
         text:CreateCompletionResponse response = check self.llmClient->/completions.post(self.modelConfig);
         return response.choices[0].text ?: error("Empty response from the model");
     }
+
+    function _generate(PromptConstruct prompt) returns string|error {
+        string thoughtHistory = "";
+        foreach History history in prompt.history {
+            thoughtHistory += string `Thought: ${history.thought}
+Observation: ${history.observation}
+`;
+        }
+        string promptStr = string `${prompt.instruction}
+
+Question: ${prompt.query}
+${thoughtHistory}Thought:`;
+
+        return check self.complete(promptStr);
+
+    }
+
 }
 
 public class ChatGPTModel {
@@ -81,13 +112,46 @@ public class ChatGPTModel {
         self.modelConfig = modelConfig;
     }
 
-    function complete(string query) returns string|error {
-        self.modelConfig.messages = [{role: "user", content: query}];
+    function chatComplete(ChatMessage[] messages) returns string|error {
+        self.modelConfig.messages = messages;
         chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(self.modelConfig);
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         if message is () {
             return error("Empty response from the model");
         }
         return message.content;
+    }
+
+    function _generate(PromptConstruct prompt) returns string|error {
+        string userMessage = "";
+        if (prompt.history.length() == 0) {
+            userMessage = prompt.query;
+        }
+        else {
+            userMessage = string `${prompt.query}
+            
+This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):
+            `;
+
+            foreach History history in prompt.history {
+                userMessage += string `
+${history.thought}} 
+Observation: ${history.observation}
+Thought:`;
+            }
+
+        }
+
+        ChatMessage[] messages = [
+            {
+                role: "system",
+                content: prompt.instruction
+            },
+            {
+                role: "user",
+                content: userMessage
+            }
+        ];
+        return check self.chatComplete(messages);
     }
 }

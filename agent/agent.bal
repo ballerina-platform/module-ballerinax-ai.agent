@@ -31,7 +31,7 @@ type NextAction record {|
 # Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs
 public class Agent {
 
-    private string prompt;
+    private PromptConstruct? prompt;
     private LLMModel model;
     private ToolStore toolStore;
 
@@ -43,7 +43,7 @@ public class Agent {
         if tools.length() == 0 {
             return error("No tools provided to the agent");
         }
-        self.prompt = "";
+        self.prompt = ();
         self.model = model;
         self.toolStore = new;
         foreach BaseToolKit|Tool tool in tools {
@@ -70,11 +70,12 @@ public class Agent {
         string toolDescriptions = output.toolIntro;
         string toolNames = output.toolList;
 
-        string instruction = "Answer the following questions as best you can without making any assumptions. " +
-        "You have access to the following tools.";
+        string instruction =
+string `Answer the following questions as best you can without making any assumptions. You have access to the following tools:
 
-        string formatInstruction =
-string ` Use a JSON blob with the following format to define the action and input. Do NOT return a list of multiple actions, the $JSON_BLOB should only contain a SINGLE action.
+${toolDescriptions.trim()}
+
+Use a JSON blob with the following format to define the action and input. Do NOT return a list of multiple actions, the $JSON_BLOB should only contain a SINGLE action.
 
 ${blacktick}${blacktick}${blacktick}
 {
@@ -98,34 +99,36 @@ Final Answer: the final answer to the original input question
 
 Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records.`;
 
-        string promptTemplate = string `
-${instruction}:
-
-${toolDescriptions.trim()}
-
-${formatInstruction.trim()}
-
-Question: ${query.trim()}
-Thought:`;
-
-        self.prompt = promptTemplate.trim(); // reset the prompt during each run
+        self.prompt = {
+            instruction: instruction.trim(),
+            query: query.trim(),
+            history: []
+        };
     }
 
     # Build the prompts during each decision iterations 
     #
     # + thoughts - Thoughts by the model during the previous iterations
     # + observation - Observations returned by the performed tool
-    private function buildNextPrompt(string thoughts, string observation) {
-
-        self.prompt = string `${self.prompt} ${thoughts}
-Observation: ${observation}
-Thought:`;
-
+    # + return - Error, in case of a failure
+    private function buildNextPrompt(string thoughts, string observation) returns error? {
+        PromptConstruct? prompt = self.prompt;
+        if prompt is () {
+            return error("Prompt is not initialized");
+        }
+        prompt.history.push({
+            thought: thoughts,
+            observation: observation
+        });
     }
+
     # Use LLMs to decide the next tool 
     # + return - Decision by the LLM or an error if call to the LLM fails
     private function decideNextTool() returns string?|error {
-        return self.model.complete(self.prompt);
+        if self.prompt is () {
+            return error("Prompt is not initialized");
+        }
+        return self.model._generate(<PromptConstruct>self.prompt);
     }
 
     # Parse the LLM response in string form to an LLMResponse record
@@ -154,7 +157,6 @@ Thought:`;
     # + return - Returns error, in case of a failure
     public function run(string query, int maxIter = 5) returns error? {
         self.initializaPrompt(query);
-        io:println(self.prompt);
         int iter = 0;
         NextAction selectedTool;
         while maxIter > iter {
@@ -167,7 +169,13 @@ Thought:`;
             string currentThought = response.toString().trim();
 
             io:println("\n\nReasoning iteration: " + (iter + 1).toString());
-            io:println("Thought: " + currentThought);
+
+            if currentThought.startsWith("Thought") {
+                io:println(currentThought);
+            }
+            else {
+                io:println("Thought: " + currentThought);
+            }
 
             selectedTool = check self.parseLLMResponse(currentThought);
             if selectedTool.isCompleted {
@@ -175,7 +183,7 @@ Thought:`;
             }
 
             string currentObservation = check self.toolStore.runTool(selectedTool.tool, selectedTool.tool_input);
-            self.buildNextPrompt(currentThought, currentObservation);
+            check self.buildNextPrompt(currentThought, currentObservation);
             iter = iter + 1;
 
             io:println("Observation: " + currentObservation);

@@ -317,6 +317,3 @@ public class OpenAPISpecVisitor {
     }
 }
 
-
-
-
