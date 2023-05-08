@@ -42,15 +42,10 @@ public type ChatGPTModelConfig record {|
 
 public type ChatMessage chat:ChatCompletionRequestMessage;
 
-type History record {|
-    string thought;
-    string observation;
-|};
-
 type PromptConstruct record {|
     string instruction;
     string query;
-    History[] history;
+    string[] history;
 |};
 
 public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
@@ -85,10 +80,8 @@ public class GPT3Model {
 
     function _generate(PromptConstruct prompt) returns string|error {
         string thoughtHistory = "";
-        foreach History history in prompt.history {
-            thoughtHistory += string `Thought: ${history.thought}
-Observation: ${history.observation}
-`;
+        foreach string history in prompt.history {
+            thoughtHistory += history + "\n";
         }
         string promptStr = string `${prompt.instruction}
 
@@ -133,13 +126,10 @@ public class ChatGPTModel {
 This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):
             `;
 
-            foreach History history in prompt.history {
-                userMessage += string `
-${history.thought}} 
-Observation: ${history.observation}
-Thought:`;
+            foreach string history in prompt.history {
+                userMessage += history;
             }
-
+            userMessage += "\nThought:";
         }
 
         ChatMessage[] messages = [
