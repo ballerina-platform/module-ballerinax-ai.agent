@@ -22,7 +22,7 @@ configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 
-const string DEFAULT_QUERY = "create a new guest wifi with user newWifi and password abc123 and show available accounts. email is john@gmail.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user newWifi and password abc123 and show available accounts";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
 
@@ -59,5 +59,5 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     // 3) Create the agent
     agent:Agent agent = check new (model, httpToolKit);
     // 4) Run the agent to execute user's query
-    check agent.run(query, maxIter = 5);
+    check agent.run(query, maxIter = 5, context = "email is john@gmail.com");
 }

@@ -50,7 +50,7 @@ public class AgentExectutor {
 
         prompt.history.push(
             string `${thoughts}
-            Observation: ${observation.trim()}`
+Observation: ${observation.trim()}`
         );
 
     }
@@ -72,7 +72,10 @@ public class AgentExectutor {
                 isCompleted: true
             };
         }
-        string[] content = regex:split(llmResponse, "```");
+        string[] content = regex:split(llmResponse + "<endtoken>", "```");
+        if content.length() < 3 {
+            return error("No proper tool definition found in the LLM response: \n`" + llmResponse + "`");
+        }
         NextAction|error nextAction = content[1].fromJsonStringWithType();
         if nextAction is error {
             return error(string `Error while extracting actions from LLM response. ${nextAction.toString()}`);
@@ -158,7 +161,7 @@ string `Answer the following questions as best you can without making any assump
 
 ${toolDescriptions.trim()}
 ${contextInfo}
-Use a JSON blob with the following format to define the action and input. Do NOT return a list of multiple actions, the $JSON_BLOB should only contain a SINGLE action.
+Use a JSON blob with the following format to define the action and input.
 
 ${blacktick}${blacktick}${blacktick}
 {
@@ -173,7 +176,7 @@ Question: the input question you must answer
 Thought: you should always think about what to do
 Action:
 ${blacktick}${blacktick}${blacktick}
-$JSON_BLOB
+$JSON_BLOB only for a SINGLE tool (Do NOT return a list of multiple tools)
 ${blacktick}${blacktick}${blacktick}
 Observation: the result of the action
 ... (this Thought/Action/Observation can repeat N times)

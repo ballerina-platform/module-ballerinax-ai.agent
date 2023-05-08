@@ -24,7 +24,7 @@ configurable string wifiClientSecret = ?;
 
 const string OPENAPI_PATH = "openapi.json";
 
-const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts. email is johnw@gmail.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts";
 
 public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_QUERY) returns error? {
 
@@ -44,5 +44,5 @@ public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_Q
     agent:Agent agent = check new (model, openAPIToolKit);
 
     // 4) Execute the user's query
-    check agent.run(query);
+    check agent.run(query, context = {"email" : "johnw@gmail.com"});
 }

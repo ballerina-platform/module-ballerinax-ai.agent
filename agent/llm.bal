@@ -124,13 +124,13 @@ public class ChatGPTModel {
             userMessage = string `${prompt.query}
             
 This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):
-            `;
+`;
 
             foreach string history in prompt.history {
-                userMessage += history;
+                userMessage += history + "\n";
             }
-            userMessage += "\nThought:";
         }
+        userMessage += "\nThought:";
 
         ChatMessage[] messages = [
             {

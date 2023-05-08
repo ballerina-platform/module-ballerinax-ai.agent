@@ -54,8 +54,7 @@ public function addGuestWifi(*WifiCreateParams params) returns string|error {
     return response.getTextPayload();
 }
 
-const string DEFAULT_QUERY = "create a new guest wifi with user newWifiacc and password abc123 and show available accounts." +
-" email is nad123new@wso2.com";
+const string DEFAULT_QUERY = "create a new guest wifi with user guestJohn and password abc123 and show available accounts";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
 
@@ -81,5 +80,5 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Agent agent = check new (model, listwifi, addWifi);
 
     // 3) Run the agent with user's query
-    check agent.run(query);
+    check agent.run(query, context = {"email": "alex@wso2.com"});
 }
