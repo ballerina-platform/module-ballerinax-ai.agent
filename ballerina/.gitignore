@@ -31,3 +31,4 @@ tests
 .DS_store
 sample.bal
 sample_openapi.bal
+sample_codewrite.bal
