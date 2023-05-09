@@ -28,6 +28,11 @@ type NextAction record {|
     boolean isCompleted = false;
 |};
 
+type ExectutorOutput record {|
+    string thought;
+    string observation?;
+|};
+
 public class AgentExectutor {
     private Agent agent;
     private PromptConstruct prompt;
@@ -83,7 +88,7 @@ Observation: ${observation.trim()}`
         return nextAction;
     }
 
-    public function next() returns record {|string thought; string observation?;|}|error {
+    public function next() returns ExectutorOutput|error {
 
         string thoughts = check self.decideNextTool();
 
@@ -105,6 +110,9 @@ Observation: ${observation.trim()}`
         return {thought: formattedThoughts, observation: observation};
     }
 
+    function getPromptConstruct() returns PromptConstruct {
+        return self.prompt;
+    }
 }
 
 # Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs
@@ -192,7 +200,7 @@ Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to gen
         };
     }
 
-    public function createAgentExecutor(string query, json context) returns AgentExectutor {
+    public function createAgentExecutor(string query, json context = {}) returns AgentExectutor {
         io:println(self.initializaPrompt(query, context));
         return new (self, self.initializaPrompt(query, context));
     }
@@ -209,7 +217,7 @@ Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to gen
         while maxIter > iter {
             iter += 1;
             io:println("\n\nReasoning iteration: " + (iter).toString());
-            record {|string thought; string observation?;|} nextResult = check executor.next();
+            ExectutorOutput nextResult = check executor.next();
 
             if nextResult?.observation is () {
                 // io:println(nextResult.thought);

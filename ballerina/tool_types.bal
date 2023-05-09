@@ -48,6 +48,7 @@ public type PrimitiveInputSchema record {|
     PrimitiveInputType 'type;
     string format?;
     string pattern?;
+    string[] 'enum?;
 |};
 
 public type AnyOfInputSchema record {|

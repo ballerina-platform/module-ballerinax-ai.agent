@@ -37,7 +37,7 @@ function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
 }
 
 const string DEFAULT_QUERY = "create a new wifi account with user newGuest and password jh123. " +
-"Send the available list of wifi accounts for that email to nadheesh@wso2.com";
+"Send the available list of wifi accounts for that email to alica@wso2.com";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
 

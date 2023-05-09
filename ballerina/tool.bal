@@ -27,7 +27,7 @@ public type ToolInfo record {|
 |};
 
 class ToolStore {
-    map<Tool> tools;
+    private map<Tool> tools;
 
     function init() {
         self.tools = {};
@@ -97,17 +97,6 @@ class ToolStore {
             toolIntro: string:'join("\n", ...toolIntroList)
         };
     }
-
-    // # Build description for an tool to generate prompts to the LLMs
-    // #
-    // # + tool - Tool requires prompt decription
-    // # + return - Prompt description generated for the tool
-    // private function buildToolDescription(Tool tool) returns string {
-    //     if tool.inputs == null { // case for functions with zero parameters 
-    //         return string `${tool.name}: ${tool.description}. Parameters should be empty {}`;
-    //     }
-    //     return string `${tool.name}: ${tool.description}. Parameters to this ${TOOL_KEYWORD} should be in the format of ${tool.inputs.toString()}`;
-    // }
 
     function mergeToolStore(ToolStore toolStore) {
         foreach Tool tool in toolStore.tools {

@@ -1,3 +1,19 @@
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+//
+// WSO2 Inc. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import ballerina/io;
 import ballerina/log;
 
@@ -28,9 +44,9 @@ public function parseOpenAPISpec(string jsonPath) returns OpenAPISpec|error {
 public class OpenAPISpecVisitor {
     string? serverURL;
     HttpTool[] tools;
-    string currentPath;
-    HttpMethod? currentMethod;
-    map<ComponentType> referenceMap;
+    private string currentPath;
+    private HttpMethod? currentMethod;
+    private map<ComponentType> referenceMap;
 
     function init() {
         self.serverURL = ();
@@ -54,10 +70,10 @@ public class OpenAPISpecVisitor {
         if servers.length() < 1 {
             return;
         }
-        if servers.length() > 1 {
-            return log:printWarn("Multiple server urls are defined in the OpenAPI specification.");
-        }
         self.serverURL = check servers[0].url.ensureType();
+        if servers.length() > 1 {
+            log:printWarn("Multiple server urls are defined in the OpenAPI specification. If not specified, toolkit will use " + self.serverURL.toString());
+        }
     }
 
     private function visitComponents(Components components) returns error? {
@@ -148,20 +164,18 @@ public class OpenAPISpecVisitor {
 
         // resolve queryParameters
         InputSchema queryParams = {};
-        // if operation.parameters !is () {
-        // forea
-        //     foreach Parameter|Reference parameter in operation.parameters {
-        //         if parameter.in != "query" {
-        //             continue;
-        //         }
-        //         InputSchema jsonSchema;
-        //         if parameter is Reference {
-        //             Parameter resolvedParameter = check self.resolveReference(<Reference>parameter).ensureType();
-        //             jsonSchema = check self.visitParameter(resolvedParameter);
+        // (Parameter|Reference)[]? parameters = operation.parameters;
+        // if parameters is (Parameter|Reference)[] {
+        //     foreach Parameter|Reference param in parameters {
+        //         Parameter resolvedParameter;
+        //         if param is Reference{
+        //             resolvedParameter = check self.resolveReference(param).ensureType();
         //         } else {
-        //             jsonSchema = check self.visitParameter(parameter);
+        //             resolvedParameter = param;
         //         }
-        //         queryParams[parameter.name] = jsonSchema;
+        //         if resolvedParameter.'in != "query" && resolvedParameter.schema !is () {
+        //             queryParams[resolvedParameter.name] = check self.visitSchema(<Schema>resolvedParameter.schema);
+        //         }
         //     }
         // }
 
@@ -264,7 +278,8 @@ public class OpenAPISpecVisitor {
         if schema is StringSchema {
             return {
                 'type: STRING,
-                format: schema.format
+                format: schema.format,
+                'enum: schema.'enum
             };
         }
         if schema is NumberSchema {
