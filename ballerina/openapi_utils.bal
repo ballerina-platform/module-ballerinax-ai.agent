@@ -33,15 +33,14 @@ function removeExtensions(json schema) {
     }
 }
 
-public function parseOpenAPISpec(string jsonPath) returns OpenAPISpec|error {
+function parseOpenAPISpec(string jsonPath) returns OpenAPISpec|error {
     json fileJson = check io:fileReadJson(jsonPath);
-    removeExtensions(check fileJson.ensureType());
+    removeExtensions(fileJson);
     map<json> & readonly jsonSchema = check fileJson.cloneWithType();
-    OpenAPISpec openAPISchema = check jsonSchema.ensureType();
-    return openAPISchema;
+    return jsonSchema.ensureType();
 }
 
-public class OpenAPISpecVisitor {
+class OpenAPISpecVisitor {
     string? serverURL;
     HttpTool[] tools;
     private string currentPath;
@@ -49,6 +48,7 @@ public class OpenAPISpecVisitor {
     private map<ComponentType> referenceMap;
 
     function init() {
+        // ask about comment : Can be initialized in-line in the fields itself.
         self.serverURL = ();
         self.currentPath = "";
         self.currentMethod = ();
@@ -61,9 +61,18 @@ public class OpenAPISpecVisitor {
         if !openAPISpec.openapi.matches(re `3\.0\..`) {
             return error("OpenAPI version is not supported. Supports specifications with version 3.0.x only.");
         }
-        check self.visitServers(openAPISpec.servers ?: []);
-        check self.visitComponents(openAPISpec.components ?: {});
-        check self.visitPaths(openAPISpec.paths ?: {});
+        Server[]? servers = openAPISpec.servers;
+        if servers !is () {
+            check self.visitServers(servers);
+        }
+        Components? components = openAPISpec.components;
+        if components !is () {
+            check self.visitComponents(components);
+        }
+        Paths? paths = openAPISpec.paths;
+        if paths !is () {
+            check self.visitPaths(paths);
+        }
     }
 
     private function visitServers(Server[] servers) returns error? {
@@ -77,14 +86,14 @@ public class OpenAPISpecVisitor {
     }
 
     private function visitComponents(Components components) returns error? {
-        foreach string componentType in components.keys() {
-            map<ComponentType|Reference>? componentMap = check components[componentType].ensureType();
+        foreach [string, map<ComponentType|Reference>?] componentTypeEntry in components.entries() {
+            map<ComponentType|Reference>? componentMap = componentTypeEntry[1];
             if componentMap is () {
                 continue;
             }
-            foreach string componentId in componentMap.keys() {
-                ComponentType|Reference component = check componentMap[componentId].ensureType();
-                string ref = "#/components/" + componentType + "/" + componentId;
+            foreach [string, ComponentType|Reference] componentEntry in componentMap.entries() {
+                ComponentType|Reference component = componentEntry[1];
+                string ref = string `#/components/${componentTypeEntry[0]}/${componentEntry[0]}`;
                 self.referenceMap[ref] = component;
             }
         }
@@ -152,51 +161,37 @@ public class OpenAPISpecVisitor {
         if operation.servers !is () {
             return error("Path-wise service URLs are not supported");
         }
-        if operation.summary is () && operation.description is () {
-            return error(string `Summary or Description is mandotory. It is missing for ${self.currentPath} and method ${self.currentMethod.toString()}`);
+        string? description = operation.summary ?: operation.description;
+        if description is () {
+            return error(string `Summary or Description is mandotory for paths. It is missing for ${self.currentPath} and method ${self.currentMethod.toString()}`);
         }
-        if operation.operationId is () {
+        string? name = operation.operationId;
+        if name is () {
             return error(string `OperationId is mandotory. It is missing for ${self.currentPath} and method ${self.currentMethod.toString()}`);
         }
 
-        string name = <string>operation.operationId;
-        string description = operation.summary ?: <string>operation.description;
-
         // resolve queryParameters
-        InputSchema queryParams = {};
-        // (Parameter|Reference)[]? parameters = operation.parameters;
-        // if parameters is (Parameter|Reference)[] {
-        //     foreach Parameter|Reference param in parameters {
-        //         Parameter resolvedParameter;
-        //         if param is Reference{
-        //             resolvedParameter = check self.resolveReference(param).ensureType();
-        //         } else {
-        //             resolvedParameter = param;
-        //         }
-        //         if resolvedParameter.'in != "query" && resolvedParameter.schema !is () {
-        //             queryParams[resolvedParameter.name] = check self.visitSchema(<Schema>resolvedParameter.schema);
-        //         }
-        //     }
-        // }
+        InputSchema? queryParams = ();
+        (Parameter|Reference)[]? parameters = operation.parameters;
+        if parameters is (Parameter|Reference)[] {
+            queryParams = check self.visitParameters(parameters);
+        }
 
-        // resolve requestBody
         InputSchema jsonRequestBody = {};
-        if operation.requestBody !is () {
-            RequestBody requestBody;
-            if operation.requestBody is Reference {
-                requestBody = check self.resolveReference(<Reference>operation.requestBody).ensureType();
-            } else {
-                requestBody = check operation.requestBody.ensureType();
-            }
+        RequestBody|Reference? requestBody = operation.requestBody;
+        if requestBody is Reference {
+            RequestBody resolvedRequestBody = check self.resolveReference(requestBody).ensureType();
+            jsonRequestBody = check self.visitRequestBody(resolvedRequestBody);
+        } else if requestBody is RequestBody {
             jsonRequestBody = check self.visitRequestBody(requestBody);
         }
 
         self.tools.push({
-            name: name,
-            description: description,
+            name,
+            description,
             path: self.currentPath,
             method: <HttpMethod>self.currentMethod,
-            queryParams: queryParams,
+            queryParams,
             requestBody: jsonRequestBody
         });
     }
@@ -210,6 +205,34 @@ public class OpenAPISpecVisitor {
         }
         Schema schema = content.get(OPENAPI_JSON_CONTENT_KEY).schema;
         return self.visitSchema(schema).ensureType();
+    }
+
+    function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema|error {
+
+        map<SubSchema> properties = {};
+
+        foreach Parameter|Reference param in parameters {
+            Parameter resolvedParameter;
+            if param is Reference {
+                resolvedParameter = check self.resolveReference(param).ensureType();
+            } else {
+                resolvedParameter = param;
+            }
+
+            Schema? schema = resolvedParameter.schema;
+            if resolvedParameter.'in == OPENAPI_QUERY_PARAM_LOC_KEY && schema !is () {
+                string? style = resolvedParameter.style;
+                boolean? explode = resolvedParameter.explode;
+                if style !is () && style != OPENAPI_SUPPORTED_STYLE {
+                    return error("Supported only the query parameters with style=" + OPENAPI_SUPPORTED_STYLE);
+                }
+                if explode !is () && !explode {
+                    return error("Supported only the query parmaters with explode=true");
+                }
+                properties[resolvedParameter.name] = check self.visitSchema(schema);
+            }
+        }
+        return {properties};
     }
 
     function visitSchema(Schema schema) returns SubSchema|error {
@@ -238,8 +261,6 @@ public class OpenAPISpecVisitor {
 
         Schema resolvedSchema = check self.resolveReference(<Reference>schema).ensureType();
         return check self.visitSchema(resolvedSchema);
-
-        // return error("Unsupported schema type found: " + (typeof schema).toString());
     }
 
     function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
@@ -276,9 +297,20 @@ public class OpenAPISpecVisitor {
 
     function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
         if schema is StringSchema {
+            string? pattern = schema.pattern;
+            string? format = schema.format;
+            if format is string && pattern is () {
+                if format == "date" {
+                    pattern = OPENAPI_PATTER_DATE;
+                }
+                else if format == "date-time" {
+                    pattern = OPENAPI_PATTER_DATE_TIME;
+                }
+            }
             return {
                 'type: STRING,
-                format: schema.format,
+                format,
+                pattern,
                 'enum: schema.'enum
             };
         }
@@ -299,7 +331,7 @@ public class OpenAPISpecVisitor {
             anyOf.push(trimmedElement);
         }
         return {
-            anyOf: anyOf
+            anyOf
         };
     }
 
@@ -310,7 +342,7 @@ public class OpenAPISpecVisitor {
             allOf.push(trimmedElement);
         }
         return {
-            allOf: allOf
+            allOf
         };
     }
 
@@ -321,7 +353,7 @@ public class OpenAPISpecVisitor {
             oneOf.push(trimmedElement);
         }
         return {
-            oneOf: oneOf
+            oneOf
         };
     }
 

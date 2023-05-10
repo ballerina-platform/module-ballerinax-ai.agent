@@ -123,8 +123,12 @@ public class HttpToolKit {
     }
 
     private function get(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->get(httpInput.path, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->get(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -133,8 +137,12 @@ public class HttpToolKit {
     }
 
     private function post(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->post(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -143,8 +151,12 @@ public class HttpToolKit {
     }
 
     private function delete(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->delete(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -153,8 +165,12 @@ public class HttpToolKit {
     }
 
     private function put(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->put(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -163,8 +179,12 @@ public class HttpToolKit {
     }
 
     private function patch(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->patch(httpInput.path, message = httpInput?.requestBody, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -173,8 +193,12 @@ public class HttpToolKit {
     }
 
     private function head(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->head(httpInput.path, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->head(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
@@ -183,14 +207,35 @@ public class HttpToolKit {
     }
 
     private function options(*HttpInput httpInput) returns string|error {
-        // TODO need a way to use query params. Waiting for an solution in discord channel.
-        http:Response|http:ClientError getResult = self.httpClient->options(httpInput.path, headers = self.headers);
+        map<json>? queryParams = httpInput?.queryParams;
+        string path = httpInput.path;
+        if queryParams !is () {
+            path += check buildQueryURL(queryParams);
+        }
+        http:Response|http:ClientError getResult = self.httpClient->options(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
         } else {
             return getResult.message();
         }
     }
+}
+
+function buildQueryURL(map<json> queryparams) returns string|error {
+    string query = "?";
+    foreach [string, json] param in queryparams.entries() {
+        string key = param[0];
+        json value = param[1];
+        if value is string {
+            query += string `${key}=${value}&`;
+        } else if value is string[] {
+            query += <string>from string element in value
+                select key + "=" + element + "&";
+        } else {
+            return error(string `Unsupported query parameter value: ${value.toString()} for key ${key}`);
+        }
+    }
+    return query.substring(0, query.length() - 1);
 }
 
 public class OpenAPIToolKit {
