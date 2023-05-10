@@ -292,6 +292,9 @@ version = "2.2.4"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
+modules = [
+	{org = "ballerina", packageName = "time", moduleName = "time"}
+]
 
 [[package]]
 org = "ballerina"
@@ -311,6 +314,25 @@ dependencies = [
 ]
 modules = [
 	{org = "ballerinai", packageName = "observe", moduleName = "observe"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "agent"
+version = "0.1.22"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "regex"},
+	{org = "ballerina", name = "test"},
+	{org = "ballerina", name = "time"},
+	{org = "ballerinai", name = "observe"},
+	{org = "ballerinax", name = "openai.chat"},
+	{org = "ballerinax", name = "openai.text"}
+]
+modules = [
+	{org = "ballerinax", packageName = "agent", moduleName = "agent"}
 ]
 
 [[package]]
@@ -339,23 +361,5 @@ dependencies = [
 ]
 modules = [
 	{org = "ballerinax", packageName = "openai.text", moduleName = "openai.text"}
-]
-
-[[package]]
-org = "nadheeshjihan"
-name = "agent"
-version = "0.1.21"
-dependencies = [
-	{org = "ballerina", name = "http"},
-	{org = "ballerina", name = "io"},
-	{org = "ballerina", name = "log"},
-	{org = "ballerina", name = "regex"},
-	{org = "ballerina", name = "test"},
-	{org = "ballerinai", name = "observe"},
-	{org = "ballerinax", name = "openai.chat"},
-	{org = "ballerinax", name = "openai.text"}
-]
-modules = [
-	{org = "nadheeshjihan", packageName = "agent", moduleName = "agent"}
 ]
 

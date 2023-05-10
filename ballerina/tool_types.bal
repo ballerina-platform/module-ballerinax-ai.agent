@@ -34,8 +34,8 @@ public enum HttpMethod {
 // input record definitions ----------------------------
 type HttpInput record {|
     string path;
-    json queryParams?;
-    json requestBody?;
+    map<json> queryParams?;
+    map<json> requestBody?;
 |};
 
 // input schema definitions ----------------------------

@@ -29,14 +29,14 @@ public type GPT3ModelConfig record {|
     string model = GPT3_MODEL_NAME;
     decimal? temperature = DEFAULT_TEMPERATURE;
     int? max_tokens = DEFAULT_MAX_TOKEN_COUNT;
-    string|string[]?? stop = OBSERVATION_KEY;
+    string|string[]? stop = OBSERVATION_KEY;
 |};
 
 public type ChatGPTModelConfig record {|
     *chat:CreateChatCompletionRequest;
     string model = GPT3_5_MODEL_NAME;
     decimal? temperature = DEFAULT_TEMPERATURE;
-    string|string[]?? stop = OBSERVATION_KEY;
+    string|string[]? stop = OBSERVATION_KEY;
     chat:ChatCompletionRequestMessage[] messages = [];
 |};
 
@@ -80,13 +80,12 @@ public class GPT3Model {
 
     function _generate(PromptConstruct prompt) returns string|error {
         string thoughtHistory = "";
-        foreach string history in prompt.history {
-            thoughtHistory += history + "\n";
-        }
+        thoughtHistory += <string>from string history in prompt.history
+            select history + "\n";
         string promptStr = string `${prompt.instruction}
 
 Question: ${prompt.query}
-${thoughtHistory}Thought:`;
+${thoughtHistory}${THOUGHT_KEY}`;
 
         return check self.complete(promptStr);
 
@@ -125,20 +124,18 @@ public class ChatGPTModel {
             
 This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):
 `;
-
-            foreach string history in prompt.history {
-                userMessage += history + "\n";
-            }
+            userMessage += <string>from string history in prompt.history
+                select history + "\n";
         }
-        userMessage += "\nThought:";
+        userMessage += ("\n" + THOUGHT_KEY);
 
         ChatMessage[] messages = [
             {
-                role: "system",
+                role: SYSTEM_ROLE,
                 content: prompt.instruction
             },
             {
-                role: "user",
+                role: USER_ROLE,
                 content: userMessage
             }
         ];

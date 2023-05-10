@@ -48,30 +48,23 @@ public class AgentExectutor {
     # + observation - Observations returned by the performed tool
     # + return - Error, in case of a failure
     private function updatePromptHistory(string thoughts, string observation) returns error? {
-        PromptConstruct? prompt = self.prompt;
-        if prompt is () {
-            return error("Prompt is not initialized");
-        }
-
-        prompt.history.push(
+        self.prompt.history.push(
             string `${thoughts}
 Observation: ${observation.trim()}`
         );
-
     }
 
     # Use LLMs to decide the next tool 
     # + return - Decision by the LLM or an error if call to the LLM fails
-    private function decideNextTool() returns string|error {
-        return self.agent.getLLMModel()._generate(<PromptConstruct>self.prompt);
-    }
+    private function decideNextTool() returns string|error =>
+        self.agent.getLLMModel()._generate(self.prompt);
 
     # Parse the LLM response in string form to an LLMResponse record
     #
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
     private function parseLLMResponse(string llmResponse) returns NextAction|error {
-        if (llmResponse.includes("Final Answer")) {
+        if llmResponse.includes(FINAL_ANSWER_KEY) {
             return {
                 tool: "complete",
                 isCompleted: true
@@ -93,8 +86,8 @@ Observation: ${observation.trim()}`
         string thoughts = check self.decideNextTool();
 
         string formattedThoughts = thoughts.trim();
-        if !formattedThoughts.startsWith("Thought:") {
-            formattedThoughts = string `Thought: ${formattedThoughts}`;
+        if !formattedThoughts.startsWith(THOUGHT_KEY) {
+            formattedThoughts = string `${THOUGHT_KEY} ${formattedThoughts}`;
         }
 
         io:println(formattedThoughts);
@@ -132,10 +125,10 @@ public class Agent {
         self.model = model;
         self.toolStore = new;
         foreach BaseToolKit|Tool tool in tools {
-            if (tool is BaseToolKit) {
-                self.registerLoaders(<BaseToolKit>tool);
+            if tool is BaseToolKit {
+                self.registerLoaders(tool);
             } else {
-                check self.toolStore.registerTools(<Tool>tool);
+                check self.toolStore.registerTools(tool);
             }
         }
     }
@@ -153,7 +146,6 @@ public class Agent {
     # + return - PromptConstruct record or an error if the initialization failed
     private function initializaPrompt(string query, json context) returns PromptConstruct {
         ToolInfo output = self.toolStore.extractToolInfo();
-        string blacktick = "`";
         string toolDescriptions = output.toolIntro;
         string toolNames = output.toolList;
         string contextInfo = "";
@@ -164,28 +156,27 @@ ${context.toString()}
 `;
         }
 
-        string instruction =
-string `Answer the following questions as best you can without making any assumptions. You have access to the following tools:
+        string instruction = string `Answer the following questions as best you can without making any assumptions. You have access to the following tools:
 
 ${toolDescriptions.trim()}
 ${contextInfo}
 Use a JSON blob with the following format to define the action and input.
 
-${blacktick}${blacktick}${blacktick}
+${BACKTICK}${BACKTICK}${BACKTICK}
 {
   "tool": the tool to take, should be one of [${toolNames}]",
   "tool_input": JSON input record to the tool
 }
-${blacktick}${blacktick}${blacktick}
+${BACKTICK}${BACKTICK}${BACKTICK}
 
 ALWAYS use the following format:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
 Action:
-${blacktick}${blacktick}${blacktick}
+${BACKTICK}${BACKTICK}${BACKTICK}
 $JSON_BLOB only for a SINGLE tool (Do NOT return a list of multiple tools)
-${blacktick}${blacktick}${blacktick}
+${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: the result of the action
 ... (this Thought/Action/Observation can repeat N times)
 Thought: I now know the final answer
@@ -194,7 +185,7 @@ Final Answer: the final answer to the original input question
 Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records.`;
 
         return {
-            instruction: instruction.trim(),
+            instruction: instruction,
             query: query.trim(),
             history: []
         };

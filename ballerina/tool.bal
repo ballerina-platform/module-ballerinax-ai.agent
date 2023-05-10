@@ -56,7 +56,7 @@ class ToolStore {
 
         if !self.tools.hasKey(toolName) {
             log:printWarn("Failed to execute the unknown tool: " + toolName);
-            return string `You don't have access to the ${TOOL_KEYWORD}: ${toolName}. Try a different approach`;
+            return string `You don't have access to the tool: ${toolName}. Try a different approach`;
         }
 
         function caller = self.tools.get(toolName).caller;

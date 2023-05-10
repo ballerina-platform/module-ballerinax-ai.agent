@@ -15,39 +15,25 @@
 // under the License.
 
 // model default parameters 
-const string GPT3_MODEL_NAME = "text-davinci-003";
-const string GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
-const string OBSERVATION_KEY = "Observation";
-const int DEFAULT_MAX_TOKEN_COUNT = 256;
-const decimal DEFAULT_TEMPERATURE = 0.7;
-
-// counters 
-const int FINAL_THOUGHT_LINE_COUNT = 2;
-const int REGULAR_THOUGHT_LINE_COUNT = 3;
-
-// keywords 
-const string TOOL_KEYWORD = "tool";
+const GPT3_MODEL_NAME = "text-davinci-003";
+const GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
+const OBSERVATION_KEY = "Observation";
+const DEFAULT_MAX_TOKEN_COUNT = 512;
+const DEFAULT_TEMPERATURE = 0.7d;
 
 // openapi
-const string OPENAPI_KEY = "openapi";
-const string OPENAPI_SERVER_KEY = "servers";
-const string OPENAPI_PATHS_KEY = "paths";
-const string OPENAPI_COMPONENTS_KEY = "components";
-const string OPENAPI_SUMMERY_KEY = "summary";
-const string OPENAPI_OPERATION_ID_KEY = "operationId";
-const string OPENAPI_REQUEST_BODY_KEY = "requestBody";
-const string OPENAPI_CONTENT_KEY = "content";
-const string OPENAPI_JSON_CONTENT_KEY = "application/json";
-const string OPENAPI_SCHEMA_KEY = "schema";
-const string OPENAPI_REF_KEY = "$ref";
-const string OPENAPI_ONE_OF_KEY = "oneOf";
-const string OPENAPI_ALL_OF_KEY = "allOf";
-const string OPENAPI_ANY_OF_KEY = "anyOf";
-const string OPENAPI_NOT_KEY = "not";
-const string OPENAPI_TYPE_KEY = "type";
-const string OPENAPI_PROPERTIES_KEY = "properties";
-const string OPENAPI_ITEMS_KEY = "items";
-const string OPENAPI_OBJECT_TYPE = "object";
-const string OPENAPI_ARRAY_TYPE = "array";
-const string OPENAPI_DEFAULT_VALUE_KEY = "default";
+const OPENAPI_JSON_CONTENT_KEY = "application/json";
+const OPENAPI_QUERY_PARAM_LOC_KEY = "query";
+const OPENAPI_PATTER_DATE = "yyyy-MM-dd";
+const OPENAPI_PATTER_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
+const OPENAPI_SUPPORTED_STYLE = "form";
+
+//agent
+const FINAL_ANSWER_KEY = "Final Answer";
+const THOUGHT_KEY = "Thought:";
+const BACKTICK = "`";
+
+//llm
+const USER_ROLE = "user";
+const SYSTEM_ROLE = "system";
 
