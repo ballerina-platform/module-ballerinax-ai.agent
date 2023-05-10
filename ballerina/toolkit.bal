@@ -195,10 +195,9 @@ public class HttpToolKit {
 
 public class OpenAPIToolKit {
     *BaseToolKit;
-    HttpToolKit httpToolKit;
+    private HttpToolKit httpToolKit;
 
     public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
-        self.toolStore = new;
         OpenAPISpec openAPISchema = check parseOpenAPISpec(filePath);
         OpenAPISpecVisitor visitor = new;
         check visitor.visit(openAPISchema);
@@ -215,6 +214,8 @@ public class OpenAPIToolKit {
         }
         HttpTool[] listResult = visitor.tools;
         self.httpToolKit = check new (serverUrl, listResult, clientConfig, headers);
+        self.toolStore = self.httpToolKit.toolStore;
+
     }
 
     function initializeToolKit(ToolStore store) {

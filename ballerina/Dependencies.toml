@@ -275,6 +275,18 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "test"
+version = "0.0.0"
+scope = "testOnly"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"}
+]
+modules = [
+	{org = "ballerina", packageName = "test", moduleName = "test"}
+]
+
+[[package]]
+org = "ballerina"
 name = "time"
 version = "2.2.4"
 dependencies = [
@@ -332,12 +344,13 @@ modules = [
 [[package]]
 org = "nadheeshjihan"
 name = "agent"
-version = "0.1.20"
+version = "0.1.21"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "log"},
 	{org = "ballerina", name = "regex"},
+	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
 	{org = "ballerinax", name = "openai.chat"},
 	{org = "ballerinax", name = "openai.text"}
