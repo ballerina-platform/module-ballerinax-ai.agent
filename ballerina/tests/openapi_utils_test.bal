@@ -54,22 +54,22 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
     OpenAPISpec openAPISchema = check parseOpenAPISpec(wifiSpecPath);
     OpenAPISpecVisitor visitor = new;
     check visitor.visit(openAPISchema);
-
+    
     HttpTool[] tools = [
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            queryParams: {},
-            requestBody: {}
+            queryParams: (),
+            requestBody: ()
         },
         {
             name: "postGuestWifiAccounts",
             description: "Create new guest WiFi account",
             method: "POST",
             path: "/guest-wifi-accounts",
-            queryParams: {},
+            queryParams: (),
             requestBody: {
                 allOf: [
                     {'type: "object", properties: {email: {'type: "string"}, username: {'type: "string"}}},
@@ -82,8 +82,8 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            queryParams: {},
-            requestBody: {}
+            queryParams: (),
+            requestBody: ()
         }
     ];
     test:assertEquals(visitor.tools, tools);
@@ -112,7 +112,7 @@ function testVisitorWithOpenAISpec() returns error? {
                 description: "Creates a completion for the provided prompt and parameters",
                 method: POST,
                 path: "/completions",
-                "queryParams": {},
+                "queryParams": (),
                 requestBody: {
                     'type: "object",
                     properties:
@@ -156,7 +156,7 @@ function testVisitorWithOpenAISpec() returns error? {
                 description: "Creates a completion for the chat message",
                 method: POST,
                 path: "/chat/completions",
-                queryParams: {},
+                queryParams: (),
                 requestBody: {
                     'type: "object",
                     properties: {

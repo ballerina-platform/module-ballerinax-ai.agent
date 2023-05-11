@@ -68,7 +68,13 @@ function testOpenAPIToolKitInitialization() {
     string wifiSpecPath = "tests/resources/wifi-spec.json";
     string serviceURL = "http://test-wifi-url.com";
 
-    OpenAPIToolKit|error openAPIToolKit = new (wifiSpecPath, serviceURL, {auth: {token: "<API-TOKEN>"}}, {timeout: "10000"});
+    OpenAPIToolKitConfig config = {
+        serverURL: serviceURL,
+        clientConfig: {auth: {token: "<API-TOKEN>"}},
+        headers: {timeout: "10000"}
+    };
+
+    OpenAPIToolKit|error openAPIToolKit = new (wifiSpecPath, config);
 
     test:assertTrue(openAPIToolKit is OpenAPIToolKit, "OpenAPIToolKit is not initialized due to an error");
     if openAPIToolKit is OpenAPIToolKit {
