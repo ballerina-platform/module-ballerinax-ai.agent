@@ -46,8 +46,9 @@ class OpenAPISpecVisitor {
     private string currentPath;
     private HttpMethod? currentMethod;
     private map<ComponentType> referenceMap;
+    private OpenAPISchemaKeyword includes;
 
-    function init() {
+    function init(OpenAPISchemaKeyword includes = {}) {
         // ask about comment : Can be initialized in-line in the fields itself.
         self.serverURL = ();
         self.currentPath = "";
@@ -55,6 +56,7 @@ class OpenAPISpecVisitor {
 
         self.tools = [];
         self.referenceMap = {};
+        self.includes = includes;
     }
 
     function visit(OpenAPISpec openAPISpec) returns error? {
@@ -177,7 +179,7 @@ class OpenAPISpecVisitor {
             queryParams = check self.visitParameters(parameters);
         }
 
-        InputSchema jsonRequestBody = {};
+        InputSchema? jsonRequestBody = ();
         RequestBody|Reference? requestBody = operation.requestBody;
         if requestBody is Reference {
             RequestBody resolvedRequestBody = check self.resolveReference(requestBody).ensureType();
@@ -207,7 +209,7 @@ class OpenAPISpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema|error {
+    function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema?|error {
 
         map<SubSchema> properties = {};
 
@@ -231,6 +233,9 @@ class OpenAPISpecVisitor {
                 }
                 properties[resolvedParameter.name] = check self.visitSchema(schema);
             }
+        }
+        if properties.length() == 0 {
+            return ();
         }
         return {properties};
     }
@@ -286,9 +291,7 @@ class OpenAPISpecVisitor {
     }
 
     function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
-
         SubSchema trimmedItems = check self.visitSchema(schema.items);
-
         return {
             'type: ARRAY,
             items: trimmedItems
@@ -296,6 +299,17 @@ class OpenAPISpecVisitor {
     }
 
     function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
+        PrimitiveInputSchema inputSchmea = {
+            'type: schema.'type
+        };
+
+        if self.includes.description {
+            inputSchmea.description = schema.description;
+        }
+        if self.includes.default {
+            inputSchmea.default = schema?.default;
+        }
+
         if schema is StringSchema {
             string? pattern = schema.pattern;
             string? format = schema.format;
@@ -307,51 +321,36 @@ class OpenAPISpecVisitor {
                     pattern = OPENAPI_PATTER_DATE_TIME;
                 }
             }
-            return {
-                'type: STRING,
-                format,
-                pattern,
-                'enum: schema.'enum
-            };
+
+            inputSchmea.format = format;
+            inputSchmea.pattern = pattern;
+            inputSchmea.'enum = schema.'enum;
         }
         if schema is NumberSchema {
-            return {
-                'type: FLOAT
-            };
+            inputSchmea.'type = FLOAT;
         }
-        return {
-            'type: schema.'type
-        };
+        return inputSchmea;
     }
 
     function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
-        SubSchema[] anyOf = [];
-        foreach Schema element in schema.anyOf {
-            SubSchema trimmedElement = check self.visitSchema(element);
-            anyOf.push(trimmedElement);
-        }
+        SubSchema[] anyOf = from Schema element in schema.anyOf
+            select check self.visitSchema(element);
         return {
             anyOf
         };
     }
 
     function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
-        SubSchema[] allOf = [];
-        foreach Schema element in schema.allOf {
-            SubSchema trimmedElement = check self.visitSchema(element);
-            allOf.push(trimmedElement);
-        }
+        SubSchema[] allOf = from Schema element in schema.allOf
+            select check self.visitSchema(element);
         return {
             allOf
         };
     }
 
     function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
-        SubSchema[] oneOf = [];
-        foreach Schema element in schema.oneOf {
-            SubSchema trimmedElement = check self.visitSchema(element);
-            oneOf.push(trimmedElement);
-        }
+        SubSchema[] oneOf = from Schema element in schema.oneOf
+            select check self.visitSchema(element);
         return {
             oneOf
         };

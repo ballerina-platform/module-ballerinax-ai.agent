@@ -48,6 +48,8 @@ public type PrimitiveInputSchema record {|
     PrimitiveInputType 'type;
     string format?;
     string pattern?;
+    string description?;
+    anydata default?;
     string[] 'enum?;
 |};
 

@@ -238,29 +238,35 @@ function buildQueryURL(map<json> queryparams) returns string|error {
     return query.substring(0, query.length() - 1);
 }
 
+public type OpenAPISchemaKeyword record {|
+    boolean description = false;
+    boolean default = false;
+|};
+
+public type OpenAPIToolKitConfig record {|
+    string serverURL?;
+    HttpClientConfig clientConfig = {};
+    map<string|string[]> headers = {};
+    OpenAPISchemaKeyword includes = {};
+|};
+
 public class OpenAPIToolKit {
     *BaseToolKit;
     private HttpToolKit httpToolKit;
 
-    public function init(string filePath, string? serviceUrl = (), HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
+    public function init(string filePath, OpenAPIToolKitConfig toolkitConfig = {}) returns error? {
         OpenAPISpec openAPISchema = check parseOpenAPISpec(filePath);
-        OpenAPISpecVisitor visitor = new;
+        OpenAPISpecVisitor visitor = new (includes = toolkitConfig.includes);
         check visitor.visit(openAPISchema);
 
-        string serverUrl;
-        if serviceUrl is string {
-            serverUrl = serviceUrl;
-        } else {
-            if visitor.serverURL is string {
-                serverUrl = <string>visitor.serverURL;
-            } else {
-                return error("server url is not provided");
-            }
+        string? serverURL = toolkitConfig.serverURL ?: visitor.serverURL;
+        if serverURL is () {
+            return error("server url is not provided");
         }
-        HttpTool[] listResult = visitor.tools;
-        self.httpToolKit = check new (serverUrl, listResult, clientConfig, headers);
-        self.toolStore = self.httpToolKit.toolStore;
 
+        HttpTool[] listResult = visitor.tools;
+        self.httpToolKit = check new (serverURL, listResult, toolkitConfig.clientConfig, toolkitConfig.headers);
+        self.toolStore = self.httpToolKit.toolStore;
     }
 
     function initializeToolKit(ToolStore store) {

@@ -162,7 +162,7 @@ type MediaType record {|
 type BaseSchema record {|
     string title?;
     string description?;
-    any default?;
+    anydata default?;
     boolean nullable?;
     boolean readOnly?;
     boolean writeOnly?;
