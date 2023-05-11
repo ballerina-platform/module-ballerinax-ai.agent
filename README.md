@@ -3,18 +3,18 @@ Ballerina ReAct type Agent module using Large language models (LLMs)
 
 This repo contains the followings.
 
-1) [Ballerina Agent implementation](agent/README.md)
-2) Examples to demostrate the common [usage of the agent](samples/README.md)
+1) [Ballerina Agent implementation](ballerina/README.md)
+2) Examples to demostrate the common [usage of the agent](examples/README.md)
 
 ## Installation 
 
-We have already pushed the `Ballerina Agent` latest version to Ballerina central under the organization `nadheeshjihan`. This package can be pulled using the following command.
+We have already pushed the `ai.agent` latest version to Ballerina central under the organization `ballerinax`. This package can be pulled using the following command.
 
-`bal pull nadheeshjihan/agent`
+`bal pull ballerinax/agent`
 
 ## Usage
 
-We will explain the usage of the agent using [this sample](samples/agent_with_multi_tools/main.bal). In this example, we will use two types of actions.
+We will explain the usage of the agent using [this sample](examples/multi-type-tools/main.bal). In this example, we will use two types of actions.
 - A Gmail `sendMessage` action defined as a function (Function as actions)
 - HTTP client actions to communicate with the `GuestWifi` API (HTTP actions)
     - List available wifi accounts: `GET /guest-wifi-accounts/{ownerEmail}`
@@ -25,7 +25,7 @@ We will explain the usage of the agent using [this sample](samples/agent_with_mu
 We can't register a remote function directly to the agent as a tool. We should use the following template to define functions as tools to the agent. Although, a function can return `any` data type, it is prefered to return a `string` value from a tool. 
 
 ```
-function functionName(*record functionParams) returns any|error {
+function functionName(*RecordType functionParams) returns any|error {
     // function body
 }
 ```
@@ -59,7 +59,7 @@ agent:Tool sendEmailTool = {
     };
 ```
 
-Now define the Http tools for the `GuestWifi` API.
+Now define the HTTP tools for the `GuestWifi` API.
 
 ```
 agent:HttpTool[] httpTools = [
@@ -82,7 +82,7 @@ agent:HttpTool[] httpTools = [
     }
 ];
 ```
-Let's use `HttpToolKit` to group the http tools for a the Wifi client. `HttpToolKit` can take the `serviceURL` and `HttpClientConfig` as parameters to initialize a HTTP client to communicate with the relevent API.
+Let's use `HttpToolKit` to group the HTTP tools for a the Wifi client. `HttpToolKit` can take the `serviceURL` and `HttpClientConfig` as parameters to initialize a HTTP client to communicate with the relevent API.
 
 ```
 // auth configs to WifiService
@@ -104,7 +104,7 @@ Agent require initialzing a model (e.g. GPT3, GPT4) first. Agent takes the model
 agent:Agent agent = check new (LLMModel model, (ToolKit|Tool)... tools);
 ```
 
-We can initialize the agent as follows with the GTP3 model. To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc.
+We can initialize the agent as follows with the GPT3 model. To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc.
 
 ```
 agent:GPT3Model model = check new ({auth: {token: openAIToken}});
