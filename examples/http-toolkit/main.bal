@@ -55,9 +55,9 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     });
 
     // 2) Create the model (brain of the agent)
-    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
     // 3) Create the agent
     agent:Agent agent = check new (model, httpToolKit);
     // 4) Run the agent to execute user's query
-    check agent.run(query, maxIter = 5, context = "email is john@gmail.com");
+    _ = agent.run(query, maxIter = 5, context = "email is john@gmail.com");
 }

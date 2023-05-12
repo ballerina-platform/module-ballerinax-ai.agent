@@ -17,7 +17,18 @@
 import ballerina/io;
 import ballerina/log;
 
-function removeExtensions(json schema) {
+public type ApiSpecification record {|
+    string serverUrl?;
+    HttpTool[] tools;
+|};
+
+public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns ApiSpecification|error {
+    OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
+    OpenApiSpecVisitor visitor = new (additionInfoFlags);
+    return check visitor.visit(openApiSpec);
+}
+
+isolated function removeExtensions(json schema) {
     if schema is map<json> {
         foreach string key in schema.keys() {
             if key.startsWith("x-") {
@@ -33,61 +44,56 @@ function removeExtensions(json schema) {
     }
 }
 
-function parseOpenAPISpec(string jsonPath) returns OpenAPISpec|error {
+isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
     json fileJson = check io:fileReadJson(jsonPath);
     removeExtensions(fileJson);
     map<json> & readonly jsonSchema = check fileJson.cloneWithType();
     return jsonSchema.ensureType();
 }
 
-class OpenAPISpecVisitor {
-    string? serverURL;
-    HttpTool[] tools;
-    private string currentPath;
-    private HttpMethod? currentMethod;
-    private map<ComponentType> referenceMap;
-    private OpenAPISchemaKeyword includes;
+class OpenApiSpecVisitor {
+    private map<ComponentType> referenceMap = {};
+    private final HttpTool[] tools = [];
+    private final AdditionInfoFlags additionalInfoFlags;
 
-    function init(OpenAPISchemaKeyword includes = {}) {
-        // ask about comment : Can be initialized in-line in the fields itself.
-        self.serverURL = ();
-        self.currentPath = "";
-        self.currentMethod = ();
-
-        self.tools = [];
-        self.referenceMap = {};
-        self.includes = includes;
+    function init(AdditionInfoFlags additionalInfoFlags = {}) {
+        self.additionalInfoFlags = additionalInfoFlags.cloneReadOnly();
     }
 
-    function visit(OpenAPISpec openAPISpec) returns error? {
-        if !openAPISpec.openapi.matches(re `3\.0\..`) {
-            return error("OpenAPI version is not supported. Supports specifications with version 3.0.x only.");
+    function visit(OpenApiSpec openApiSpec) returns ApiSpecification|error {
+        if !openApiSpec.openapi.matches(re `3\.0\..`) {
+            return error("Unsupported OpenAPI version. Supports specifications with version 3.0.x only.");
         }
-        Server[]? servers = openAPISpec.servers;
-        if servers !is () {
-            check self.visitServers(servers);
-        }
-        Components? components = openAPISpec.components;
-        if components !is () {
-            check self.visitComponents(components);
-        }
-        Paths? paths = openAPISpec.paths;
+
+        string? serverUrl = self.visitServers(openApiSpec.servers);
+        self.referenceMap = self.visitComponents(openApiSpec.components);
+
+        Paths? paths = openApiSpec.paths;
         if paths !is () {
             check self.visitPaths(paths);
         }
+
+        return {
+            serverUrl,
+            tools: self.tools.cloneReadOnly()
+        };
     }
 
-    private function visitServers(Server[] servers) returns error? {
-        if servers.length() < 1 {
-            return;
+    private function visitServers(Server[]? servers) returns string? {
+        if servers is () || servers.length() < 1 {
+            return ();
         }
-        self.serverURL = check servers[0].url.ensureType();
         if servers.length() > 1 {
-            log:printWarn("Multiple server urls are defined in the OpenAPI specification. If not specified, toolkit will use " + self.serverURL.toString());
+            log:printWarn("Multiple server urls are defined in the OpenAPI specification. If not specified, toolkit will use " + servers[0].url);
         }
+        return servers[0].url;
     }
 
-    private function visitComponents(Components components) returns error? {
+    private isolated function visitComponents(Components? components) returns map<ComponentType> {
+        if components is () {
+            return {};
+        }
+        map<ComponentType> referenceMap = {};
         foreach [string, map<ComponentType|Reference>?] componentTypeEntry in components.entries() {
             map<ComponentType|Reference>? componentMap = componentTypeEntry[1];
             if componentMap is () {
@@ -95,81 +101,63 @@ class OpenAPISpecVisitor {
             }
             foreach [string, ComponentType|Reference] componentEntry in componentMap.entries() {
                 ComponentType|Reference component = componentEntry[1];
-                string ref = string `#/components/${componentTypeEntry[0]}/${componentEntry[0]}`;
-                self.referenceMap[ref] = component;
+                string ref = string `#/${OPENAPI_COMPONENTS_KEY}/${componentTypeEntry[0]}/${componentEntry[0]}`;
+                referenceMap[ref] = component;
             }
         }
+        return referenceMap;
     }
 
     private function visitPaths(Paths paths) returns error? {
-        foreach string pathURL in paths.keys() {
+        foreach string pathUrl in paths.keys() {
             PathItem pathItem;
-            if paths.get(pathURL) is Reference {
-                pathItem = check self.resolveReference(<Reference>paths.get(pathURL)).ensureType();
+            if paths.get(pathUrl) is Reference {
+                pathItem = check self.resolveReference(<Reference>paths.get(pathUrl)).ensureType();
             } else {
-                pathItem = check paths.get(pathURL).ensureType();
+                pathItem = check paths.get(pathUrl).ensureType();
             }
-            self.currentPath = pathURL;
-            check self.visitPathItem(pathItem);
+            check self.visitPathItem(pathItem, pathUrl);
         }
     }
 
-    private function visitPathItem(PathItem pathItem) returns error? {
+    private function visitPathItem(PathItem pathItem, string pathUrl) returns error? {
         if pathItem.get is Operation {
-            self.currentMethod = GET;
-            check self.visitOperation(<Operation>pathItem.get);
+            check self.visitOperation(<Operation>pathItem.get, pathUrl, GET);
         }
         if pathItem.post is Operation {
-            self.currentMethod = POST;
-            check self.visitOperation(<Operation>pathItem.post);
+            check self.visitOperation(<Operation>pathItem.post, pathUrl, POST);
         }
         if pathItem.put is Operation {
-            self.currentMethod = PUT;
-            check self.visitOperation(<Operation>pathItem.put);
+            check self.visitOperation(<Operation>pathItem.put, pathUrl, PUT);
         }
         if pathItem.delete is Operation {
-            self.currentMethod = DELETE;
-            check self.visitOperation(<Operation>pathItem.delete);
+            check self.visitOperation(<Operation>pathItem.delete, pathUrl, DELETE);
         }
         if pathItem.options is Operation {
-            self.currentMethod = OPTIONS;
-            check self.visitOperation(<Operation>pathItem.options);
+            check self.visitOperation(<Operation>pathItem.options, pathUrl, OPTIONS);
         }
         if pathItem.head is Operation {
-            self.currentMethod = HEAD;
-            check self.visitOperation(<Operation>pathItem.head);
+            check self.visitOperation(<Operation>pathItem.head, pathUrl, HEAD);
         }
         if pathItem.patch is Operation {
-            self.currentMethod = PATCH;
-            check self.visitOperation(<Operation>pathItem.patch);
+            check self.visitOperation(<Operation>pathItem.patch, pathUrl, PATCH);
         }
         if pathItem.trace is Operation {
             return error("Http trace method is not supported");
         }
     }
 
-    private function resolveReference(Reference reference) returns ComponentType|error {
-        if !self.referenceMap.hasKey(reference.\$ref) {
-            return error("No component found to resolve the reference: " + reference.\$ref);
-        }
-        ComponentType|Reference component = self.referenceMap.get(reference.\$ref);
-        while component is Reference {
-            component = check self.resolveReference(component);
-        }
-        return component;
-    }
-
-    private function visitOperation(Operation operation) returns error? {
+    private function visitOperation(Operation operation, string path, HttpMethod method) returns error? {
         if operation.servers !is () {
-            return error("Path-wise service URLs are not supported");
+            return error("Path-wise service URLs are not supported. Please use global server URL.");
         }
         string? description = operation.summary ?: operation.description;
         if description is () {
-            return error(string `Summary or Description is mandotory for paths. It is missing for ${self.currentPath} and method ${self.currentMethod.toString()}`);
+            return error(string `Summary or description is mandotory for paths. It is missing for ${path} and method ${method}`);
         }
         string? name = operation.operationId;
         if name is () {
-            return error(string `OperationId is mandotory. It is missing for ${self.currentPath} and method ${self.currentMethod.toString()}`);
+            return error(string `OperationId is mandotory. It is missing for ${path} and method ${method}`);
         }
 
         // resolve queryParameters
@@ -191,14 +179,14 @@ class OpenAPISpecVisitor {
         self.tools.push({
             name,
             description,
-            path: self.currentPath,
-            method: <HttpMethod>self.currentMethod,
+            path,
+            method,
             queryParams,
             requestBody: jsonRequestBody
         });
     }
 
-    function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
+    private function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
         map<MediaType> content = requestBody.content;
 
         // check for json content
@@ -209,7 +197,7 @@ class OpenAPISpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema?|error {
+    private function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema?|error {
 
         map<SubSchema> properties = {};
 
@@ -240,7 +228,19 @@ class OpenAPISpecVisitor {
         return {properties};
     }
 
-    function visitSchema(Schema schema) returns SubSchema|error {
+    private function resolveReference(Reference reference) returns ComponentType|error {
+        if !self.referenceMap.hasKey(reference.\$ref) {
+            return error("No component found for the reference: " + reference.\$ref);
+        }
+        ComponentType|Reference component = self.referenceMap.get(reference.\$ref);
+
+        if component is Reference {
+            return self.resolveReference(component);
+        }
+        return component;
+    }
+
+    private function visitSchema(Schema schema) returns SubSchema|error {
 
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema);
@@ -268,7 +268,7 @@ class OpenAPISpecVisitor {
         return check self.visitSchema(resolvedSchema);
     }
 
-    function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
+    private function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
         ObjectInputSchema objectSchema = {
             'type: OBJECT,
             properties: {}
@@ -290,7 +290,7 @@ class OpenAPISpecVisitor {
         return objectSchema;
     }
 
-    function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
+    private function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
         SubSchema trimmedItems = check self.visitSchema(schema.items);
         return {
             'type: ARRAY,
@@ -298,15 +298,15 @@ class OpenAPISpecVisitor {
         };
     }
 
-    function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
+    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
         PrimitiveInputSchema inputSchmea = {
             'type: schema.'type
         };
 
-        if self.includes.description {
+        if self.additionalInfoFlags.extractDescrition {
             inputSchmea.description = schema.description;
         }
-        if self.includes.default {
+        if self.additionalInfoFlags.extractDefault {
             inputSchmea.default = schema?.default;
         }
 
@@ -332,7 +332,7 @@ class OpenAPISpecVisitor {
         return inputSchmea;
     }
 
-    function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
+    private function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
         SubSchema[] anyOf = from Schema element in schema.anyOf
             select check self.visitSchema(element);
         return {
@@ -340,7 +340,7 @@ class OpenAPISpecVisitor {
         };
     }
 
-    function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
+    private function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
         SubSchema[] allOf = from Schema element in schema.allOf
             select check self.visitSchema(element);
         return {
@@ -348,7 +348,7 @@ class OpenAPISpecVisitor {
         };
     }
 
-    function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
+    private function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
         SubSchema[] oneOf = from Schema element in schema.oneOf
             select check self.visitSchema(element);
         return {
@@ -356,7 +356,7 @@ class OpenAPISpecVisitor {
         };
     }
 
-    function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
+    private function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
         return {
             not: check self.visitSchema(schema.not)
         };

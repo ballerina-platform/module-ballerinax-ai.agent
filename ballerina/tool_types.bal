@@ -40,7 +40,7 @@ type HttpInput record {|
 
 // input schema definitions ----------------------------
 public type SimpleInputSchema record {|
-    PrimitiveInputType 'type?; // avoid ambiguity with ArrayInputSchema and ObjectInputSchema
+    never 'type?; // avoid ambiguity with ArrayInputSchema and ObjectInputSchema
     string|SimpleInputSchema|SimpleInputSchema[]...;
 |};
 
@@ -104,6 +104,7 @@ type HttpJsonInputSchema record {|
 |};
 
 type HttpSimpleInputSchema record {|
+    *SimpleInputSchema;
     string path;
     SimpleInputSchema queryParams?;
     SimpleInputSchema requestBody?;
@@ -114,11 +115,10 @@ public type Tool record {|
     string name;
     string description;
     InputSchema? inputs = ();
-    function caller;
+    isolated function caller;
 |};
 
 public type HttpTool record {|
-    // *HttpInputSchema;
     string name;
     string description;
     HttpMethod method;

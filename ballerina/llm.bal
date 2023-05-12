@@ -18,67 +18,64 @@ import ballerinax/openai.text;
 import ballerinax/openai.chat;
 
 # Defines allowed LLM client types
-public type LLMRemoteClient text:Client|chat:Client;
+public type LlmRemoteClient text:Client|chat:Client;
 
-public type GPT3ConnectionConfig text:ConnectionConfig;
+public type Gpt3ConnectionConfig text:ConnectionConfig;
 
-public type ChatGPTConnectionConfig chat:ConnectionConfig;
+public type ChatGptConnectionConfig chat:ConnectionConfig;
 
-public type GPT3ModelConfig record {|
-    *text:CreateCompletionRequest;
+public type Gpt3ModelConfig readonly & record {|
     string model = GPT3_MODEL_NAME;
-    decimal? temperature = DEFAULT_TEMPERATURE;
-    int? max_tokens = DEFAULT_MAX_TOKEN_COUNT;
-    string|string[]? stop = OBSERVATION_KEY;
+    decimal temperature = DEFAULT_TEMPERATURE;
+    int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
+    never stop?;
+    never prompt?;
 |};
 
-public type ChatGPTModelConfig record {|
-    *chat:CreateChatCompletionRequest;
+public type ChatGptModelConfig readonly & record {|
     string model = GPT3_5_MODEL_NAME;
-    decimal? temperature = DEFAULT_TEMPERATURE;
-    string|string[]? stop = OBSERVATION_KEY;
-    chat:ChatCompletionRequestMessage[] messages = [];
+    decimal temperature = DEFAULT_TEMPERATURE;
+    never messages?;
+    never stop?;
 |};
 
 public type ChatMessage chat:ChatCompletionRequestMessage;
 
-type PromptConstruct record {|
+public type PromptConstruct record {|
     string instruction;
     string query;
     string[] history;
 |};
 
-public type ModelConfig GPT3ModelConfig|ChatGPTModelConfig;
-
 # Extendable LLM model object that can be used for completion tasks
 # Useful to initialize the agents 
 # + llmClient - A remote client object to access LLM models
-# + modelConfig - Required model configs to use do the completion
-public type LLMModel distinct object {
-    LLMRemoteClient llmClient;
-    ModelConfig modelConfig;
-    function _generate(PromptConstruct prompt) returns string|error;
-    // function initializePrompt(s)
+public type LlmModel distinct isolated object {
+    LlmRemoteClient llmClient;
+    isolated function generate(PromptConstruct prompt) returns string|error;
 };
 
-public class GPT3Model {
-    *LLMModel;
-    text:Client llmClient;
-    GPT3ModelConfig modelConfig;
+public isolated class Gpt3Model {
+    *LlmModel;
+    final text:Client llmClient;
+    private final Gpt3ModelConfig modelConfig;
 
-    public function init(GPT3ConnectionConfig connectionConfig, GPT3ModelConfig modelConfig = {}) returns error? {
+    public isolated function init(Gpt3ConnectionConfig connectionConfig, Gpt3ModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
-        modelConfig.stop = OBSERVATION_KEY;
         self.modelConfig = modelConfig;
     }
 
-    function complete(string prompt) returns string|error {
-        self.modelConfig.prompt = prompt;
-        text:CreateCompletionResponse response = check self.llmClient->/completions.post(self.modelConfig);
+    public isolated function complete(string prompt) returns string|error {
+        text:CreateCompletionRequest modelConfig = {
+            ...self.modelConfig,
+            stop: OBSERVATION_KEY,
+            prompt
+        };
+        text:CreateCompletionResponse response = check self.llmClient->/completions.post(modelConfig);
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
-    function _generate(PromptConstruct prompt) returns string|error {
+    isolated function generate(PromptConstruct prompt) returns string|error {
         string thoughtHistory = "";
         thoughtHistory += <string>from string history in prompt.history
             select history + "\n";
@@ -93,20 +90,23 @@ ${thoughtHistory}${THOUGHT_KEY}`;
 
 }
 
-public class ChatGPTModel {
-    *LLMModel;
-    chat:Client llmClient;
-    ChatGPTModelConfig modelConfig;
+public isolated class ChatGptModel {
+    *LlmModel;
+    final chat:Client llmClient;
+    private final ChatGptModelConfig modelConfig;
 
-    public function init(ChatGPTConnectionConfig connectionConfig, ChatGPTModelConfig modelConfig = {}) returns error? {
+    public isolated function init(ChatGptConnectionConfig connectionConfig, ChatGptModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
-        modelConfig.stop = OBSERVATION_KEY;
         self.modelConfig = modelConfig;
     }
 
-    function chatComplete(ChatMessage[] messages) returns string|error {
-        self.modelConfig.messages = messages;
-        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(self.modelConfig);
+    public isolated function chatComplete(ChatMessage[] messages) returns string|error {
+        chat:CreateChatCompletionRequest modelConfig = {
+            ...self.modelConfig,
+            stop: OBSERVATION_KEY,
+            messages
+        };
+        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(modelConfig);
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         if message is () {
             return error("Empty response from the model");
@@ -114,7 +114,7 @@ public class ChatGPTModel {
         return message.content;
     }
 
-    function _generate(PromptConstruct prompt) returns string|error {
+    isolated function generate(PromptConstruct prompt) returns string|error {
         string userMessage = "";
         if (prompt.history.length() == 0) {
             userMessage = prompt.query;

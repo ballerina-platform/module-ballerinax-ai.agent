@@ -346,7 +346,7 @@ type Tag record {|
     ExternalDocumentation externalDocs?;
 |};
 
-type OpenAPISpec record {|
+type OpenApiSpec record {|
     string openapi;
     Info info;
     string jsonSchemaDialect?;

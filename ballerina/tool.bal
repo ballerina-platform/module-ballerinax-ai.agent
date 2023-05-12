@@ -14,36 +14,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/log;
+type ToolNotFoundError distinct error;
 
-type ToolDescription record {
-    string description;
-    InputSchema inputSchema?;
-};
+type ToolInvalidInputError distinct error;
 
-public type ToolInfo record {|
+type ToolInfo readonly & record {|
     string toolList;
     string toolIntro;
 |};
 
-class ToolStore {
-    private map<Tool> tools;
-
-    function init() {
-        self.tools = {};
-    }
+isolated class ToolStore {
+    private final map<Tool & readonly> tools = {};
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks 
     #
     # + tools - A list of tools that are available to the LLM
     # + return - An error if the tool is already registered
-    function registerTools(Tool... tools) returns error? {
-        foreach Tool tool in tools {
-            if self.tools.hasKey(tool.name) {
-                return error(string `Duplicated tools. Tool '${tool.name}' is already registered.`);
+    isolated function registerTools(Tool... tools) returns error? {
+        lock {
+            foreach Tool tool in tools.cloneReadOnly() {
+                if self.tools.hasKey(tool.name) {
+                    return error(string `Duplicated tools. Tool '${tool.name}' is already registered.`);
+                }
+                self.tools[tool.name] = tool;
             }
-            self.tools[tool.name] = tool;
         }
     }
 
@@ -52,41 +47,40 @@ class ToolStore {
     # + toolName - Name of the tool to be executed
     # + inputs - Inputs to the tool
     # + return - Result of the tool execution or an error if tool execution fails
-    function runTool(string toolName, map<json>? inputs) returns string|error {
-
-        if !self.tools.hasKey(toolName) {
-            log:printWarn("Failed to execute the unknown tool: " + toolName);
-            return string `You don't have access to the tool: ${toolName}. Try a different approach`;
-        }
-
-        function caller = self.tools.get(toolName).caller;
-        any|error observation;
-        if inputs is null || inputs.length() == 0 {
-            observation = function:call(caller);
-        } else {
-            map<json> & readonly toolParams = check inputs.fromJsonWithType();
-            if toolParams.length() > 0 {
-                observation = function:call(caller, toolParams);
-            } else {
-                observation = function:call(caller);
+    isolated function runTool(string toolName, map<json>? inputs) returns any|error {
+        isolated function caller;
+        lock {
+            if !self.tools.hasKey(toolName) {
+                return error ToolNotFoundError(string `Can't find the tool '${toolName}'. Provide a valid toolName`);
             }
+            caller = self.tools.get(toolName).caller;
         }
-
+        any|error observation;
+        if inputs is () || inputs.length() == 0 {
+            observation = trap check function:call(caller);
+        } else {
+            map<json> & readonly toolParams = inputs.cloneReadOnly();
+            observation = trap check function:call(caller, toolParams);
+        }
         if observation is error {
-            return observation.message();
+            return error ToolInvalidInputError(string `Tool '${toolName}' is provide with invalid inputs: ${(inputs ?: {}).toString()}`);
         }
-        return observation.toString();
+        return observation;
     }
 
     # Generate descriptions for the tools registered
     # + return - Return a record with tool names and descriptions
-    function extractToolInfo() returns ToolInfo {
+    isolated function extractToolInfo() returns ToolInfo {
         string[] toolNameList = [];
         string[] toolIntroList = [];
-        foreach Tool tool in self.tools {
-            toolNameList.push(tool.name);
 
-            ToolDescription toolDescription = {
+        map<Tool> tools;
+        lock {
+            tools = self.tools.cloneReadOnly();
+        }
+        foreach Tool tool in tools {
+            toolNameList.push(tool.name);
+            record {|string description; InputSchema inputSchema?;|} toolDescription = {
                 description: tool.description,
                 inputSchema: tool.inputs
             };
@@ -98,9 +92,11 @@ class ToolStore {
         };
     }
 
-    function mergeToolStore(ToolStore toolStore) {
-        foreach Tool tool in toolStore.tools {
-            self.tools[tool.name] = tool;
+    isolated function mergeToolStore(ToolStore toolStore) {
+        lock {
+            foreach Tool tool in toolStore.tools {
+                self.tools[tool.name] = tool;
+            }
         }
     }
 }

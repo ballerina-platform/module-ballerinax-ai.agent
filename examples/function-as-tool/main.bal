@@ -41,13 +41,13 @@ final http:Client wifiClient = check new (wifiAPIUrl, {
     }
 });
 
-public function listGuestWifi(*WifiGetParams params) returns string|error {
+public isolated function listGuestWifi(*WifiGetParams params) returns string|error {
     string path = string `/guest-wifi-accounts/${params.email}`;
     http:Response response = check wifiClient->get(path);
     return response.getTextPayload();
 }
 
-public function addGuestWifi(*WifiCreateParams params) returns string|error {
+public isolated function addGuestWifi(*WifiCreateParams params) returns string|error {
     string path = "/guest-wifi-accounts";
     json payload = params;
     http:Response response = check wifiClient->post(path, message = payload);
@@ -59,7 +59,7 @@ const string DEFAULT_QUERY = "create a new guest wifi with user guestJohn and pa
 public function main(string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
-    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
 
     // 2) Define functions as tools 
     agent:Tool listwifi = {
@@ -80,5 +80,5 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Agent agent = check new (model, listwifi, addWifi);
 
     // 3) Run the agent with user's query
-    check agent.run(query, context = {"email": "alex@wso2.com"});
+    _ = agent.run(query, context = {"email": "alex@wso2.com"});
 }

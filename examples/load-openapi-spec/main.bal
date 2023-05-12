@@ -29,20 +29,25 @@ const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and 
 public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
-    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
 
-    // 2) Create the OpenAPI specification toolkit (load tools from openApi specification)
-    agent:OpenAPIToolKit openAPIToolKit = check new (openAPIPath, wifiAPIUrl, {
+    // 2) Extract tools from openAPI specification
+    agent:ApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpec(openAPIPath);
+
+    // 3) Createn httpToolKit with the extract tools from openAPI specification
+    agent:HttpToolKit toolKit = check new (wifiAPIUrl, apiSpecification.tools, {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,
             clientSecret: wifiClientSecret
         }
-    });
+    }
+    );
 
     // 3) Create the agent
-    agent:Agent agent = check new (model, openAPIToolKit);
+    agent:Agent agent = check new (model, toolKit);
 
     // 4) Execute the user's query
-    check agent.run(query, context = {"email" : "johnw@gmail.com"});
+    _ = agent.run(query, context = {"email": "johnw@gmail.com"});
+
 }

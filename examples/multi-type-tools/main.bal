@@ -16,6 +16,7 @@
 
 import ballerinax/googleapis.gmail;
 import nadheeshjihan/agent;
+import ballerina/io;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;
@@ -25,7 +26,7 @@ configurable string wifiClientSecret = ?;
 configurable string gmailToken = ?;
 
 // define send mail tool as a function
-function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
+isolated function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
     gmail:MessageRequest message = check messageRequest.cloneWithType();
     message["contentType"] = "text/plain";
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
@@ -78,7 +79,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     ];
 
-    // 3) Create the HttpLoader (easily load http tools for a given API)
+    // Create the Http toolkit (easily load http tools for a given API)
     agent:HttpClientConfig clientConfig = {
         auth: {
             tokenUrl: wifiTokenUrl,
@@ -86,8 +87,24 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             clientSecret: wifiClientSecret
         }
     };
+
     agent:HttpToolKit wifiApiToolKit = check new (wifiAPIUrl, httpTools, clientConfig);
-    agent:ChatGPTModel model = check new ({auth: {token: openAIToken}});
+
+    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
     agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
-    check agent.run(query, maxIter = 5, context = {"userEmail" : "johnny@wso2.com"});
+
+    // Execute the query using agent iterator
+    int iter = 0;
+    foreach agent:ExecutorOutput result in agent.iterator(query, context = {"userEmail": "johnny@wso2.com"}) {
+        io:println(result.thought);
+        any|error observation = result?.observation;
+        if observation !is () {
+            io:print("Observation: ");
+            io:println(observation);
+        }
+        iter += 1;
+        if iter == 5 {
+            break;
+        }
+    }
 }

@@ -18,29 +18,27 @@ import ballerina/http;
 
 public type HttpClientConfig http:ClientConfiguration;
 
-public type BaseToolKit distinct object {
-    ToolStore toolStore;
-    function initializeToolKit(ToolStore store);
-};
+public type ToolKit HttpToolKit;
 
-public class HttpToolKit {
-    *BaseToolKit;
-    private map<string|string[]> headers;
-    private http:Client httpClient;
+public type HttpHeader readonly & record {|string|string[]...;|};
 
-    public function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, map<string|string[]> headers = {}) returns error? {
+public isolated class HttpToolKit {
+    private final ToolStore toolStore;
+    private final HttpHeader headers;
+    private final http:Client httpClient;
+
+    public isolated function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, HttpHeader headers = {}) returns error? {
         self.toolStore = new;
-        self.headers = headers;
+        self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
         check self.registerTools(...tools);
     }
 
-    function initializeToolKit(ToolStore store) {
-        store.mergeToolStore(self.toolStore);
-        self.toolStore = store;
+    isolated function getToolStore() returns ToolStore {
+        return self.toolStore;
     }
 
-    private function registerTools(HttpTool... httpTools) returns error? {
+    private isolated function registerTools(HttpTool... httpTools) returns error? {
         InputSchema inputSchema;
 
         foreach HttpTool httpTool in httpTools {
@@ -78,7 +76,7 @@ public class HttpToolKit {
                 inputSchema = httpInputSchema;
             }
 
-            function httpCaller = self.get;
+            isolated function httpCaller = self.get;
             match httpTool.method {
                 GET => {
                     // do nothing (default)
@@ -122,12 +120,13 @@ public class HttpToolKit {
         }
     }
 
-    private function get(*HttpInput httpInput) returns string|error {
+    private isolated function get(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
             path += check buildQueryURL(queryParams);
         }
+
         http:Response|http:ClientError getResult = self.httpClient->get(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -136,7 +135,7 @@ public class HttpToolKit {
         }
     }
 
-    private function post(*HttpInput httpInput) returns string|error {
+    private isolated function post(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -150,7 +149,7 @@ public class HttpToolKit {
         }
     }
 
-    private function delete(*HttpInput httpInput) returns string|error {
+    private isolated function delete(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -164,7 +163,7 @@ public class HttpToolKit {
         }
     }
 
-    private function put(*HttpInput httpInput) returns string|error {
+    private isolated function put(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -178,7 +177,7 @@ public class HttpToolKit {
         }
     }
 
-    private function patch(*HttpInput httpInput) returns string|error {
+    private isolated function patch(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -192,7 +191,7 @@ public class HttpToolKit {
         }
     }
 
-    private function head(*HttpInput httpInput) returns string|error {
+    private isolated function head(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -206,7 +205,7 @@ public class HttpToolKit {
         }
     }
 
-    private function options(*HttpInput httpInput) returns string|error {
+    private isolated function options(*HttpInput httpInput) returns string|error {
         map<json>? queryParams = httpInput?.queryParams;
         string path = httpInput.path;
         if queryParams !is () {
@@ -221,7 +220,7 @@ public class HttpToolKit {
     }
 }
 
-function buildQueryURL(map<json> queryparams) returns string|error {
+isolated function buildQueryURL(map<json> queryparams) returns string|error {
     string query = "?";
     foreach [string, json] param in queryparams.entries() {
         string key = param[0];
@@ -238,41 +237,8 @@ function buildQueryURL(map<json> queryparams) returns string|error {
     return query.substring(0, query.length() - 1);
 }
 
-public type OpenAPISchemaKeyword record {|
-    boolean description = false;
-    boolean default = false;
+public type AdditionInfoFlags record {|
+    boolean extractDescrition = false;
+    boolean extractDefault = false;
 |};
 
-public type OpenAPIToolKitConfig record {|
-    string serverURL?;
-    HttpClientConfig clientConfig = {};
-    map<string|string[]> headers = {};
-    OpenAPISchemaKeyword includes = {};
-|};
-
-public class OpenAPIToolKit {
-    *BaseToolKit;
-    private HttpToolKit httpToolKit;
-
-    public function init(string filePath, OpenAPIToolKitConfig toolkitConfig = {}) returns error? {
-        OpenAPISpec openAPISchema = check parseOpenAPISpec(filePath);
-        OpenAPISpecVisitor visitor = new (includes = toolkitConfig.includes);
-        check visitor.visit(openAPISchema);
-
-        string? serverURL = toolkitConfig.serverURL ?: visitor.serverURL;
-        if serverURL is () {
-            return error("server url is not provided");
-        }
-
-        HttpTool[] listResult = visitor.tools;
-        self.httpToolKit = check new (serverURL, listResult, toolkitConfig.clientConfig, toolkitConfig.headers);
-        self.toolStore = self.httpToolKit.toolStore;
-    }
-
-    function initializeToolKit(ToolStore store) {
-        store.mergeToolStore(self.toolStore);
-        self.toolStore = store;
-        self.httpToolKit.initializeToolKit(store);
-    }
-
-}

@@ -131,13 +131,13 @@ Agent will proceed with multiple reasoning-action interations following [ReAct F
 
 1) Agent creates a new wifi account for owner `john@gmail.com`
 
-    ```
-    Reasoning iteration: 1
-    Thought: I need to use the tools available to create the guest wifi account and send an email with the list of wifi accounts.
-    Tool: Create wifi
-    Tool Input: {"path":"/guest-wifi-accounts","queryParams":{},"payload":{"email":"john@gmail.com","username":"guest123","password":"john123"}}
-    Observation: Successfully added the wifi account
-    ```
+```
+Reasoning iteration: 1
+Thought: I need to use the tools available to create the guest wifi account and send an email with the list of wifi accounts.
+Tool: Create wifi
+Tool Input: {"path":"/guest-wifi-accounts","queryParams":{},"payload":{"email":"john@gmail.com","username":"guest123","password":"john123"}}
+Observation: Successfully added the wifi account
+```
 
 2) Agent finds exisiting guest wifi accounts under the owner `john@gmail.com`
 

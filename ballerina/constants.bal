@@ -24,6 +24,7 @@ const DEFAULT_TEMPERATURE = 0.7d;
 // openapi
 const OPENAPI_JSON_CONTENT_KEY = "application/json";
 const OPENAPI_QUERY_PARAM_LOC_KEY = "query";
+const OPENAPI_COMPONENTS_KEY = "components";
 const OPENAPI_PATTER_DATE = "yyyy-MM-dd";
 const OPENAPI_PATTER_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 const OPENAPI_SUPPORTED_STYLE = "form";

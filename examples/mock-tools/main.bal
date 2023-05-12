@@ -15,6 +15,7 @@
 // under the License.
 
 import nadheeshjihan/agent;
+import ballerina/regex;
 
 configurable string openAIToken = ?;
 
@@ -27,12 +28,12 @@ type CalculatorParams record {|
 |};
 
 // create two mock tools 
-function searchToolMock(*SearchParams params) returns string {
+isolated function searchToolMock(*SearchParams params) returns string {
     string query = params.query.trim().toLowerAscii();
-    if query.matches(re `.*girlfriend.*`) {
+    if regex:matches(query, ".*girlfriend.*") {
         return "Camila Morrone";
 
-    } else if query.matches(re `.*age.*`) {
+    } else if regex:matches(query, ".*age.*") {
         return "25 years";
     }
     else {
@@ -40,7 +41,7 @@ function searchToolMock(*SearchParams params) returns string {
     }
 }
 
-function calculatorToolMock(*CalculatorParams params) returns string {
+isolated function calculatorToolMock(*CalculatorParams params) returns string {
     string expression = params.expression.trim();
     if (expression == "25^0.43") {
         return "Answer: 3.991298452658078";
@@ -66,7 +67,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         caller: calculatorToolMock
     };
 
-    agent:GPT3Model model = check new ({auth: {token: openAIToken}});
+    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
     agent:Agent agent = check new (model, searchTool, calculatorTool);
-    check agent.run(query);
+    _ = agent.run(query);
 }
