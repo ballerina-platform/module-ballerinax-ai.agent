@@ -18,115 +18,98 @@ import ballerina/http;
 
 public type HttpClientConfig http:ClientConfiguration;
 
-public type ToolKit HttpToolKit;
+# allows implmenting custom toolkits by extending this type
+public type BaseToolKit distinct object {
+    isolated function getTools() returns Tool[]|error;
+};
 
 public type HttpHeader readonly & record {|string|string[]...;|};
 
 public isolated class HttpToolKit {
-    private final ToolStore toolStore;
+    *BaseToolKit;
+    private final HttpTool[] & readonly tools;
     private final HttpHeader headers;
     private final http:Client httpClient;
 
     public isolated function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, HttpHeader headers = {}) returns error? {
-        self.toolStore = new;
+        self.tools = tools.cloneReadOnly();
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
-        check self.registerTools(...tools);
     }
 
-    isolated function getToolStore() returns ToolStore {
-        return self.toolStore;
-    }
+    isolated function getTools() returns Tool[]|error {
+        Tool[] tools = [];
+        foreach HttpTool httpTool in self.tools {
+            InputSchema? queryParams = httpTool?.queryParams;
+            InputSchema? requestBody = httpTool?.requestBody;
 
-    private isolated function registerTools(HttpTool... httpTools) returns error? {
-        InputSchema inputSchema;
+            if (requestBody !is () && requestBody.length() == 0) || (queryParams !is () && queryParams.length() == 0) {
+                return error("Invalid requestBody or queryParameter schemas. Empty records are not allowed, use null instead.");
+            }
 
-        foreach HttpTool httpTool in httpTools {
-            InputSchema? queryParams = httpTool.queryParams;
-            InputSchema? requestBody = httpTool.requestBody;
-
-            if (queryParams is JsonInputSchema && (requestBody is SimpleInputSchema && requestBody != {})) ||
-            ((queryParams is SimpleInputSchema && queryParams != {}) && requestBody is JsonInputSchema) {
+            if (queryParams is JsonInputSchema && requestBody is SimpleInputSchema) || (queryParams is SimpleInputSchema && requestBody is JsonInputSchema) {
                 return error("Unsupported input schema combination. " +
                 "Both `queryParams` and `requestBody` should be either `JsonInputSchema` or `SimpleInputSchema`");
             }
 
-            if queryParams == {} {
-                queryParams = ();
-            }
-            if requestBody == {} {
-                requestBody = ();
-            }
-
-            if queryParams is JsonInputSchema || requestBody is JsonInputSchema {
-                HttpJsonInputSchema jsonInputSchema = {
-                    properties: {
-                        path: {pattern: httpTool.path},
-                        queryParams: <JsonInputSchema?>queryParams ?: (),
-                        requestBody: <JsonInputSchema?>requestBody ?: ()
-                    }
-                };
-                inputSchema = jsonInputSchema;
+            InputSchema inputSchema;
+            if queryParams is JsonInputSchema? && requestBody is JsonInputSchema? {
+                map<JsonSubSchema> properties = {path: {'type: STRING, pattern: httpTool.path}};
+                inputSchema = {properties};
+                if queryParams is JsonSubSchema {
+                    properties[QUERY_PARAM_KEY] = queryParams;
+                }
+                if requestBody is JsonSubSchema {
+                    properties[REQUEST_BODY_KEY] = requestBody;
+                }
             } else {
-                HttpSimpleInputSchema httpInputSchema = {
-                    path: httpTool.path,
-                    queryParams: <SimpleInputSchema?>queryParams ?: (),
-                    requestBody: <SimpleInputSchema?>requestBody ?: ()
-                };
-                inputSchema = httpInputSchema;
+                inputSchema = {"path": httpTool.path};
+                if queryParams is SimpleInputSchema {
+                    inputSchema[QUERY_PARAM_KEY] = queryParams;
+                }
+                if requestBody is SimpleInputSchema {
+                    inputSchema[REQUEST_BODY_KEY] = requestBody;
+                }
             }
 
-            isolated function httpCaller = self.get;
+            isolated function caller = self.get;
             match httpTool.method {
-                GET => {
-                    // do nothing (default)
+                GET => { // do nothing (default)
                 }
                 POST => {
-                    httpCaller = self.post;
-
+                    caller = self.post;
                 }
                 DELETE => {
-                    httpCaller = self.delete;
-
+                    caller = self.delete;
                 }
                 PUT => {
-                    httpCaller = self.put;
-
+                    caller = self.put;
                 }
                 PATCH => {
-                    httpCaller = self.patch;
-
+                    caller = self.patch;
                 }
                 HEAD => {
-                    httpCaller = self.head;
-
+                    caller = self.head;
                 }
                 OPTIONS => {
-                    httpCaller = self.options;
-
+                    caller = self.options;
                 }
                 _ => {
-                    return error("invalid http type");
+                    return error("invalid http type: " + httpTool.method.toString());
                 }
             }
-
-            Tool tool = {
+            tools.push({
                 name: httpTool.name,
                 description: httpTool.description,
-                inputs: inputSchema,
-                caller: httpCaller
-            };
-            check self.toolStore.registerTools(tool);
+                inputSchema,
+                caller
+            });
         }
+        return tools;
     }
 
     private isolated function get(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
-
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->get(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -136,11 +119,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function post(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -150,11 +129,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function delete(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -164,11 +139,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function put(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -178,11 +149,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function patch(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -192,11 +159,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function head(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->head(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -206,11 +169,7 @@ public isolated class HttpToolKit {
     }
 
     private isolated function options(*HttpInput httpInput) returns string|error {
-        map<json>? queryParams = httpInput?.queryParams;
-        string path = httpInput.path;
-        if queryParams !is () {
-            path += check buildQueryURL(queryParams);
-        }
+        string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response|http:ClientError getResult = self.httpClient->options(path, headers = self.headers);
         if getResult is http:Response {
             return getResult.getTextPayload();
@@ -220,25 +179,21 @@ public isolated class HttpToolKit {
     }
 }
 
-isolated function buildQueryURL(map<json> queryparams) returns string|error {
+isolated function getPathWithQueryParams(string path, map<json>? queryParams) returns string|error {
+    if queryParams is () {
+        return path;
+    }
+
     string query = "?";
-    foreach [string, json] param in queryparams.entries() {
-        string key = param[0];
-        json value = param[1];
+    foreach [string, json] [key, value] in queryParams.entries() {
         if value is string {
             query += string `${key}=${value}&`;
         } else if value is string[] {
             query += <string>from string element in value
-                select key + "=" + element + "&";
+                select string `${key}=${element}&`;
         } else {
             return error(string `Unsupported query parameter value: ${value.toString()} for key ${key}`);
         }
     }
-    return query.substring(0, query.length() - 1);
+    return path + query.substring(0, query.length() - 1);
 }
-
-public type AdditionInfoFlags record {|
-    boolean extractDescrition = false;
-    boolean extractDefault = false;
-|};
-

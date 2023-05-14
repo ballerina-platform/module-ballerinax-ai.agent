@@ -1,38 +1,36 @@
 import ballerina/test;
-import ballerina/io;
 
 Tool searchTool = {
     name: "Search",
     description: " A search engine. Useful for when you need to answer questions about current events",
-    inputs: {"query": "string"},
+    inputSchema: {"query": "string"},
     caller: searchToolMock
 };
 
 Tool calculatorTool = {
     name: "Calculator",
     description: "Useful for when you need to answer questions about math.",
-    inputs: {"expression": "string mathematical expression"},
+    inputSchema: {"expression": "string mathematical expression"},
     caller: calculatorToolMock
 };
 
-GPT3Model model = test:mock(GPT3Model, new MockLLM());
+Gpt3Model model = test:mock(Gpt3Model, new MockLLM());
 
 @test:Config {}
 function testAgentInitialization() {
     Agent|error agent = new (model, searchTool, calculatorTool);
-    test:assertTrue(agent is Agent, "Agent creation is unsuccessful");
+    if agent is error {
+        test:assertFail("Agent creation is unsuccessful");
+    }
 
     ToolInfo toolInfo = {
         toolList: string `${searchTool.name}, ${calculatorTool.name}`,
-        "toolIntro": string `Search: ${{"description": searchTool.description, "inputSchema": searchTool.inputs}.toString()}
-Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.inputs}.toString()}`
+        "toolIntro": string `Search: ${{"description": searchTool.description, "inputSchema": searchTool.inputSchema}.toString()}
+Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.inputSchema}.toString()}`
     };
 
-    if agent is Agent {
-        ToolStore store = agent.getToolStore();
-        io:println(store.extractToolInfo());
-        test:assertEquals(store.extractToolInfo(), toolInfo);
-    }
+    ToolStore store = agent.getToolStore();
+    test:assertEquals(store.extractToolInfo(), toolInfo);
 }
 
 @test:Config {}
@@ -40,7 +38,7 @@ function testInitializedPrompt() returns error? {
     Agent agent = check new (model, searchTool, calculatorTool);
 
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExectutor agentExecutor = agent.createAgentExecutor(query);
+    AgentExecutor agentExecutor = agent.createAgentExecutor(query);
 
     ToolInfo toolInfo = agent.getToolStore().extractToolInfo();
     PromptConstruct prompt = {
@@ -62,7 +60,7 @@ function testInitializedPrompt() returns error? {
         "... (this Thought/Action/Observation can repeat N times)\n" +
         "Thought: I now know the final answer\n" +
         "Final Answer: the final answer to the original input question\n\n" +
-        "Begin! Reminder to use the EXACT types as specified in JSON \"inputSchema\" to generate input records.",
+        "Begin! Reminder to use the EXACT types as specified in JSON \"inputSchema\" to generate input records. Do NOT add any additional fields to the input record.",
         query: query,
         history: []
     };
@@ -73,25 +71,28 @@ function testInitializedPrompt() returns error? {
 function testAgentExecutorRun() returns error? {
     Agent agent = check new (model, searchTool, calculatorTool);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExectutor agentExecutor = agent.createAgentExecutor(query);
+    AgentExecutor agentExecutor = agent.createAgentExecutor(query);
 
-    ExectutorOutput|error results = agentExecutor.next();
-    test:assertTrue(results is ExectutorOutput, "AgentExecutor.next returns an error during first iteration");
-    if results is ExectutorOutput {
-        test:assertEquals(results.observation, "Camila Morrone");
+    record {|ExecutorOutput value;|}? result = agentExecutor.next();
+    if result is () {
+        test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
+    ExecutorOutput output = result.value;
+    test:assertEquals(output?.observation, "Camila Morrone");
 
-    results = agentExecutor.next();
-    test:assertTrue(results is ExectutorOutput, "AgentExecutor.next returns an error during second iteration");
-    if results is ExectutorOutput {
-        test:assertEquals(results.observation, "25 years");
+    result = agentExecutor.next();
+    if result is () {
+        test:assertFail("AgentExecutor.next returns an null during second iteration");
     }
+    output = result.value;
+    test:assertEquals(output?.observation, "25 years");
 
-    results = agentExecutor.next();
-    test:assertTrue(results is ExectutorOutput, "AgentExecutor.next returns an error during third iteration");
-    if results is ExectutorOutput {
-        test:assertEquals(results.observation, "Answer: 3.991298452658078");
+    result = agentExecutor.next();
+    if result is () {
+        test:assertFail("AgentExecutor.next returns an null during third iteration");
     }
+    output = result.value;
+    test:assertEquals(output?.observation, "Answer: 3.991298452658078");
 
 }
 

@@ -82,7 +82,7 @@ isolated class ToolStore {
             toolNameList.push(tool.name);
             record {|string description; InputSchema inputSchema?;|} toolDescription = {
                 description: tool.description,
-                inputSchema: tool.inputs
+                inputSchema: tool.inputSchema
             };
             toolIntroList.push(tool.name + ": " + toolDescription.toString());
         }
@@ -90,13 +90,5 @@ isolated class ToolStore {
             toolList: string:'join(", ", ...toolNameList),
             toolIntro: string:'join("\n", ...toolIntroList)
         };
-    }
-
-    isolated function mergeToolStore(ToolStore toolStore) {
-        lock {
-            foreach Tool tool in toolStore.tools {
-                self.tools[tool.name] = tool;
-            }
-        }
     }
 }

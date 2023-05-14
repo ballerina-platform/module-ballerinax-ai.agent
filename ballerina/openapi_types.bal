@@ -86,7 +86,7 @@ type Components record {|
     map<SecurityScheme|Reference> securitySchemes?;
     map<Link|Reference> links?;
     map<Callback|Reference> callbacks?;
-    Paths pathItems?;
+    map<PathItem|Reference> pathItems?;
 |};
 
 type ServerVariable record {|
@@ -202,13 +202,12 @@ type StringSchema record {|
     int minLength?;
     int maxLength?;
     string pattern?;
-    string format?;
     string[] 'enum?;
 |};
 
 type BooleanSchema record {|
-    BOOLEAN 'type = BOOLEAN;
     *BaseTypeSchema;
+    BOOLEAN 'type = BOOLEAN;
 |};
 
 type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
@@ -220,7 +219,6 @@ type ArraySchema record {|
     Schema items;
     int minItems?;
     int maxItems?;
-    // boolean contains?;
 |};
 
 type Discriminator record {|
@@ -346,7 +344,7 @@ type Tag record {|
     ExternalDocumentation externalDocs?;
 |};
 
-type OpenApiSpec record {|
+type OpenApiSpec readonly & record {|
     string openapi;
     Info info;
     string jsonSchemaDialect?;

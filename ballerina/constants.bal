@@ -38,3 +38,7 @@ const BACKTICK = "`";
 const USER_ROLE = "user";
 const SYSTEM_ROLE = "system";
 
+//toolkit
+const QUERY_PARAM_KEY = "queryParams";
+const REQUEST_BODY_KEY = "requestBody";
+

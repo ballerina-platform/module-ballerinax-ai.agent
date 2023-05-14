@@ -17,9 +17,14 @@
 import ballerina/io;
 import ballerina/log;
 
-public type ApiSpecification record {|
+public type ApiSpecification readonly & record {|
     string serverUrl?;
     HttpTool[] tools;
+|};
+
+public type AdditionInfoFlags record {|
+    boolean extractDescrition = false;
+    boolean extractDefault = false;
 |};
 
 public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns ApiSpecification|error {
@@ -28,25 +33,29 @@ public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags 
     return check visitor.visit(openApiSpec);
 }
 
-isolated function removeExtensions(json schema) {
-    if schema is map<json> {
-        foreach string key in schema.keys() {
+isolated function cleanXtagsFromJsonSpec(map<json>|json[] openAPISpec) {
+    if openAPISpec is map<json> {
+        foreach [string, json] [key, value] in openAPISpec.entries() {
             if key.startsWith("x-") {
-                _ = schema.remove(key);
+                _ = openAPISpec.remove(key);
                 continue;
             }
-            _ = removeExtensions(schema[key]);
+            if value is map<json>|json[] {
+                _ = cleanXtagsFromJsonSpec(value);
+            }
         }
-    } else if schema is json[] {
-        foreach json element in schema {
-            _ = removeExtensions(element);
+        return;
+    }
+    foreach json element in openAPISpec {
+        if element is map<json>|json[] {
+            _ = cleanXtagsFromJsonSpec(element);
         }
     }
 }
 
 isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
-    json fileJson = check io:fileReadJson(jsonPath);
-    removeExtensions(fileJson);
+    map<json> fileJson = check io:fileReadJson(jsonPath).ensureType();
+    cleanXtagsFromJsonSpec(fileJson);
     map<json> & readonly jsonSchema = check fileJson.cloneWithType();
     return jsonSchema.ensureType();
 }
@@ -94,14 +103,9 @@ class OpenApiSpecVisitor {
             return {};
         }
         map<ComponentType> referenceMap = {};
-        foreach [string, map<ComponentType|Reference>?] componentTypeEntry in components.entries() {
-            map<ComponentType|Reference>? componentMap = componentTypeEntry[1];
-            if componentMap is () {
-                continue;
-            }
-            foreach [string, ComponentType|Reference] componentEntry in componentMap.entries() {
-                ComponentType|Reference component = componentEntry[1];
-                string ref = string `#/${OPENAPI_COMPONENTS_KEY}/${componentTypeEntry[0]}/${componentEntry[0]}`;
+        foreach [string, map<ComponentType|Reference>] [componentType, componentMap] in components.entries() {
+            foreach [string, ComponentType|Reference] [componentName, component] in componentMap.entries() {
+                string ref = string `#/${OPENAPI_COMPONENTS_KEY}/${componentType}/${componentName}`;
                 referenceMap[ref] = component;
             }
         }
@@ -109,14 +113,12 @@ class OpenApiSpecVisitor {
     }
 
     private function visitPaths(Paths paths) returns error? {
-        foreach string pathUrl in paths.keys() {
-            PathItem pathItem;
-            if paths.get(pathUrl) is Reference {
-                pathItem = check self.resolveReference(<Reference>paths.get(pathUrl)).ensureType();
+        foreach [string, PathItem|Reference] [pathUrl, pathItem] in paths.entries() {
+            if pathItem is Reference {
+                check self.visitPathItem(check self.resolveReference(pathItem).ensureType(), pathUrl);
             } else {
-                pathItem = check paths.get(pathUrl).ensureType();
+                check self.visitPathItem(pathItem, pathUrl);
             }
-            check self.visitPathItem(pathItem, pathUrl);
         }
     }
 
@@ -167,13 +169,13 @@ class OpenApiSpecVisitor {
             queryParams = check self.visitParameters(parameters);
         }
 
-        InputSchema? jsonRequestBody = ();
-        RequestBody|Reference? requestBody = operation.requestBody;
-        if requestBody is Reference {
-            RequestBody resolvedRequestBody = check self.resolveReference(requestBody).ensureType();
-            jsonRequestBody = check self.visitRequestBody(resolvedRequestBody);
-        } else if requestBody is RequestBody {
-            jsonRequestBody = check self.visitRequestBody(requestBody);
+        InputSchema? requestBody = ();
+        RequestBody|Reference? requestBodySchema = operation.requestBody;
+        if requestBodySchema is Reference {
+            RequestBody resolvedRequestBody = check self.resolveReference(requestBodySchema).ensureType();
+            requestBody = check self.visitRequestBody(resolvedRequestBody);
+        } else if requestBodySchema is RequestBody {
+            requestBody = check self.visitRequestBody(requestBodySchema);
         }
 
         self.tools.push({
@@ -182,7 +184,7 @@ class OpenApiSpecVisitor {
             path,
             method,
             queryParams,
-            requestBody: jsonRequestBody
+            requestBody
         });
     }
 
@@ -199,7 +201,7 @@ class OpenApiSpecVisitor {
 
     private function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema?|error {
 
-        map<SubSchema> properties = {};
+        map<JsonSubSchema> properties = {};
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -240,7 +242,7 @@ class OpenApiSpecVisitor {
         return component;
     }
 
-    private function visitSchema(Schema schema) returns SubSchema|error {
+    private function visitSchema(Schema schema) returns JsonSubSchema|error {
 
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema);
@@ -283,15 +285,15 @@ class OpenApiSpecVisitor {
             return objectSchema;
         }
 
-        foreach string propertyName in properties.keys() {
-            SubSchema trimmedProperty = check self.visitSchema(properties.get(propertyName));
+        foreach [string, Schema] [propertyName, property] in properties.entries() {
+            JsonSubSchema trimmedProperty = check self.visitSchema(property);
             objectSchema.properties[propertyName] = trimmedProperty;
         }
         return objectSchema;
     }
 
     private function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
-        SubSchema trimmedItems = check self.visitSchema(schema.items);
+        JsonSubSchema trimmedItems = check self.visitSchema(schema.items);
         return {
             'type: ARRAY,
             items: trimmedItems
@@ -333,7 +335,7 @@ class OpenApiSpecVisitor {
     }
 
     private function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
-        SubSchema[] anyOf = from Schema element in schema.anyOf
+        JsonSubSchema[] anyOf = from Schema element in schema.anyOf
             select check self.visitSchema(element);
         return {
             anyOf
@@ -341,7 +343,7 @@ class OpenApiSpecVisitor {
     }
 
     private function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
-        SubSchema[] allOf = from Schema element in schema.allOf
+        JsonSubSchema[] allOf = from Schema element in schema.allOf
             select check self.visitSchema(element);
         return {
             allOf
@@ -349,7 +351,7 @@ class OpenApiSpecVisitor {
     }
 
     private function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
-        SubSchema[] oneOf = from Schema element in schema.oneOf
+        JsonSubSchema[] oneOf = from Schema element in schema.oneOf
             select check self.visitSchema(element);
         return {
             oneOf

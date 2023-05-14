@@ -54,67 +54,43 @@ public type PrimitiveInputSchema record {|
 |};
 
 public type AnyOfInputSchema record {|
-    SubSchema[] anyOf;
+    JsonSubSchema[] anyOf;
 |};
 
 public type AllOfInputSchema record {|
-    SubSchema[] allOf;
+    JsonSubSchema[] allOf;
 |};
 
 public type OneOfInputSchema record {|
-    SubSchema[] oneOf;
+    JsonSubSchema[] oneOf;
 |};
 
 public type NotInputSchema record {|
-    SubSchema not;
+    JsonSubSchema not;
 |};
 
 public type ArrayInputSchema record {|
     ARRAY 'type = ARRAY;
-    SubSchema items;
+    JsonSubSchema items;
 |};
 
 public type ObjectInputSchema record {|
     OBJECT 'type = OBJECT;
     string[] required?;
-    map<SubSchema> properties;
+    map<JsonSubSchema> properties;
 |};
 
 public type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|OneOfInputSchema|AllOfInputSchema|NotInputSchema;
 
-public type SubSchema JsonInputSchema|PrimitiveInputSchema;
-
-type HttpPathSchema record {|
-    STRING 'type = STRING;
-    string pattern;
-|};
-
-type HttpPropertiesSchema record {|
-    HttpPathSchema path;
-    JsonInputSchema queryParams?;
-    JsonInputSchema requestBody?;
-|};
+public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema;
 
 public type InputSchema SimpleInputSchema|JsonInputSchema;
-
-type HttpJsonInputSchema record {|
-    *ObjectInputSchema;
-    string[] required = ["path"];
-    HttpPropertiesSchema properties;
-|};
-
-type HttpSimpleInputSchema record {|
-    *SimpleInputSchema;
-    string path;
-    SimpleInputSchema queryParams?;
-    SimpleInputSchema requestBody?;
-|};
 
 // tool definitions ----------------------------
 public type Tool record {|
     string name;
     string description;
-    InputSchema? inputs = ();
+    InputSchema? inputSchema = ();
     isolated function caller;
 |};
 

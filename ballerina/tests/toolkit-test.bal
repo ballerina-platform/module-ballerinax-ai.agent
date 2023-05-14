@@ -48,42 +48,78 @@ HttpTool[] tools = [
     }
 ];
 
-@test:Config {}
-function testHttpToolKitInitialization() {
-    string serviceURL = "http://test-wifi-url.com";
-    HttpToolKit|error httpToolKit = new (serviceURL, tools, {auth: {token: "<API-TOKEN>"}}, {timeout: "10000"});
-    test:assertTrue(httpToolKit is HttpToolKit, "HttpToolKit is not initialized due to an error");
-    if httpToolKit is HttpToolKit {
-        ToolInfo toolInfo = httpToolKit.toolStore.extractToolInfo();
-        test:assertEquals(toolInfo.toolList, string `${tools[0].name}, ${tools[1].name}, ${tools[2].name}`);
-        test:assertEquals(toolInfo.toolIntro,
-            string `${tools[0].name}: {"description":"${tools[0].description}","inputSchema":{"path":"${tools[0].path}"}}
-${tools[1].name}: {"description":"${tools[1].description}","inputSchema":{"path":"${tools[1].path}","requestBody":${tools[1].requestBody.toString()}}}
-${tools[2].name}: {"description":"${tools[2].description}","inputSchema":{"required":["path"],"properties":{"path":{"type":"string","pattern":"${tools[2].path}"},"requestBody":${tools[2].requestBody.toString()}},"type":"object"}}`);
-    }
+isolated function getMock(HttpInput input) returns string|error {
+    return "";
 }
 
 @test:Config {}
-function testOpenAPIToolKitInitialization() {
-    string wifiSpecPath = "tests/resources/wifi-spec.json";
+function testHttpToolKitInitialization() {
     string serviceURL = "http://test-wifi-url.com";
-
-    OpenAPIToolKitConfig config = {
-        serverURL: serviceURL,
-        clientConfig: {auth: {token: "<API-TOKEN>"}},
-        headers: {timeout: "10000"}
-    };
-
-    OpenAPIToolKit|error openAPIToolKit = new (wifiSpecPath, config);
-
-    test:assertTrue(openAPIToolKit is OpenAPIToolKit, "OpenAPIToolKit is not initialized due to an error");
-    if openAPIToolKit is OpenAPIToolKit {
-        ToolInfo toolInfo = openAPIToolKit.toolStore.extractToolInfo();
-        test:assertEquals(toolInfo.toolList, "getGuestWifiAccountsOwneremail, postGuestWifiAccounts, deleteGuestWifiAccountsOwneremailUsername");
-        test:assertEquals(toolInfo.toolIntro,
-            "getGuestWifiAccountsOwneremail: {\"description\":\"Get list of guest WiFi accounts of a given owner email address\",\"inputSchema\":{\"path\":\"/guest-wifi-accounts/{ownerEmail}\"}}\n" +
-            "postGuestWifiAccounts: {\"description\":\"Create new guest WiFi account\",\"inputSchema\":{\"required\":[\"path\"],\"properties\":{\"path\":{\"type\":\"string\",\"pattern\":\"/guest-wifi-accounts\"},\"requestBody\":{" +
-                "\"allOf\":[{\"type\":\"object\",\"properties\":{\"email\":{\"type\":\"string\"},\"username\":{\"type\":\"string\"}}},{\"type\":\"object\",\"properties\":{\"password\":{\"type\":\"string\"}}}]}},\"type\":\"object\"}}\n" +
-            "deleteGuestWifiAccountsOwneremailUsername: {\"description\":\"Delete a guest WiFi account\",\"inputSchema\":{\"path\":\"/guest-wifi-accounts/{ownerEmail}/{username}\"}}");
+    HttpToolKit|error httpToolKit = new (serviceURL, tools, {auth: {token: "<API-TOKEN>"}}, {"timeout": "10000"});
+    if httpToolKit is error {
+        test:assertFail("HttpToolKit is not initialized due to an error");
     }
+    Tool[]|error tools = httpToolKit.getTools();
+    if tools is error {
+        test:assertFail("Error occurred while getting tools from HttpToolKit");
+    }
+    test:assertEquals(tools.length(), 3);
+
+    test:assertEquals(tools[0].name, "httpGet");
+    test:assertEquals(tools[0].description, "test HTTP GET tool");
+    test:assertEquals(tools[0].inputSchema, {
+        'type: "object",
+        properties: {
+            path: {
+                'type: "string",
+                pattern: "/example-get/{pathParam}"
+            }
+        }
+    });
+
+    test:assertEquals(tools[1].name, "httpPostWithSimpleSchema");
+    test:assertEquals(tools[1].description, "test HTTP POST tool with simple schema");
+    test:assertEquals(tools[1].inputSchema, {
+        path: "/example-post",
+        requestBody: {
+            attribute1: "string",
+            attribute2: "integer",
+            attribute3: "string[]"
+        }
+    });
+
+    test:assertEquals(tools[2].name, "httpDeleteWithComplexSchema");
+    test:assertEquals(tools[2].description, "test HTTP DELETE tool with complex schema");
+    test:assertEquals(tools[2].inputSchema, {
+        'type: "object",
+        properties: {
+            path: {
+                'type: "string",
+                pattern: "/example-delete"
+            },
+            requestBody: {
+                'type: "object",
+                properties:
+                {
+                    model: {'type: "string"},
+                    prompt: {
+                        oneOf: [
+                            {'type: "string"},
+                            {'type: "array", items: {'type: "string"}},
+                            {'type: "array", items: {'type: "integer"}},
+                            {
+                                'type: "array",
+                                items: {
+                                    'type: "array",
+                                    items: {'type: "integer"}
+                                }
+                            }
+                        ]
+                    },
+                    suffix: {'type: "string"}
+                }
+            }
+        }
+    });
+
 }

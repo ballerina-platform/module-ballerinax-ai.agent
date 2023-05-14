@@ -1,3 +1,5 @@
+import ballerina/regex;
+
 type SearchParams record {|
     string query;
 |};
@@ -7,12 +9,12 @@ type CalculatorParams record {|
 |};
 
 // create two mock tools 
-function searchToolMock(*SearchParams params) returns string {
+isolated function searchToolMock(*SearchParams params) returns string {
     string query = params.query.trim().toLowerAscii();
-    if query.matches(re `.*girlfriend.*`) {
+    if regex:matches(query, ".*girlfriend.*") {
         return "Camila Morrone";
 
-    } else if query.matches(re `.*age.*`) {
+    } else if regex:matches(query, ".*age.*") {
         return "25 years";
     }
     else {
@@ -20,7 +22,7 @@ function searchToolMock(*SearchParams params) returns string {
     }
 }
 
-function calculatorToolMock(*CalculatorParams params) returns string {
+isolated function calculatorToolMock(*CalculatorParams params) returns string {
     string expression = params.expression.trim();
     if (expression == "25 ^ 0.43") {
         return "Answer: 3.991298452658078";
@@ -31,7 +33,7 @@ function calculatorToolMock(*CalculatorParams params) returns string {
 
 public client class MockLLM {
 
-    function _generate(PromptConstruct prompt) returns string|error {
+    isolated function generate(PromptConstruct prompt) returns string|error {
         if prompt.query == "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?" {
             if prompt.history.length() == 0 {
                 return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +

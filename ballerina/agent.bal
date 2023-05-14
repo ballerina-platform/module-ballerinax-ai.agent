@@ -77,11 +77,7 @@ public class AgentExecutor {
         } else {
             observationString = observation.toString();
         }
-
-        self.prompt.history.push(
-            string `${thought}
-Observation: ${observationString.trim()}`
-        );
+        self.prompt.history.push(string `${thought}${"\n"}Observation: ${observationString.trim()}`);
     }
 
     # Use LLMs to decide the next tool 
@@ -166,15 +162,15 @@ public isolated class Agent {
     #
     # + model - LLM model instance
     # + toolLoader - ToolLoader instance to load tools from (optional)
-    public isolated function init(LlmModel model, (ToolKit|Tool)... tools) returns error? {
+    public isolated function init(LlmModel model, (BaseToolKit|Tool)... tools) returns error? {
         if tools.length() == 0 {
             return error("No tools provided to the agent");
         }
         self.model = model;
         self.toolStore = new;
-        foreach ToolKit|Tool tool in tools {
-            if tool is ToolKit {
-                self.toolStore.mergeToolStore(tool.getToolStore());
+        foreach BaseToolKit|Tool tool in tools {
+            if tool is BaseToolKit {
+                check self.toolStore.registerTools(...check tool.getTools());
             } else {
                 check self.toolStore.registerTools(tool);
             }
@@ -234,11 +230,10 @@ ${context.toString()}
                 any|error observation = output?.observation;
                 if observation is error {
                     io:println("Observation (Error): " + observation.toString());
-                    break;
+                } else {
+                    io:println("Observation: " + observation.toString());
                 }
-                io:println("Observation: " + observation.toString());
             }
-            
             if iter == maxIter {
                 break;
             }
@@ -283,5 +278,5 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records.`;
+Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records. Do NOT add any additional fields to the input record.`;
 }
