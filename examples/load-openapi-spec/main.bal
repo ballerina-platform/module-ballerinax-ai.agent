@@ -41,8 +41,7 @@ public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_Q
             clientId: wifiClientId,
             clientSecret: wifiClientSecret
         }
-    }
-    );
+    });
 
     // 3) Create the agent
     agent:Agent agent = check new (model, toolKit);

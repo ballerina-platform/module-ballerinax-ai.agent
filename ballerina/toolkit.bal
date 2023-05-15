@@ -110,72 +110,44 @@ public isolated class HttpToolKit {
 
     private isolated function get(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->get(path, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response getResult = check self.httpClient->get(path, headers = self.headers);
+        return getResult.getTextPayload();
     }
 
     private isolated function post(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
+        return postResult.getTextPayload();
     }
 
     private isolated function delete(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
+        return deleteResult.getTextPayload();
     }
 
     private isolated function put(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
+        return putResult.getTextPayload();
     }
 
     private isolated function patch(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
+        return patchResult.getTextPayload();
     }
 
     private isolated function head(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->head(path, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response headResult = check self.httpClient->head(path, headers = self.headers);
+        return headResult.getTextPayload();
     }
 
     private isolated function options(*HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
-        http:Response|http:ClientError getResult = self.httpClient->options(path, headers = self.headers);
-        if getResult is http:Response {
-            return getResult.getTextPayload();
-        } else {
-            return getResult.message();
-        }
+        http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
+        return optionsResult.getTextPayload();
     }
 }
 

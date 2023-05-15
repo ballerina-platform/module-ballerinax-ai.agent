@@ -65,14 +65,14 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool listwifi = {
         name: "List_Wifi",
         description: "useful to list the guest wifi accounts",
-        inputs: {"email": "string"},
+        inputSchema: {"email": "string"},
         caller: listGuestWifi
     };
 
     agent:Tool addWifi = {
         name: "Add_Wifi",
         description: "useful to add a new guest wifi account",
-        inputs: {"email": "string", "username": "string", "password": "string"},
+        inputSchema: {"email": "string", "username": "string", "password": "string"},
         caller: addGuestWifi
     };
 

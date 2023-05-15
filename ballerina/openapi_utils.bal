@@ -17,7 +17,7 @@
 import ballerina/io;
 import ballerina/log;
 
-public type ApiSpecification readonly & record {|
+public type ApiSpecification record {|
     string serverUrl?;
     HttpTool[] tools;
 |};
@@ -27,10 +27,10 @@ public type AdditionInfoFlags record {|
     boolean extractDefault = false;
 |};
 
-public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns ApiSpecification|error {
+public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns ApiSpecification & readonly|error {
     OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(openApiSpec);
+    return check visitor.visit(openApiSpec).cloneReadOnly();
 }
 
 isolated function cleanXtagsFromJsonSpec(map<json>|json[] openAPISpec) {

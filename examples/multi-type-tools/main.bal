@@ -45,7 +45,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool sendEmailTool = {
         name: "Send mail",
         description: "useful send emails to the recipients.",
-        inputs: {
+        inputSchema: {
             'type: agent:OBJECT,
             properties: {
                 recipient: {'type: agent:STRING},

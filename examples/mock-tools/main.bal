@@ -56,14 +56,14 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool searchTool = {
         name: "Search",
         description: " A search engine. Useful for when you need to answer questions about current events",
-        inputs: {"query": "string"},
+        inputSchema: {"query": "string"},
         caller: searchToolMock
     };
 
     agent:Tool calculatorTool = {
         name: "Calculator",
         description: "Useful for when you need to answer questions about math.",
-        inputs: {"expression": "string mathematical expression"},
+        inputSchema: {"expression": "string mathematical expression"},
         caller: calculatorToolMock
     };
 

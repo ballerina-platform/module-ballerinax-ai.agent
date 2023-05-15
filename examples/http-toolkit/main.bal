@@ -59,5 +59,5 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     // 3) Create the agent
     agent:Agent agent = check new (model, httpToolKit);
     // 4) Run the agent to execute user's query
-    _ = agent.run(query, maxIter = 5, context = "email is john@gmail.com");
+    _ = agent.run(query, maxIter = 5, context = "email is john@gmail.com and date is 14/05/2023");
 }
