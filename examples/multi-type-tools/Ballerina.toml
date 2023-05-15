@@ -1,6 +1,6 @@
 [package]
-org = "nadheesh"
-name = "sample_agent_with_multiactions"
+org = "agent"
+name = "multi_type_tools"
 version = "0.1.0"
 distribution = "2201.5.0"
 

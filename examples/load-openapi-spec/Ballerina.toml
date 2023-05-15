@@ -1,6 +1,6 @@
 [package]
-org = "nadheesh"
-name = "sample_agent_with_openapi_loader"
+org = "agent"
+name = "load_openapi_spec"
 version = "0.1.0"
 distribution = "2201.5.0"
 

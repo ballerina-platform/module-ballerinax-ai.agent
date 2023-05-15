@@ -1,6 +1,6 @@
 [package]
 org = "ballerinax"
-name = "agent"
+name = "ai.agent"
 version = "0.1.0"
 distribution = "2201.5.0"
 

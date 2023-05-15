@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/http;
-import nadheeshjihan/agent;
+import ballerinax/ai.agent;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;

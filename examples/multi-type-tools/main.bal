@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerinax/googleapis.gmail;
-import nadheeshjihan/agent;
+import ballerinax/ai.agent;
 import ballerina/io;
 
 configurable string openAIToken = ?;

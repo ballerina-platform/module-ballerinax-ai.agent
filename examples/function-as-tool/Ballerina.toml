@@ -1,6 +1,6 @@
 [package]
-org = "nadheesh"
-name = "sample_agent_without_loaders"
+org = "agent"
+name = "function_as_tool"
 version = "0.1.0"
 distribution = "2201.5.0"
 

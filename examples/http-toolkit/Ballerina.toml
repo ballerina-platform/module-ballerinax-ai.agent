@@ -1,6 +1,6 @@
 [package]
-org = "nadheesh"
-name = "sample_agent_with_http_loader"
+org = "agent"
+name = "http_toolkit"
 version = "0.1.0"
 distribution = "2201.5.0"
 

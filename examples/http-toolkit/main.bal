@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import nadheeshjihan/agent;
+import ballerinax/ai.agent;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;

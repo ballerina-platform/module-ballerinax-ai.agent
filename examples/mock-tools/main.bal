@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import nadheeshjihan/agent;
+import ballerinax/ai.agent;
 import ballerina/regex;
 
 configurable string openAIToken = ?;
