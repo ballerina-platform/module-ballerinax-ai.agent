@@ -71,13 +71,7 @@ public class AgentExecutor {
     # + thought - Thought by the model during the previous iterations
     # + observation - Observation returned by the performed tool
     private isolated function updatePromptHistory(string thought, any|error observation) {
-        string observationString;
-        if observation is error {
-            observationString = observation.toString();
-        } else {
-            observationString = observation.toString();
-        }
-        self.prompt.history.push(string `${thought}${"\n"}Observation: ${observationString.trim()}`);
+        self.prompt.history.push({thought, observation});
     }
 
     # Use LLMs to decide the next tool 
@@ -122,14 +116,12 @@ public class AgentExecutor {
             self.isCompleted = true;
             return ();
         }
-
         string thought = string `${THOUGHT_KEY} ${decision.trim()}`;
-        NextTool|LLMInputParseError nextTool = self.parseLlmOutput(thought);
 
+        NextTool|LLMInputParseError nextTool = self.parseLlmOutput(thought);
         if nextTool is LLMInputParseError {
             return {value: {thought, observation: nextTool}};
         }
-
         if nextTool.isCompleted {
             self.isCompleted = true;
             return {value: {thought}};
@@ -256,27 +248,47 @@ isolated function constructPrompt(string toolNames, string toolDescriptions, str
 
 ${toolDescriptions.trim()}
 ${contextInfo}
-Use a JSON blob with the following format to define the action and input.
-
-${BACKTICK}${BACKTICK}${BACKTICK}
-{
-  "tool": the tool to take, should be one of [${toolNames}]",
-  "tool_input": JSON input record to the tool
-}
-${BACKTICK}${BACKTICK}${BACKTICK}
-
 ALWAYS use the following format:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action:
+Action: always should be a single tool using the following format within backticks
 ${BACKTICK}${BACKTICK}${BACKTICK}
-$JSON_BLOB only for a SINGLE tool (Do NOT return a list of multiple tools)
+{
+  "tool": the tool to take, should be one of [${toolNames}]",
+  "tool_input": JSON input record to the tool following "inputSchema"
+}
 ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: the result of the action
 ... (this Thought/Action/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin! Reminder to use the EXACT types as specified in JSON "inputSchema" to generate input records. Do NOT add any additional fields to the input record.`;
+Begin!`;
+}
+
+isolated function constructHistoryPrompt(ExecutionStep[] history) returns string {
+    string historyPrompt = "";
+    foreach ExecutionStep step in history {
+        string observationStr;
+        any|error observation = step?.observation;
+        if observation is () {
+            observationStr = "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
+        }
+        else if observation is error {
+            record {|string message; string cause?;|} errorInfo = {
+                message: observation.message().trim()
+            };
+            error? cause = observation.cause();
+            if cause is error {
+                errorInfo.cause = cause.message().trim();
+            }
+            observationStr = "Error occured while trying to execute the tool: " + errorInfo.toString();
+        }
+        else {
+            observationStr = observation.toString().trim();
+        }
+        historyPrompt += string `${step.thought}${"\n"}Observation: ${observationStr}${"\n"}`;
+    }
+    return historyPrompt;
 }

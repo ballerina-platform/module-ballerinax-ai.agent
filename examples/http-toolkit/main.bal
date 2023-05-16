@@ -46,7 +46,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     };
 
-    agent:HttpToolKit httpToolKit = check new (wifiAPIUrl, [listWifiTool, createWifiTool], {
+    agent:HttpServiceToolKit httpToolKit = check new (wifiAPIUrl, [listWifiTool, createWifiTool], {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,

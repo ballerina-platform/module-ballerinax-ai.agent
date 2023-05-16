@@ -14,15 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-public enum PrimitiveInputType {
+public enum InputType {
     STRING = "string",
     INTEGER = "integer",
     FLOAT = "float",
     BOOLEAN = "boolean",
-    NUMBER = "number"
-}
-
-public enum ComplexInputType {
+    NUMBER = "number",
     OBJECT = "object",
     ARRAY = "array"
 }
@@ -45,7 +42,7 @@ public type SimpleInputSchema record {|
 |};
 
 public type PrimitiveInputSchema record {|
-    PrimitiveInputType 'type;
+    InputType 'type;
     string format?;
     string pattern?;
     string description?;

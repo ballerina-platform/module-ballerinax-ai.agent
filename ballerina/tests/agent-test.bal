@@ -41,30 +41,25 @@ function testInitializedPrompt() returns error? {
     AgentExecutor agentExecutor = agent.createAgentExecutor(query);
 
     ToolInfo toolInfo = agent.getToolStore().extractToolInfo();
-    PromptConstruct prompt = {
-        instruction: "Answer the following questions as best you can without making any assumptions. You have access to the following tools:\n\n" +
+
+    string instruction = "Answer the following questions as best you can without making any assumptions. You have access to the following tools:\n\n" +
         toolInfo.toolIntro + "\n\n" +
-        "Use a JSON blob with the following format to define the action and input.\n\n" +
-        "```\n" +
-        "{\n" +
-        "  \"tool\": the tool to take, should be one of [" + toolInfo.toolList + "]\",\n" +
-        "  \"tool_input\": JSON input record to the tool\n" +
-        "}\n" +
-        "```\n\n" +
         "ALWAYS use the following format:\n\n" +
         "Question: the input question you must answer\n" +
         "Thought: you should always think about what to do\n" +
-        "Action:\n" +
-        "```\n$JSON_BLOB only for a SINGLE tool (Do NOT return a list of multiple tools)\n```\n" +
+        "Action: always should be a single tool using the following format within backticks\n" +
+        "```\n" +
+        "{\n" +
+        "  \"tool\": the tool to take, should be one of [" + toolInfo.toolList + "]\",\n" +
+        "  \"tool_input\": JSON input record to the tool following \"inputSchema\"\n" +
+        "}\n" +
+        "```\n" +
         "Observation: the result of the action\n" +
         "... (this Thought/Action/Observation can repeat N times)\n" +
         "Thought: I now know the final answer\n" +
         "Final Answer: the final answer to the original input question\n\n" +
-        "Begin! Reminder to use the EXACT types as specified in JSON \"inputSchema\" to generate input records. Do NOT add any additional fields to the input record.",
-        query: query,
-        history: []
-    };
-    test:assertEquals(agentExecutor.getPromptConstruct(), prompt);
+        "Begin!";
+    test:assertEquals(agentExecutor.getPromptConstruct().instruction, instruction);
 }
 
 @test:Config {}
@@ -93,6 +88,88 @@ function testAgentExecutorRun() returns error? {
     }
     output = result.value;
     test:assertEquals(output?.observation, "Answer: 3.991298452658078");
+}
 
+@test:Config {}
+function testConstructHistoryPrompt() {
+    ExecutionStep[] history = [
+        {
+            thought: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
+Action:
+{
+  "tool": "Create wifi",
+  "tool_input": {
+    "path": "/guest-wifi-accounts",
+    "requestBody": {
+      "email": "johnny@wso2.com",
+      "username": "newGuest",
+      "password": "jh123"
+    }
+  }
+}`,
+            observation: "Successfully added the wifi account"
+        },
+        {
+            thought: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
+Action:
+{
+  "tool": "List wifi",
+  "tool_input": {
+    "path": "/guest-wifi-accounts/johnny@wso2.com"
+  }
+}`,
+            observation: ["freeWifi.guestOf.johnny", "newGuest.guestOf.johnny"]
+        },
+        {
+            thought: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
+Action:
+{
+  "tool": "Send mail",
+  "tool_input": {
+    "recipient": "alica@wso2.com",
+    "subject": "Available Wifi Accounts",
+    "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
+  }
+}`,
+            observation: error("Error while sending the email(ballerinax/googleapis.gmail)GmailError")
+        }
+    ];
+
+    string thoughtHistory = constructHistoryPrompt(history);
+    test:assertEquals(thoughtHistory, string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
+Action:
+{
+  "tool": "Create wifi",
+  "tool_input": {
+    "path": "/guest-wifi-accounts",
+    "requestBody": {
+      "email": "johnny@wso2.com",
+      "username": "newGuest",
+      "password": "jh123"
+    }
+  }
+}
+Observation: Successfully added the wifi account
+Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
+Action:
+{
+  "tool": "List wifi",
+  "tool_input": {
+    "path": "/guest-wifi-accounts/johnny@wso2.com"
+  }
+}
+Observation: ["freeWifi.guestOf.johnny","newGuest.guestOf.johnny"]
+Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
+Action:
+{
+  "tool": "Send mail",
+  "tool_input": {
+    "recipient": "alica@wso2.com",
+    "subject": "Available Wifi Accounts",
+    "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
+  }
+}
+Observation: Error occured while trying to execute the tool: {"message":"Error while sending the email(ballerinax/googleapis.gmail)GmailError"}
+`);
 }
 

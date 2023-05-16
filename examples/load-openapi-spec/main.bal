@@ -32,10 +32,10 @@ public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_Q
     agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
 
     // 2) Extract tools from openAPI specification
-    agent:ApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpec(openAPIPath);
+    agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpec(openAPIPath);
 
     // 3) Createn httpToolKit with the extract tools from openAPI specification
-    agent:HttpToolKit toolKit = check new (wifiAPIUrl, apiSpecification.tools, {
+    agent:HttpServiceToolKit toolKit = check new (wifiAPIUrl, apiSpecification.tools, {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,
