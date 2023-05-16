@@ -73,11 +73,11 @@ function testAgentExecutorRun() returns error? {
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     AgentExecutor agentExecutor = agent.createAgentExecutor(query);
 
-    record {|ExecutorOutput value;|}? result = agentExecutor.next();
+    record {|ExecutionStep value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
-    ExecutorOutput output = result.value;
+    ExecutionStep output = result.value;
     test:assertEquals(output?.observation, "Camila Morrone");
 
     result = agentExecutor.next();

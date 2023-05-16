@@ -55,7 +55,7 @@ isolated function getMock(HttpInput input) returns string|error {
 @test:Config {}
 function testHttpToolKitInitialization() {
     string serviceURL = "http://test-wifi-url.com";
-    HttpToolKit|error httpToolKit = new (serviceURL, tools, {auth: {token: "<API-TOKEN>"}}, {"timeout": "10000"});
+    HttpServiceToolKit|error httpToolKit = new (serviceURL, tools, {auth: {token: "<API-TOKEN>"}}, {"timeout": "10000"});
     if httpToolKit is error {
         test:assertFail("HttpToolKit is not initialized due to an error");
     }

@@ -25,7 +25,7 @@ public type BaseToolKit distinct object {
 
 public type HttpHeader readonly & record {|string|string[]...;|};
 
-public isolated class HttpToolKit {
+public isolated class HttpServiceToolKit {
     *BaseToolKit;
     private final HttpTool[] & readonly tools;
     private final HttpHeader headers;

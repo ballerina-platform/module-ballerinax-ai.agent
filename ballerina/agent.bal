@@ -31,7 +31,7 @@ type NextTool record {|
     boolean isCompleted = false;
 |};
 
-public type ExecutorOutput record {|
+public type ExecutionStep record {|
     string thought;
     any|error observation?;
 |};
@@ -46,7 +46,7 @@ public class AgentIterator {
     }
 
     public function iterator() returns object {
-        public function next() returns record {|ExecutorOutput value;|}?;
+        public function next() returns record {|ExecutionStep value;|}?;
     } {
         return self.executor;
     }
@@ -111,7 +111,7 @@ public class AgentExecutor {
         return nextTool;
     }
 
-    public isolated function next() returns record {|ExecutorOutput value;|}? {
+    public isolated function next() returns record {|ExecutionStep value;|}? {
         if self.isCompleted {
             return ();
         }
@@ -216,18 +216,18 @@ ${context.toString()}
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps
     # + return - Returns error, in case of a failure
-    public isolated function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns ExecutorOutput[] {
-        ExecutorOutput[] exectutorResults = [];
+    public isolated function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns ExecutionStep[] {
+        ExecutionStep[] exectutorResults = [];
         AgentIterator iterator = self.iterator(query, context);
         int iter = 0;
-        foreach ExecutorOutput output in iterator {
+        foreach ExecutionStep step in iterator {
             iter += 1;
-            exectutorResults.push(output);
+            exectutorResults.push(step);
 
             if verbose {
                 io:println("\n\nReasoning iteration: " + (iter).toString());
-                io:println(output.thought);
-                any|error observation = output?.observation;
+                io:println(step.thought);
+                any|error observation = step?.observation;
                 if observation is error {
                     io:println("Observation (Error): " + observation.toString());
                 } else {

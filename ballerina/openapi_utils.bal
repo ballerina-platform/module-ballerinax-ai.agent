@@ -17,8 +17,8 @@
 import ballerina/io;
 import ballerina/log;
 
-public type ApiSpecification record {|
-    string serverUrl?;
+public type HttpApiSpecification record {|
+    string serviceUrl?;
     HttpTool[] tools;
 |};
 
@@ -27,7 +27,7 @@ public type AdditionInfoFlags record {|
     boolean extractDefault = false;
 |};
 
-public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns ApiSpecification & readonly|error {
+public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
     OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
     return check visitor.visit(openApiSpec).cloneReadOnly();
@@ -69,12 +69,12 @@ class OpenApiSpecVisitor {
         self.additionalInfoFlags = additionalInfoFlags.cloneReadOnly();
     }
 
-    function visit(OpenApiSpec openApiSpec) returns ApiSpecification|error {
+    function visit(OpenApiSpec openApiSpec) returns HttpApiSpecification|error {
         if !openApiSpec.openapi.matches(re `3\.0\..`) {
             return error("Unsupported OpenAPI version. Supports specifications with version 3.0.x only.");
         }
 
-        string? serverUrl = self.visitServers(openApiSpec.servers);
+        string? serviceUrl = self.visitServers(openApiSpec.servers);
         self.referenceMap = self.visitComponents(openApiSpec.components);
 
         Paths? paths = openApiSpec.paths;
@@ -83,7 +83,7 @@ class OpenApiSpecVisitor {
         }
 
         return {
-            serverUrl,
+            serviceUrl,
             tools: self.tools.cloneReadOnly()
         };
     }

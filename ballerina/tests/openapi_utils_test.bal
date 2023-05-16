@@ -57,7 +57,7 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
     string wifiSpecPath = "tests/resources/wifi-spec.json";
     OpenApiSpec openAPISchema = check parseOpenApiSpec(wifiSpecPath);
     OpenApiSpecVisitor visitor = new;
-    ApiSpecification apiSpec = check visitor.visit(openAPISchema);
+    HttpApiSpecification apiSpec = check visitor.visit(openAPISchema);
 
     HttpTool[] tools = [
         {
@@ -91,13 +91,13 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
-    test:assertEquals(apiSpec.serverUrl, "http://test-wifi-url.com");
+    test:assertEquals(apiSpec.serviceUrl, "http://test-wifi-url.com");
 }
 
 @test:Config {}
 function testVisitorWithOpenAISpec() returns error? {
     string wifiSpecPath = "tests/resources/openai-spec.json";
-    ApiSpecification|error apiSpec = extractToolsFromOpenApiSpec(wifiSpecPath);
+    HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpec(wifiSpecPath);
 
     if apiSpec is error {
         test:assertFail("Visitor fails with the error");
@@ -105,7 +105,7 @@ function testVisitorWithOpenAISpec() returns error? {
     HttpTool[] tools = apiSpec.tools;
 
     test:assertEquals(tools.length(), 19);
-    test:assertEquals(apiSpec.serverUrl, "https://api.openai.com/v1");
+    test:assertEquals(apiSpec.serviceUrl, "https://api.openai.com/v1");
 
     foreach HttpTool tool in tools {
         if tool.name == "createCompletion" {

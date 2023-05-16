@@ -124,7 +124,7 @@ type PathItem record {|
 type Example record {|
     string summary?;
     string description?;
-    any value?;
+    anydata value?;
     string externalValue?;
 |};
 
@@ -137,7 +137,7 @@ type Header record {|
     boolean explode?;
     boolean allowReserved?;
     Schema schema?;
-    any example?;
+    anydata example?;
     map<Example|Reference> examples?;
     map<MediaType> content?;
 
@@ -153,7 +153,7 @@ type Encoding record {|
 
 type MediaType record {|
     Schema schema;
-    any example?;
+    anydata example?;
     map<Example|Reference> examples?;
     map<Encoding> encoding?;
 
@@ -166,7 +166,7 @@ type BaseSchema record {|
     boolean nullable?;
     boolean readOnly?;
     boolean writeOnly?;
-    any example?;
+    anydata example?;
     map<Example|Reference> examples?;
 |};
 
@@ -312,7 +312,7 @@ type Link record {|
     string operationRef?;
     string operationId?;
     map<any> parameters?;
-    any requestBody?;
+    anydata requestBody?;
     string description?;
     Server server?;
 |};
@@ -333,7 +333,7 @@ type Parameter record {|
     boolean explode?;
     boolean allowReserved?;
     Schema schema?;
-    any example?;
+    anydata example?;
     map<Example|Reference> examples?;
     map<MediaType> content?;
 |};
