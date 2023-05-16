@@ -17,9 +17,6 @@
 import ballerinax/openai.text;
 import ballerinax/openai.chat;
 
-# Defines allowed LLM client types
-public type LlmRemoteClient text:Client|chat:Client;
-
 public type Gpt3ConnectionConfig text:ConnectionConfig;
 
 public type ChatGptConnectionConfig chat:ConnectionConfig;
@@ -49,9 +46,7 @@ public type PromptConstruct record {|
 
 # Extendable LLM model object that can be used for completion tasks
 # Useful to initialize the agents 
-# + llmClient - A remote client object to access LLM models
 public type LlmModel distinct isolated object {
-    LlmRemoteClient llmClient;
     isolated function generate(PromptConstruct prompt) returns string|error;
 };
 
