@@ -16,12 +16,25 @@
 
 import ballerinax/openai.text;
 import ballerinax/openai.chat;
+import ballerinax/azure.openai.text as azure_text;
 
 public type Gpt3ConnectionConfig text:ConnectionConfig;
 
 public type ChatGptConnectionConfig chat:ConnectionConfig;
 
+public type AzureGpt3ConnectionConfig azure_text:ConnectionConfig;
+
 public type Gpt3ModelConfig readonly & record {|
+    string model = GPT3_MODEL_NAME;
+    decimal temperature = DEFAULT_TEMPERATURE;
+    int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
+    never stop?;
+    never prompt?;
+|};
+
+public type AzureGpt3ModelConfig readonly & record {|
+    string deploymentId;
+    string apiVersion;
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
@@ -41,7 +54,7 @@ public type ChatMessage chat:ChatCompletionRequestMessage;
 public type PromptConstruct record {|
     string instruction;
     string query;
-    string[] history;
+    ExecutionStep[] history;
 |};
 
 # Extendable LLM model object that can be used for completion tasks
@@ -71,16 +84,38 @@ public isolated class Gpt3Model {
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
-        string thoughtHistory = "";
-        thoughtHistory += <string>from string history in prompt.history
-            select history + "\n";
-        string promptStr = string `${prompt.instruction}
+        return check self.complete(createCompletionPrompt(prompt));
+    }
 
-Question: ${prompt.query}
-${thoughtHistory}${THOUGHT_KEY}`;
+}
 
-        return check self.complete(promptStr);
+public isolated class AzureGpt3Model {
+    *LlmModel;
+    final azure_text:Client llmClient;
+    private final AzureGpt3ModelConfig modelConfig;
 
+    public isolated function init(AzureGpt3ConnectionConfig connectionConfig, string serviceUrl, AzureGpt3ModelConfig modelConfig) returns error? {
+        self.llmClient = check new (connectionConfig, serviceUrl);
+        self.modelConfig = modelConfig;
+    }
+
+    public isolated function complete(string prompt) returns string|error {
+        azure_text:Deploymentid_completions_body modelConfig = {
+            model: self.modelConfig.model,
+            temperature: self.modelConfig.temperature,
+            max_tokens: self.modelConfig.max_tokens,
+            stop: OBSERVATION_KEY,
+            prompt
+        };
+
+        string deploymentId = self.modelConfig.deploymentId;
+        string apiVersion = self.modelConfig.apiVersion;
+        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[deploymentId]/completions.post(apiVersion, modelConfig);
+        return response.choices[0].text ?: error("Empty response from the model");
+    }
+
+    isolated function generate(PromptConstruct prompt) returns string|error {
+        return check self.complete(createCompletionPrompt(prompt));
     }
 
 }
@@ -110,21 +145,22 @@ public isolated class ChatGptModel {
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
+        ChatMessage[] messages = self.createPrompt(prompt);
+        return check self.chatComplete(messages);
+    }
+
+    private isolated function createPrompt(PromptConstruct prompt) returns ChatMessage[] {
         string userMessage = "";
         if (prompt.history.length() == 0) {
             userMessage = prompt.query;
         }
         else {
-            userMessage = string `${prompt.query}
-            
-This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):
-`;
-            userMessage += <string>from string history in prompt.history
-                select history + "\n";
+            userMessage = string `${prompt.query}${"\n\n"}This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):${"\n"}`;
+            userMessage += constructHistoryPrompt(prompt.history);
         }
         userMessage += ("\n" + THOUGHT_KEY);
 
-        ChatMessage[] messages = [
+        return [
             {
                 role: SYSTEM_ROLE,
                 content: prompt.instruction
@@ -134,6 +170,12 @@ This was your previous work (but I haven\'t seen any of it! I only see what you 
                 content: userMessage
             }
         ];
-        return check self.chatComplete(messages);
     }
+}
+
+isolated function createCompletionPrompt(PromptConstruct prompt) returns string {
+    return string `${prompt.instruction}
+
+Question: ${prompt.query}
+${constructHistoryPrompt(prompt.history)}${THOUGHT_KEY}`;
 }
