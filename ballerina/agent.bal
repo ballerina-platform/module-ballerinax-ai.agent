@@ -256,7 +256,7 @@ Action: always should be a single tool using the following format within backtic
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
   "tool": the tool to take, should be one of [${toolNames}]",
-  "tool_input": JSON input record to the tool following "inputSchema"
+  "tool_input": JSON input record to the tool following "inputSchema
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: the result of the action

@@ -52,12 +52,12 @@ type SecurityRequirement record {|
 type SecurityScheme record {|
     SecuritySchemeType 'type;
     string description?;
-    string name;
-    SecuritySchemeLocation 'in;
-    string scheme;
+    string name?;
+    SecuritySchemeLocation 'in?;
+    string scheme?;
     string bearerFormat?;
     OAuthFlows flows;
-    string openIdConnectUrl;
+    string openIdConnectUrl?;
 |};
 
 type OAuthFlows record {|
@@ -68,8 +68,8 @@ type OAuthFlows record {|
 |};
 
 type OAuthFlow record {|
-    string authorizationUrl?;
-    string tokenUrl;
+    string authorizationUrl;
+    string tokenUrl?;
     string refreshUrl?;
     map<string> scopes;
 |};
@@ -325,7 +325,7 @@ type ExternalDocumentation record {|
 type Parameter record {|
     string name;
     ParameterLocation 'in;
-    boolean required;
+    boolean required?;
     string description?;
     boolean deprecated?;
     boolean allowEmptyValue?;
