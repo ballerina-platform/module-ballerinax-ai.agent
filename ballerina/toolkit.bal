@@ -27,19 +27,16 @@ public type HttpHeader readonly & record {|string|string[]...;|};
 
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
-    private final HttpTool[] & readonly tools;
+    private final Tool[] & readonly tools;
     private final HttpHeader headers;
     private final http:Client httpClient;
 
-    public isolated function init(string serviceUrl, HttpTool[] tools, HttpClientConfig clientConfig = {}, HttpHeader headers = {}) returns error? {
-        self.tools = tools.cloneReadOnly();
+    public isolated function init(string serviceUrl, HttpTool[] httpTools, HttpClientConfig clientConfig = {}, HttpHeader headers = {}) returns error? {
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
-    }
 
-    isolated function getTools() returns Tool[]|error {
         Tool[] tools = [];
-        foreach HttpTool httpTool in self.tools {
+        foreach HttpTool httpTool in httpTools {
             InputSchema? queryParams = httpTool?.queryParams;
             InputSchema? requestBody = httpTool?.requestBody;
 
@@ -104,8 +101,13 @@ public isolated class HttpServiceToolKit {
                 inputSchema,
                 caller
             });
+
+            self.tools = tools.cloneReadOnly();
         }
-        return tools;
+    }
+
+    isolated function getTools() returns Tool[]|error {
+        return self.tools;
     }
 
     private isolated function get(*HttpInput httpInput) returns string|error {
