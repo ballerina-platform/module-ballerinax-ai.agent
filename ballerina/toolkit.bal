@@ -16,8 +16,6 @@
 
 import ballerina/http;
 
-public type HttpClientConfig http:ClientConfiguration;
-
 # allows implmenting custom toolkits by extending this type
 public type BaseToolKit distinct object {
     isolated function getTools() returns Tool[]|error;
@@ -31,7 +29,7 @@ public isolated class HttpServiceToolKit {
     private final HttpHeader headers;
     private final http:Client httpClient;
 
-    public isolated function init(string serviceUrl, HttpTool[] httpTools, HttpClientConfig clientConfig = {}, HttpHeader headers = {}) returns error? {
+    public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, HttpHeader headers = {}) returns error? {
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
 
@@ -110,43 +108,43 @@ public isolated class HttpServiceToolKit {
         return self.tools;
     }
 
-    private isolated function get(*HttpInput httpInput) returns string|error {
+    private isolated function get(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
         return getResult.getTextPayload();
     }
 
-    private isolated function post(*HttpInput httpInput) returns string|error {
+    private isolated function post(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
         return postResult.getTextPayload();
     }
 
-    private isolated function delete(*HttpInput httpInput) returns string|error {
+    private isolated function delete(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
         return deleteResult.getTextPayload();
     }
 
-    private isolated function put(*HttpInput httpInput) returns string|error {
+    private isolated function put(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
         return putResult.getTextPayload();
     }
 
-    private isolated function patch(*HttpInput httpInput) returns string|error {
+    private isolated function patch(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
         return patchResult.getTextPayload();
     }
 
-    private isolated function head(*HttpInput httpInput) returns string|error {
+    private isolated function head(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
         return headResult.getTextPayload();
     }
 
-    private isolated function options(*HttpInput httpInput) returns string|error {
+    private isolated function options(HttpInput httpInput) returns string|error {
         string path = check getPathWithQueryParams(httpInput.path, httpInput?.queryParams);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
         return optionsResult.getTextPayload();
@@ -163,8 +161,9 @@ isolated function getPathWithQueryParams(string path, map<json>? queryParams) re
         if value is string {
             query += string `${key}=${value}&`;
         } else if value is string[] {
-            query += <string>from string element in value
-                select string `${key}=${element}&`;
+            foreach string element in value {
+                query += string `${key}=${element}&`;
+            }
         } else {
             return error(string `Unsupported query parameter value: ${value.toString()} for key ${key}`);
         }
