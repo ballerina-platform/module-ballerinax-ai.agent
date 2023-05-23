@@ -18,13 +18,8 @@ import ballerinax/openai.text;
 import ballerinax/openai.chat;
 import ballerinax/azure.openai.text as azure_text;
 
-public type Gpt3ConnectionConfig text:ConnectionConfig;
-
-public type ChatGptConnectionConfig chat:ConnectionConfig;
-
-public type AzureGpt3ConnectionConfig azure_text:ConnectionConfig;
-
 public type Gpt3ModelConfig readonly & record {|
+    // text:CreateCompletionRequest should be included when the bug is fixed
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
@@ -33,8 +28,7 @@ public type Gpt3ModelConfig readonly & record {|
 |};
 
 public type AzureGpt3ModelConfig readonly & record {|
-    string deploymentId;
-    string apiVersion;
+    // azure_text:Deploymentid_completions_body should be included when the bug is fixed
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
@@ -43,13 +37,12 @@ public type AzureGpt3ModelConfig readonly & record {|
 |};
 
 public type ChatGptModelConfig readonly & record {|
+    // chat:CreateChatCompletionRequest should be included when the bug is fixed
     string model = GPT3_5_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     never messages?;
     never stop?;
 |};
-
-public type ChatMessage chat:ChatCompletionRequestMessage;
 
 public type PromptConstruct record {|
     string instruction;
@@ -68,15 +61,15 @@ public isolated class Gpt3Model {
     final text:Client llmClient;
     private final Gpt3ModelConfig modelConfig;
 
-    public isolated function init(Gpt3ConnectionConfig connectionConfig, Gpt3ModelConfig modelConfig = {}) returns error? {
+    public isolated function init(text:ConnectionConfig connectionConfig, Gpt3ModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
         self.modelConfig = modelConfig;
     }
 
-    public isolated function complete(string prompt) returns string|error {
+    public isolated function complete(string prompt, string? stop = ()) returns string|error {
         text:CreateCompletionRequest modelConfig = {
             ...self.modelConfig,
-            stop: OBSERVATION_KEY,
+            stop,
             prompt
         };
         text:CreateCompletionResponse response = check self.llmClient->/completions.post(modelConfig);
@@ -84,40 +77,38 @@ public isolated class Gpt3Model {
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.complete(createCompletionPrompt(prompt));
+        return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
     }
-
 }
 
 public isolated class AzureGpt3Model {
     *LlmModel;
     final azure_text:Client llmClient;
     private final AzureGpt3ModelConfig modelConfig;
+    private final string deploymentId;
+    private final string apiVersion;
 
-    public isolated function init(AzureGpt3ConnectionConfig connectionConfig, string serviceUrl, AzureGpt3ModelConfig modelConfig) returns error? {
+    public isolated function init(azure_text:ConnectionConfig connectionConfig, string serviceUrl, string deploymentId,
+            string apiVersion, AzureGpt3ModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig, serviceUrl);
         self.modelConfig = modelConfig;
+        self.deploymentId = deploymentId;
+        self.apiVersion = apiVersion;
     }
 
-    public isolated function complete(string prompt) returns string|error {
+    public isolated function complete(string prompt, string? stop = ()) returns string|error {
         azure_text:Deploymentid_completions_body modelConfig = {
-            model: self.modelConfig.model,
-            temperature: self.modelConfig.temperature,
-            max_tokens: self.modelConfig.max_tokens,
-            stop: OBSERVATION_KEY,
+            ...self.modelConfig,
+            stop,
             prompt
         };
-
-        string deploymentId = self.modelConfig.deploymentId;
-        string apiVersion = self.modelConfig.apiVersion;
-        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[deploymentId]/completions.post(apiVersion, modelConfig);
+        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, modelConfig);
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.complete(createCompletionPrompt(prompt));
+        return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
     }
-
 }
 
 public isolated class ChatGptModel {
@@ -125,15 +116,15 @@ public isolated class ChatGptModel {
     final chat:Client llmClient;
     private final ChatGptModelConfig modelConfig;
 
-    public isolated function init(ChatGptConnectionConfig connectionConfig, ChatGptModelConfig modelConfig = {}) returns error? {
+    public isolated function init(chat:ConnectionConfig connectionConfig, ChatGptModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
         self.modelConfig = modelConfig;
     }
 
-    public isolated function chatComplete(ChatMessage[] messages) returns string|error {
+    public isolated function chatComplete(chat:ChatCompletionRequestMessage[] messages, string? stop = ()) returns string|error {
         chat:CreateChatCompletionRequest modelConfig = {
             ...self.modelConfig,
-            stop: OBSERVATION_KEY,
+            stop,
             messages
         };
         chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(modelConfig);
@@ -145,11 +136,11 @@ public isolated class ChatGptModel {
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
-        ChatMessage[] messages = self.createPrompt(prompt);
-        return check self.chatComplete(messages);
+        chat:ChatCompletionRequestMessage[] messages = self.createPrompt(prompt);
+        return check self.chatComplete(messages, stop = OBSERVATION_KEY);
     }
 
-    private isolated function createPrompt(PromptConstruct prompt) returns ChatMessage[] {
+    private isolated function createPrompt(PromptConstruct prompt) returns chat:ChatCompletionRequestMessage[] {
         string userMessage = "";
         if (prompt.history.length() == 0) {
             userMessage = prompt.query;
