@@ -38,7 +38,7 @@ function testInitializedPrompt() returns error? {
     Agent agent = check new (model, searchTool, calculatorTool);
 
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExecutor agentExecutor = agent.createAgentExecutor(query);
+    AgentExecutor agentExecutor = agent.getExecutor(query);
 
     ToolInfo toolInfo = agent.getToolStore().extractToolInfo();
 
@@ -47,11 +47,11 @@ function testInitializedPrompt() returns error? {
         "ALWAYS use the following format:\n\n" +
         "Question: the input question you must answer\n" +
         "Thought: you should always think about what to do\n" +
-        "Action: always should be a single tool using the following format within backticks\n" +
+        "Action: always should be a single tool using the following format within BACKTICKS\n" +
         "```\n" +
         "{\n" +
         "  \"tool\": the tool to take, should be one of [" + toolInfo.toolList + "]\",\n" +
-        "  \"tool_input\": JSON input record to the tool following \"inputSchema\"\n" +
+        "  \"tool_input\": JSON input record to the tool following \"inputSchema\". Required properties are mandatory.\n" +
         "}\n" +
         "```\n" +
         "Observation: the result of the action\n" +
@@ -66,7 +66,7 @@ function testInitializedPrompt() returns error? {
 function testAgentExecutorRun() returns error? {
     Agent agent = check new (model, searchTool, calculatorTool);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExecutor agentExecutor = agent.createAgentExecutor(query);
+    AgentExecutor agentExecutor = agent.getExecutor(query);
 
     record {|ExecutionStep value;|}? result = agentExecutor.next();
     if result is () {

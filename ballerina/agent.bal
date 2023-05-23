@@ -41,8 +41,8 @@ public class AgentIterator {
 
     private AgentExecutor executor;
 
-    isolated function init(Agent agent, PromptConstruct prompt) {
-        self.executor = new (agent, prompt);
+    isolated function init(Agent agent, string query, string|map<json> context = {}) {
+        self.executor = new (agent, query, context = context);
     }
 
     public function iterator() returns object {
@@ -59,8 +59,17 @@ public class AgentExecutor {
     private PromptConstruct prompt;
     private boolean isCompleted;
 
-    public isolated function init(Agent agent, PromptConstruct prompt) {
-        self.prompt = prompt;
+    public isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
+        string instruction = agent.getInstructionPrompt();
+        if context != {} {
+            instruction = string `${instruction}{"\n"}You can use these information if needed: ${context.toString()}$`;
+        }
+        log:printDebug("Instruction Prompt: \n" + instruction);
+        self.prompt = {
+            query: query,
+            history: previousSteps,
+            instruction
+        };
         self.model = agent.getLLMModel();
         self.toolStore = agent.getToolStore();
         self.isCompleted = false;
@@ -149,6 +158,7 @@ public isolated class Agent {
 
     private final LlmModel model;
     private final ToolStore toolStore;
+    private final string instructionPrompt;
 
     # Initialize an Agent
     #
@@ -159,46 +169,32 @@ public isolated class Agent {
             return error("No tools provided to the agent");
         }
         self.model = model;
-        self.toolStore = new;
+        Tool[] toolList = [];
         foreach BaseToolKit|Tool tool in tools {
             if tool is BaseToolKit {
-                check self.toolStore.registerTools(...check tool.getTools());
+                Tool[] toolsFromToolKit = check tool.getTools(); // needed this due to nullpointer exception in ballerina
+                toolList.push(...toolsFromToolKit);
             } else {
-                check self.toolStore.registerTools(tool);
+                toolList.push(tool);
             }
         }
+        self.toolStore = check new (toolList);
+        ToolInfo toolInfo = self.toolStore.extractToolInfo();
+        self.instructionPrompt = constructPrompt(toolInfo.toolList, toolInfo.toolIntro);
     }
 
-    # Initialize the prompt during a single run for a given user query
+    # Initialize the agent executor for a given query. 
+    # Agent executor is useful for streaming-like execution of the agent
     #
-    # + query - User's query  
+    # + query - User's query
     # + context - Context information to be used by the LLM
-    # + return - PromptConstruct record or an error if the initialization failed
-    private isolated function initializaPrompt(string query, string|map<json> context = {}) returns PromptConstruct {
-        ToolInfo output = self.toolStore.extractToolInfo();
-        string toolDescriptions = output.toolIntro;
-        string toolNames = output.toolList;
-        string contextInfo = "";
-        if context != {} {
-            contextInfo = string `
-You can also use the following information: 
-${context.toString()}
-`;
-        }
-        string instruction = constructPrompt(toolNames, toolDescriptions, contextInfo);
-        return {
-            instruction,
-            query: query.trim(),
-            history: []
-        };
+    # + return - AgentExecutor instance
+    public isolated function getExecutor(string query, string|map<json> context = {}) returns AgentExecutor {
+        return new (self, query, context = context);
     }
 
-    public isolated function createAgentExecutor(string query, string|map<json> context = {}) returns AgentExecutor {
-        return new (self, self.initializaPrompt(query, context));
-    }
-
-    public isolated function iterator(string query, string|map<json> context = {}) returns AgentIterator {
-        return new (self, self.initializaPrompt(query, context));
+    public isolated function getIterator(string query, string|map<json> context = {}) returns AgentIterator {
+        return new (self, query, context);
     }
 
     # Execute the agent for a given user's query
@@ -210,7 +206,7 @@ ${context.toString()}
     # + return - Returns error, in case of a failure
     public isolated function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns ExecutionStep[] {
         ExecutionStep[] exectutorResults = [];
-        AgentIterator iterator = self.iterator(query, context);
+        AgentIterator iterator = self.getIterator(query, context = context);
         int iter = 0;
         foreach ExecutionStep step in iterator {
             iter += 1;
@@ -232,31 +228,32 @@ ${context.toString()}
         }
         return exectutorResults;
     }
-
     isolated function getLLMModel() returns LlmModel {
         return self.model;
     }
-
     isolated function getToolStore() returns ToolStore {
         return self.toolStore;
     }
 
+    isolated function getInstructionPrompt() returns string {
+        return self.instructionPrompt;
+    }
 }
 
-isolated function constructPrompt(string toolNames, string toolDescriptions, string contextInfo) returns string {
+isolated function constructPrompt(string toolList, string toolIntro) returns string {
     return string `Answer the following questions as best you can without making any assumptions. You have access to the following tools:
 
-${toolDescriptions.trim()}
-${contextInfo}
+${toolIntro.trim()}
+
 ALWAYS use the following format:
 
 Question: the input question you must answer
 Thought: you should always think about what to do
-Action: always should be a single tool using the following format within backticks
+Action: always should be a single tool using the following format within BACKTICKS
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
-  "tool": the tool to take, should be one of [${toolNames}]",
-  "tool_input": JSON input record to the tool following "inputSchema
+  "tool": the tool to take, should be one of [${toolList}]",
+  "tool_input": JSON input record to the tool following "inputSchema". Required properties are mandatory.
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: the result of the action
@@ -264,7 +261,7 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
-Begin!`;
+Begin! Reminder to always use the exact characters 'Final Answer' when responding.`;
 }
 
 isolated function constructHistoryPrompt(ExecutionStep[] history) returns string {

@@ -66,7 +66,8 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
             queryParams: (),
-            requestBody: ()
+            requestBody: (),
+            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}}}
         },
         {
             name: "postGuestWifiAccounts",
@@ -87,7 +88,8 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
             queryParams: (),
-            requestBody: ()
+            requestBody: (),
+            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
