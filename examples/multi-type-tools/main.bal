@@ -79,23 +79,21 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     ];
 
-    // Create the Http toolkit (easily load http tools for a given API)
-    agent:HttpClientConfig clientConfig = {
+    // Create the Http toolkit (easily load http tools for a given API) 
+    agent:HttpServiceToolKit wifiApiToolKit = check new (wifiAPIUrl, httpTools, {
         auth: {
             tokenUrl: wifiTokenUrl,
             clientId: wifiClientId,
             clientSecret: wifiClientSecret
         }
-    };
-
-    agent:HttpServiceToolKit wifiApiToolKit = check new (wifiAPIUrl, httpTools, clientConfig);
+    });
 
     agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
     agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
 
     // Execute the query using agent iterator
     int iter = 0;
-    foreach agent:ExecutionStep result in agent.iterator(query, context = {"userEmail": "johnny@wso2.com"}) {
+    foreach agent:ExecutionStep result in agent.getIterator(query, context = {"userEmail": "johnny@wso2.com"}) {
         io:println(result.thought);
         any|error observation = result?.observation;
         if observation !is () {

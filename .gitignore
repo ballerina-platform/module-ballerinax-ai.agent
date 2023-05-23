@@ -19,10 +19,31 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-wip
-.DS_store
-$(pwd)
+# Ballerina
+Ballerina.lock
+
+# generated files
+target
+.ballerina
+
+# gradle
+.gradle
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# mac
+.DS_Store
+.classpath
+.project
+.settings
 .vscode
+
+# ignore examples auto generated files
+examples/**/Dependencies.toml
+examples/**/Config.toml
+examples/**/target
+
+
+

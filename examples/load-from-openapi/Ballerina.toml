@@ -1,6 +1,6 @@
 [package]
 org = "agent"
-name = "load_openapi_spec"
+name = "load_from_openapi"
 version = "0.1.0"
 distribution = "2201.5.0"
 
