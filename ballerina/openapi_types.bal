@@ -124,7 +124,7 @@ type PathItem record {|
 type Example record {|
     string summary?;
     string description?;
-    anydata value?;
+    json value?;
     string externalValue?;
 |};
 
@@ -162,7 +162,7 @@ type MediaType record {|
 type BaseSchema record {|
     string title?;
     string description?;
-    anydata default?;
+    json default?;
     boolean nullable?;
     boolean readOnly?;
     boolean writeOnly?;

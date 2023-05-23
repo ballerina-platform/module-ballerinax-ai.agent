@@ -164,9 +164,12 @@ class OpenApiSpecVisitor {
 
         // resolve queryParameters
         InputSchema? queryParams = ();
+        InputSchema? pathParams = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
         if parameters is (Parameter|Reference)[] {
-            queryParams = check self.visitParameters(parameters);
+            record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|} mappingResult = check self.visitParameters(parameters);
+            queryParams = mappingResult.queryParams;
+            pathParams = mappingResult.pathParams;
         }
 
         InputSchema? requestBody = ();
@@ -184,6 +187,7 @@ class OpenApiSpecVisitor {
             path,
             method,
             queryParams,
+            pathParams,
             requestBody
         });
     }
@@ -199,9 +203,9 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    private function visitParameters((Parameter|Reference)[] parameters) returns JsonInputSchema?|error {
-
-        map<JsonSubSchema> properties = {};
+    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|}|error {
+        map<JsonSubSchema> queryParams = {};
+        map<JsonSubSchema> pathParams = {};
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -212,22 +216,38 @@ class OpenApiSpecVisitor {
             }
 
             Schema? schema = resolvedParameter.schema;
-            if resolvedParameter.'in == OPENAPI_QUERY_PARAM_LOC_KEY && schema !is () {
-                string? style = resolvedParameter.style;
-                boolean? explode = resolvedParameter.explode;
-                if style !is () && style != OPENAPI_SUPPORTED_STYLE {
-                    return error("Supported only the query parameters with style=" + OPENAPI_SUPPORTED_STYLE);
+            if schema is () {
+                continue;
+            }
+            string? style = resolvedParameter.style;
+            boolean? explode = resolvedParameter.explode;
+            if resolvedParameter.'in == OPENAPI_QUERY_PARAM_LOC_KEY {
+                if style !is () && style != OPENAPI_QUERY_PARAM_SUPPORTED_STYLE {
+                    return error("Supported only the query parameters with style=" + OPENAPI_QUERY_PARAM_SUPPORTED_STYLE);
                 }
                 if explode !is () && !explode {
                     return error("Supported only the query parmaters with explode=true");
                 }
-                properties[resolvedParameter.name] = check self.visitSchema(schema);
+                queryParams[resolvedParameter.name] = check self.visitSchema(schema);
+            }
+            if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
+                if style !is () && style != OPENAPI_PATH_PARAM_SUPPORTED_STYLE {
+                    return error("Supported only the path parameters with style=" + OPENAPI_PATH_PARAM_SUPPORTED_STYLE);
+                }
+                if explode !is () && explode {
+                    return error("Supported only the path parmaters with explode=fale");
+                }
+                pathParams[resolvedParameter.name] = check self.visitSchema(schema);
             }
         }
-        if properties.length() == 0 {
-            return ();
-        }
-        return {properties};
+        return {
+            queryParams: queryParams.length() > 0 ? {
+                    properties: queryParams
+                } : (),
+            pathParams: pathParams.length() > 0 ? {
+                    properties: pathParams
+                } : ()
+        };
     }
 
     private function resolveReference(Reference reference) returns ComponentType|error {
@@ -286,17 +306,19 @@ class OpenApiSpecVisitor {
         }
 
         foreach [string, Schema] [propertyName, property] in properties.entries() {
-            JsonSubSchema trimmedProperty = check self.visitSchema(property);
-            objectSchema.properties[propertyName] = trimmedProperty;
+            objectSchema.properties[propertyName] = check self.visitSchema(property);
+        }
+        boolean|string[]? required = schema?.required;
+        if required is string[] {
+            objectSchema.required = required;
         }
         return objectSchema;
     }
 
     private function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
-        JsonSubSchema trimmedItems = check self.visitSchema(schema.items);
         return {
             'type: ARRAY,
-            items: trimmedItems
+            items: check self.visitSchema(schema.items)
         };
     }
 
@@ -323,7 +345,6 @@ class OpenApiSpecVisitor {
                     pattern = OPENAPI_PATTER_DATE_TIME;
                 }
             }
-
             inputSchmea.format = format;
             inputSchmea.pattern = pattern;
             inputSchmea.'enum = schema.'enum;
