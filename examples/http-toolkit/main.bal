@@ -31,7 +31,15 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         name: "List wifi",
         path: "/guest-wifi-accounts/{ownerEmail}",
         method: agent:GET,
-        description: "useful to list the guest wifi accounts."
+        description: "useful to list the guest wifi accounts.",
+        pathParams: {
+            properties:
+            {
+                ownerEmail: {
+                    'type: "string"
+                }
+            }
+        }
     };
 
     agent:HttpTool createWifiTool = {
@@ -40,9 +48,17 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         method: agent:POST,
         description: "useful to create a guest wifi account.",
         requestBody: {
-            "email": "string",
-            "username": "string",
-            "password": "string"
+            properties: {
+                email: {
+                    'type: "string"
+                },
+                username: {
+                    'type: "string"
+                },
+                password: {
+                    'type: "string"
+                }
+            }
         }
     };
 
