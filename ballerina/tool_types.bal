@@ -32,6 +32,7 @@ public enum HttpMethod {
 type HttpInput record {|
     string path;
     map<json> queryParams?;
+    map<json> pathParams?;
     map<json> requestBody?;
 |};
 
@@ -41,12 +42,21 @@ public type SimpleInputSchema record {|
     string|SimpleInputSchema|SimpleInputSchema[]...;
 |};
 
-public type PrimitiveInputSchema record {|
+public type ConstantValueSchema record {|
+    json 'const;
+|};
+
+public type BaseInputTypeSchema record {|
     InputType 'type;
+    string description?;
+    json default?;
+|};
+
+public type PrimitiveInputSchema record {|
+    *BaseInputTypeSchema;
+    STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
     string format?;
     string pattern?;
-    string description?;
-    anydata default?;
     string[] 'enum?;
 |};
 
@@ -67,11 +77,14 @@ public type NotInputSchema record {|
 |};
 
 public type ArrayInputSchema record {|
+    *BaseInputTypeSchema;
     ARRAY 'type = ARRAY;
     JsonSubSchema items;
+    json[] default?;
 |};
 
 public type ObjectInputSchema record {|
+    *BaseInputTypeSchema;
     OBJECT 'type = OBJECT;
     string[] required?;
     map<JsonSubSchema> properties;
@@ -79,7 +92,7 @@ public type ObjectInputSchema record {|
 
 public type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|OneOfInputSchema|AllOfInputSchema|NotInputSchema;
 
-public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema;
+public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema|ConstantValueSchema;
 
 public type InputSchema SimpleInputSchema|JsonInputSchema;
 
@@ -96,7 +109,8 @@ public type HttpTool record {|
     string description;
     HttpMethod method;
     string path;
-    InputSchema? queryParams = ();
-    InputSchema? requestBody = ();
+    InputSchema queryParams?;
+    InputSchema pathParams?;
+    InputSchema requestBody?;
 |};
 
