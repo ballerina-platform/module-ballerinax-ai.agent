@@ -16,7 +16,6 @@
 
 import ballerinax/googleapis.gmail;
 import ballerinax/ai.agent;
-import ballerina/io;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;
@@ -26,11 +25,9 @@ configurable string wifiClientSecret = ?;
 configurable string gmailToken = ?;
 
 // define send mail tool as a function
-isolated function sendMail(*gmail:MessageRequest messageRequest) returns string|error {
-    gmail:MessageRequest message = check messageRequest.cloneWithType();
-    message["contentType"] = "text/plain";
+isolated function sendMail(gmail:MessageRequest messageRequest) returns string|error {
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
-    gmail:Message|error sendMessage = gmail->sendMessage(message);
+    gmail:Message|error sendMessage = gmail->sendMessage(messageRequest);
     if sendMessage is gmail:Message {
         return sendMessage.toString();
     }
@@ -46,11 +43,11 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         name: "Send mail",
         description: "useful send emails to the recipients.",
         inputSchema: {
-            'type: agent:OBJECT,
             properties: {
                 recipient: {'type: agent:STRING},
                 subject: {'type: agent:STRING},
-                messageBody: {'type: agent:STRING}
+                messageBody: {'type: agent:STRING},
+                contentType: {'const: "text/plain"}
             }
         },
         caller: sendMail
@@ -61,7 +58,12 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             name: "List wifi",
             path: "/guest-wifi-accounts/{ownerEmail}",
             method: agent:GET,
-            description: "useful to list the guest wifi accounts."
+            description: "useful to list the guest wifi accounts.",
+            pathParams: {
+                properties: {
+                    ownerEmail: {'type: agent:STRING}
+                }
+            }
         },
         {
             name: "Create wifi",
@@ -92,17 +94,6 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
 
     // Execute the query using agent iterator
-    int iter = 0;
-    foreach agent:ExecutionStep result in agent.getIterator(query, context = {"userEmail": "johnny@wso2.com"}) {
-        io:println(result.thought);
-        any|error observation = result?.observation;
-        if observation !is () {
-            io:print("Observation: ");
-            io:println(observation);
-        }
-        iter += 1;
-        if iter == 5 {
-            break;
-        }
-    }
+    _ = agent.run(query, context = {"userEmail": "johnny@wso2.com"});
+
 }

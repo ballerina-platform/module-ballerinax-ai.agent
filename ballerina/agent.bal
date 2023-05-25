@@ -59,7 +59,7 @@ public class AgentExecutor {
     private PromptConstruct prompt;
     private boolean isCompleted;
 
-    public isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
+    isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();
         if context != {} {
             instruction = string `${instruction}{"\n"}You can use these information if needed: ${context.toString()}$`;
@@ -73,6 +73,13 @@ public class AgentExecutor {
         self.model = agent.getLLMModel();
         self.toolStore = agent.getToolStore();
         self.isCompleted = false;
+    }
+
+    # Checks whether agent has more steps to execute
+    # 
+    # + return - True if agent has more steps to execute, false otherwise
+    public isolated function hasNext() returns boolean {
+        return !self.isCompleted;
     }
 
     # Build the prompts during each decision iterations 
@@ -114,26 +121,23 @@ public class AgentExecutor {
         return nextTool;
     }
 
-    public isolated function next() returns record {|ExecutionStep value;|}? {
-        if self.isCompleted {
-            return ();
-        }
-
+    # Execute the next step of the agent
+    # 
+    # + return - ExecutionStep record or an error if the execution failed
+    public isolated function nextStep() returns ExecutionStep|error {
         string|error decision = self.decideNextTool();
         if decision is error {
-            log:printError("Error while communicating to LLM. Task is terminated due to: " + decision.toString());
-            self.isCompleted = true;
-            return ();
+            return error("Error while communicating to LLM. Task is terminated due to: " + decision.toString());
         }
         string thought = string `${THOUGHT_KEY} ${decision.trim()}`;
 
         NextTool|LLMInputParseError nextTool = self.parseLlmOutput(thought);
         if nextTool is LLMInputParseError {
-            return {value: {thought, observation: nextTool}};
+            return {thought, observation: nextTool};
         }
         if nextTool.isCompleted {
             self.isCompleted = true;
-            return {value: {thought}};
+            return {thought};
         }
 
         any|error observation = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
@@ -145,7 +149,19 @@ public class AgentExecutor {
         }
 
         self.updatePromptHistory(thought, observation);
-        return {value: {thought, observation}};
+        return {thought, observation};
+    }
+
+    public isolated function next() returns record {|ExecutionStep value;|}? {
+        if self.isCompleted {
+            return ();
+        }
+        ExecutionStep|error step = self.nextStep();
+        if step is error {
+            return ();
+        }
+        return {value: step};
+
     }
 
     isolated function getPromptConstruct() returns PromptConstruct {
@@ -187,12 +203,19 @@ public isolated class Agent {
     # Agent executor is useful for streaming-like execution of the agent
     #
     # + query - User's query
+    # + previousSteps - Execution steps perviously taken by the agent for the query given
     # + context - Context information to be used by the LLM
     # + return - AgentExecutor instance
-    public isolated function getExecutor(string query, string|map<json> context = {}) returns AgentExecutor {
-        return new (self, query, context = context);
+    public isolated function getExecutor(string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) returns AgentExecutor {
+        return new (self, query, previousSteps, context = context);
     }
 
+    # Initialize the agent iterator for a given query.
+    # Agent executor is useful for foreach execution of the agent 
+    #
+    # + query - User's query
+    # + context - Context information to be used by the LLM
+    # + return - AgentIterator instance
     public isolated function getIterator(string query, string|map<json> context = {}) returns AgentIterator {
         return new (self, query, context);
     }
@@ -203,7 +226,7 @@ public isolated class Agent {
     # + maxIter - No. of max iterations that agent will run to execute the task  
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps
-    # + return - Returns error, in case of a failure
+    # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     public isolated function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns ExecutionStep[] {
         ExecutionStep[] exectutorResults = [];
         AgentIterator iterator = self.getIterator(query, context = context);

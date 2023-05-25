@@ -61,11 +61,11 @@ public type PrimitiveInputSchema record {|
 |};
 
 public type AnyOfInputSchema record {|
-    JsonSubSchema[] anyOf;
+    ObjectInputSchema[] anyOf;
 |};
 
 public type AllOfInputSchema record {|
-    JsonSubSchema[] allOf;
+    ObjectInputSchema[] allOf;
 |};
 
 public type OneOfInputSchema record {|
@@ -94,13 +94,11 @@ public type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|
 
 public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema|ConstantValueSchema;
 
-public type InputSchema SimpleInputSchema|JsonInputSchema;
-
 // tool definitions ----------------------------
 public type Tool record {|
     string name;
     string description;
-    InputSchema? inputSchema = ();
+    JsonInputSchema? inputSchema = ();
     isolated function caller;
 |};
 
@@ -109,8 +107,8 @@ public type HttpTool record {|
     string description;
     HttpMethod method;
     string path;
-    InputSchema queryParams?;
-    InputSchema pathParams?;
-    InputSchema requestBody?;
+    JsonInputSchema queryParams?;
+    JsonInputSchema pathParams?;
+    JsonInputSchema requestBody?;
 |};
 

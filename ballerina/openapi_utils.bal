@@ -163,8 +163,8 @@ class OpenApiSpecVisitor {
         }
 
         // resolve queryParameters
-        InputSchema? queryParams = ();
-        InputSchema? pathParams = ();
+        JsonInputSchema? queryParams = ();
+        JsonInputSchema? pathParams = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
         if parameters is (Parameter|Reference)[] {
             record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|} mappingResult = check self.visitParameters(parameters);
@@ -172,7 +172,7 @@ class OpenApiSpecVisitor {
             pathParams = mappingResult.pathParams;
         }
 
-        InputSchema? requestBody = ();
+        JsonInputSchema? requestBody = ();
         RequestBody|Reference? requestBodySchema = operation.requestBody;
         if requestBodySchema is Reference {
             RequestBody resolvedRequestBody = check self.resolveReference(requestBodySchema).ensureType();
@@ -345,6 +345,7 @@ class OpenApiSpecVisitor {
                     pattern = OPENAPI_PATTER_DATE_TIME;
                 }
             }
+
             inputSchmea.format = format;
             inputSchmea.pattern = pattern;
             inputSchmea.'enum = schema.'enum;
@@ -356,16 +357,16 @@ class OpenApiSpecVisitor {
     }
 
     private function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
-        JsonSubSchema[] anyOf = from Schema element in schema.anyOf
-            select check self.visitSchema(element);
+        ObjectInputSchema[] anyOf = from Schema element in schema.anyOf
+            select check self.visitSchema(element).ensureType();
         return {
             anyOf
         };
     }
 
     private function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
-        JsonSubSchema[] allOf = from Schema element in schema.allOf
-            select check self.visitSchema(element);
+        ObjectInputSchema[] allOf = from Schema element in schema.allOf
+            select check self.visitSchema(element).ensureType();
         return {
             allOf
         };

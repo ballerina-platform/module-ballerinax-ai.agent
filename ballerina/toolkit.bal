@@ -37,9 +37,9 @@ public isolated class HttpServiceToolKit {
 
         Tool[] tools = [];
         foreach HttpTool httpTool in httpTools {
-            InputSchema? queryParams = httpTool?.queryParams;
-            InputSchema? pathParams = httpTool?.pathParams;
-            InputSchema? requestBody = httpTool?.requestBody;
+            JsonInputSchema? queryParams = httpTool?.queryParams;
+            JsonInputSchema? pathParams = httpTool?.pathParams;
+            JsonInputSchema? requestBody = httpTool?.requestBody;
 
             if (requestBody !is () && requestBody.length() == 0)
             || (queryParams !is () && queryParams.length() == 0)
@@ -47,43 +47,20 @@ public isolated class HttpServiceToolKit {
                 return error("Invalid requestBody or queryParameter or pathParameter schemas. Empty records are not allowed, use null instead.");
             }
 
-            if !(queryParams is SimpleInputSchema? && requestBody is SimpleInputSchema? && pathParams is SimpleInputSchema?) &&
-            !(queryParams is JsonInputSchema? && requestBody is JsonInputSchema? && pathParams is JsonInputSchema?)
-            {
-                return error("Unsupported input schema combination. " +
-                "Both `queryParams` and `requestBody` should be either `JsonInputSchema` or `SimpleInputSchema`");
+            map<JsonSubSchema> properties = {path: {'const: httpTool.path}};
+            if queryParams !is () {
+                properties[QUERY_PARAM_KEY] = queryParams;
+            }
+            if requestBody !is () {
+                properties[REQUEST_BODY_KEY] = requestBody;
+            }
+            if pathParams !is () {
+                properties[PATH_PARAM_KEY] = pathParams;
             }
 
-            InputSchema inputSchema;
-            if queryParams is JsonInputSchema || requestBody is JsonInputSchema || pathParams is JsonInputSchema {
-                map<JsonSubSchema> properties = {path: {'const: httpTool.path}};
-                string[] required = [PATH_KEY];
-                inputSchema = {properties, required};
-                if queryParams is JsonInputSchema {
-                    properties[QUERY_PARAM_KEY] = queryParams;
-                    required.push(QUERY_PARAM_KEY);
-                }
-                if requestBody is JsonInputSchema {
-                    properties[REQUEST_BODY_KEY] = requestBody;
-                    required.push(REQUEST_BODY_KEY);
-                }
-                if pathParams is JsonInputSchema {
-                    properties[PATH_PARAM_KEY] = pathParams;
-                    required.push(PATH_PARAM_KEY);
-                }
-            }
-            else {
-                inputSchema = {"path": httpTool.path};
-                if queryParams is SimpleInputSchema {
-                    inputSchema[QUERY_PARAM_KEY] = queryParams;
-                }
-                if requestBody is SimpleInputSchema {
-                    inputSchema[REQUEST_BODY_KEY] = requestBody;
-                }
-                if pathParams is SimpleInputSchema {
-                    inputSchema[PATH_PARAM_KEY] = pathParams;
-                }
-            }
+            JsonInputSchema inputSchema = {
+                properties
+            };
 
             isolated function caller = self.get;
             match httpTool.method {

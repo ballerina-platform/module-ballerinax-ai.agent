@@ -23,7 +23,7 @@ type ToolInvalidInputError distinct error;
 type AgentTool record {|
     string name;
     string description;
-    InputSchema variables?;
+    JsonInputSchema variables?;
     map<json> constants = {};
     isolated function caller;
 |};
@@ -86,7 +86,7 @@ isolated class ToolStore {
         map<AgentTool> tools = self.tools;
         foreach AgentTool tool in tools {
             toolNameList.push(tool.name);
-            record {|string description; InputSchema inputSchema?;|} toolDescription = {
+            record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
                 description: tool.description,
                 inputSchema: tool.variables
             };
@@ -105,7 +105,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
             return error(string `Duplicated tools. Tool '${tool.name}' is already registered.`);
         }
 
-        InputSchema? variables = check tool.inputSchema.cloneWithType();
+        JsonInputSchema? variables = check tool.inputSchema.cloneWithType();
         map<json> constants = {};
 
         if variables is JsonInputSchema {
@@ -130,11 +130,9 @@ isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
             json returnedValue = ();
             if subSchema is ArrayInputSchema {
                 returnedValue = subSchema?.default;
-                // subSchema.default = ();
             }
             else if subSchema is PrimitiveInputSchema {
                 returnedValue = subSchema?.default;
-                // subSchema.default = ();
             }
             else if subSchema is ConstantValueSchema {
                 string tempKey = key; // temporary reference to fix java null pointer issue
