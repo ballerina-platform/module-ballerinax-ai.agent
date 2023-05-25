@@ -24,18 +24,15 @@ configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 configurable string gmailToken = ?;
 
+const string DEFAULT_QUERY = "create a new wifi account with user newGuest and password jh123. " +
+"Send the available list of wifi accounts for that email to alica@wso2.com";
+
 // define send mail tool as a function
 isolated function sendMail(gmail:MessageRequest messageRequest) returns string|error {
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
-    gmail:Message|error sendMessage = gmail->sendMessage(messageRequest);
-    if sendMessage is gmail:Message {
-        return sendMessage.toString();
-    }
-    return "Error while sending the email" + sendMessage.message();
+    gmail:Message sendMessage = check gmail->sendMessage(messageRequest);
+    return sendMessage.toString();
 }
-
-const string DEFAULT_QUERY = "create a new wifi account with user newGuest and password jh123. " +
-"Send the available list of wifi accounts for that email to alica@wso2.com";
 
 public function main(string query = DEFAULT_QUERY) returns error? {
 

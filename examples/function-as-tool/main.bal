@@ -41,17 +41,12 @@ final http:Client wifiClient = check new (wifiAPIUrl, {
     }
 });
 
-public isolated function listGuestWifi(*WifiGetParams params) returns string|error {
-    string path = string `/guest-wifi-accounts/${params.email}`;
-    http:Response response = check wifiClient->get(path);
-    return response.getTextPayload();
+public isolated function listGuestWifi(WifiGetParams params) returns json|error {
+    return check wifiClient->/guest\-wifi\-accounts/[params.email];
 }
 
-public isolated function addGuestWifi(*WifiCreateParams params) returns string|error {
-    string path = "/guest-wifi-accounts";
-    json payload = params;
-    http:Response response = check wifiClient->post(path, message = payload);
-    return response.getTextPayload();
+public isolated function addGuestWifi(WifiCreateParams params) returns string|error {
+    return check wifiClient->/guest\-wifi\-accounts.post(params);
 }
 
 const string DEFAULT_QUERY = "create a new guest wifi with user guestJohn and password abc123 and show available accounts";
@@ -65,14 +60,32 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool listwifi = {
         name: "List_Wifi",
         description: "useful to list the guest wifi accounts",
-        inputSchema: {"email": "string"},
+        inputSchema: {
+            properties: {
+                email: {
+                    'type: "string"
+                }
+            }
+        },
         caller: listGuestWifi
     };
 
     agent:Tool addWifi = {
         name: "Add_Wifi",
         description: "useful to add a new guest wifi account",
-        inputSchema: {"email": "string", "username": "string", "password": "string"},
+        inputSchema: {
+            properties: {
+                email: {
+                    'type: "string"
+                },
+                username: {
+                    'type: "string"
+                },
+                password: {
+                    'type: "string"
+                }
+            }
+        },
         caller: addGuestWifi
     };
 

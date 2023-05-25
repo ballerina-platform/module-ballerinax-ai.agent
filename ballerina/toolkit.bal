@@ -106,9 +106,7 @@ public isolated class HttpServiceToolKit {
         }
     }
 
-    isolated function getTools() returns Tool[]|error {
-        return self.tools;
-    }
+    isolated function getTools() returns Tool[]|error => self.tools;
 
     private isolated function get(HttpInput httpInput) returns json|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.queryParams, httpInput?.pathParams);

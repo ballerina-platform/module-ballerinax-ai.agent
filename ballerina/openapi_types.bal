@@ -140,7 +140,6 @@ type Header record {|
     anydata example?;
     map<Example|Reference> examples?;
     map<MediaType> content?;
-
 |};
 
 type Encoding record {|
@@ -156,7 +155,6 @@ type MediaType record {|
     anydata example?;
     map<Example|Reference> examples?;
     map<Encoding> encoding?;
-
 |};
 
 type BaseSchema record {|
@@ -289,7 +287,6 @@ type Operation record {|
     boolean deprecated?;
     SecurityRequirement[] security?;
     Server[] servers?;
-
 |};
 
 type Callback record {|
@@ -311,7 +308,7 @@ type Response record {|
 type Link record {|
     string operationRef?;
     string operationId?;
-    map<any> parameters?;
+    map<anydata> parameters?;
     anydata requestBody?;
     string description?;
     Server server?;

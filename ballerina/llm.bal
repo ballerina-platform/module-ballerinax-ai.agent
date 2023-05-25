@@ -77,12 +77,11 @@ public isolated class Gpt3Model {
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
     public isolated function complete(string prompt, string? stop = ()) returns string|error {
-        text:CreateCompletionRequest modelConfig = {
+        text:CreateCompletionResponse response = check self.llmClient->/completions.post({
             ...self.modelConfig,
             stop,
             prompt
-        };
-        text:CreateCompletionResponse response = check self.llmClient->/completions.post(modelConfig);
+        });
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
@@ -120,12 +119,11 @@ public isolated class AzureGpt3Model {
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
     public isolated function complete(string prompt, string? stop = ()) returns string|error {
-        azure_text:Deploymentid_completions_body modelConfig = {
+        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, {
             ...self.modelConfig,
             stop,
             prompt
-        };
-        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, modelConfig);
+        });
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
@@ -155,12 +153,11 @@ public isolated class ChatGptModel {
     # + stop - Stop sequence to stop the completion
     # + return - Completed message or error if the completion fails
     public isolated function chatComplete(chat:ChatCompletionRequestMessage[] messages, string? stop = ()) returns string|error {
-        chat:CreateChatCompletionRequest modelConfig = {
+        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post({
             ...self.modelConfig,
             stop,
             messages
-        };
-        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(modelConfig);
+        });
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         if message is () {
             return error("Empty response from the model");
@@ -175,7 +172,7 @@ public isolated class ChatGptModel {
 
     private isolated function createPrompt(PromptConstruct prompt) returns chat:ChatCompletionRequestMessage[] {
         string userMessage = "";
-        if (prompt.history.length() == 0) {
+        if prompt.history.length() == 0 {
             userMessage = prompt.query;
         }
         else {
@@ -197,9 +194,5 @@ public isolated class ChatGptModel {
     }
 }
 
-isolated function createCompletionPrompt(PromptConstruct prompt) returns string {
-    return string `${prompt.instruction}
-
-Question: ${prompt.query}
-${constructHistoryPrompt(prompt.history)}${THOUGHT_KEY}`;
-}
+isolated function createCompletionPrompt(PromptConstruct prompt) returns string => string
+`${prompt.instruction}${"\n\n"}Question: ${prompt.query}${"\n"}${constructHistoryPrompt(prompt.history)}${THOUGHT_KEY}`;

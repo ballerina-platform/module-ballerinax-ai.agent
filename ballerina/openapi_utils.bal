@@ -23,7 +23,7 @@ public type HttpApiSpecification record {|
 |};
 
 public type AdditionInfoFlags record {|
-    boolean extractDescrition = false;
+    boolean extractDescription = false;
     boolean extractDefault = false;
 |};
 
@@ -38,7 +38,7 @@ public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags 
     return check visitor.visit(openApiSpec).cloneReadOnly();
 }
 
-isolated function cleanXtagsFromJsonSpec(map<json>|json[] openAPISpec) {
+isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
     if openAPISpec is map<json> {
         foreach [string, json] [key, value] in openAPISpec.entries() {
             if key.startsWith("x-") {
@@ -46,21 +46,21 @@ isolated function cleanXtagsFromJsonSpec(map<json>|json[] openAPISpec) {
                 continue;
             }
             if value is map<json>|json[] {
-                _ = cleanXtagsFromJsonSpec(value);
+                _ = cleanXTagsFromJsonSpec(value);
             }
         }
         return;
     }
     foreach json element in openAPISpec {
         if element is map<json>|json[] {
-            _ = cleanXtagsFromJsonSpec(element);
+            _ = cleanXTagsFromJsonSpec(element);
         }
     }
 }
 
 isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
     map<json> fileJson = check io:fileReadJson(jsonPath).ensureType();
-    cleanXtagsFromJsonSpec(fileJson);
+    cleanXTagsFromJsonSpec(fileJson);
     map<json> & readonly jsonSchema = check fileJson.cloneWithType();
     return jsonSchema.ensureType();
 }
@@ -332,7 +332,7 @@ class OpenApiSpecVisitor {
             'type: schema.'type
         };
 
-        if self.additionalInfoFlags.extractDescrition {
+        if self.additionalInfoFlags.extractDescription {
             inputSchmea.description = schema.description;
         }
         if self.additionalInfoFlags.extractDefault {

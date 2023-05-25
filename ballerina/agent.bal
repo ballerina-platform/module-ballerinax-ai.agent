@@ -76,7 +76,7 @@ public class AgentExecutor {
     }
 
     # Checks whether agent has more steps to execute.
-    # 
+    #
     # + return - True if agent has more steps to execute, false otherwise
     public isolated function hasNext() returns boolean {
         return !self.isCompleted;
@@ -122,9 +122,12 @@ public class AgentExecutor {
     }
 
     # Execute the next step of the agent.
-    # 
+    #
     # + return - ExecutionStep record or an error if the execution failed
-    public isolated function nextStep() returns ExecutionStep|error {
+    public isolated function nextStep() returns ExecutionStep?|error {
+        if self.isCompleted {
+            return ();
+        }
         string|error decision = self.decideNextTool();
         if decision is error {
             return error("Error while communicating to LLM. Task is terminated due to: " + decision.toString());
@@ -143,8 +146,7 @@ public class AgentExecutor {
         any|error observation = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
         if observation is ToolNotFoundError {
             observation = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
-        }
-        else if observation is ToolInvalidInputError {
+        } else if observation is ToolInvalidInputError {
             observation = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
         }
 
@@ -156,12 +158,11 @@ public class AgentExecutor {
         if self.isCompleted {
             return ();
         }
-        ExecutionStep|error step = self.nextStep();
+        ExecutionStep?|error step = self.nextStep();
         if step is error {
-            return ();
+            log:printError("Error occured while executing the agent: " + step.toString());
         }
-        return {value: step};
-
+        return step is ExecutionStep ? {value: step} : ();
     }
 
     isolated function getPromptConstruct() returns PromptConstruct {
@@ -251,16 +252,12 @@ public isolated class Agent {
         }
         return exectutorResults;
     }
-    isolated function getLlmModel() returns LlmModel {
-        return self.model;
-    }
-    isolated function getToolStore() returns ToolStore {
-        return self.toolStore;
-    }
+    isolated function getLlmModel() returns LlmModel => self.model;
 
-    isolated function getInstructionPrompt() returns string {
-        return self.instructionPrompt;
-    }
+    isolated function getToolStore() returns ToolStore => self.toolStore;
+
+    isolated function getInstructionPrompt() returns string => self.instructionPrompt;
+
 }
 
 isolated function constructPrompt(string toolList, string toolIntro) returns string {

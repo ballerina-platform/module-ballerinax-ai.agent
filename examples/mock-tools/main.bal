@@ -43,7 +43,7 @@ isolated function searchToolMock(*SearchParams params) returns string {
 
 isolated function calculatorToolMock(*CalculatorParams params) returns string {
     string expression = params.expression.trim();
-    if (expression == "25^0.43") {
+    if expression == "25^0.43" {
         return "Answer: 3.991298452658078";
     } else {
         return "Can't compute. Some information is missing";
