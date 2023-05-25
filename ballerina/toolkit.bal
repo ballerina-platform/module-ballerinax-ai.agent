@@ -32,7 +32,7 @@ public isolated class HttpServiceToolKit {
     private final http:Client httpClient;
 
     # Initializes the toolkit with the given service url and http tools.
-    # 
+    #
     # + serviceUrl - The url of the service to be called
     # + httpTools - The http tools to be initialized
     # + clientConfig - The http client configuration associated to the tools

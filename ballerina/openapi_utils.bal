@@ -61,8 +61,7 @@ isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
 isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
     map<json> fileJson = check io:fileReadJson(jsonPath).ensureType();
     cleanXTagsFromJsonSpec(fileJson);
-    map<json> & readonly jsonSchema = check fileJson.cloneWithType();
-    return jsonSchema.ensureType();
+    return check fileJson.cloneWithType();
 }
 
 class OpenApiSpecVisitor {

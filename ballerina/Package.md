@@ -246,7 +246,7 @@ First, define `sendMail` function as a tool.
 ```
 agent:Tool sendEmailTool = {
     name: "Send mail",
-    description: "useful send emails to the recipients.",
+    description: "useful to send emails to a given recipient",
     inputSchema: {
         properties: {
             recipient: {'type: agent:STRING},
