@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/regex;
+
 import ballerina/log;
+import ballerina/regex;
 
 type ToolNotFoundError distinct error;
 
@@ -78,7 +79,7 @@ isolated class ToolStore {
     }
 
     # Generate descriptions for the tools registered.
-    # 
+    #
     # + return - Return a record with tool names and descriptions
     isolated function extractToolInfo() returns ToolInfo {
         string[] toolNameList = [];

@@ -70,7 +70,7 @@ public class AgentExecutor {
             history: previousSteps,
             instruction
         };
-        self.model = agent.getLLMModel();
+        self.model = agent.getLlmModel();
         self.toolStore = agent.getToolStore();
         self.isCompleted = false;
     }
@@ -251,7 +251,7 @@ public isolated class Agent {
         }
         return exectutorResults;
     }
-    isolated function getLLMModel() returns LlmModel {
+    isolated function getLlmModel() returns LlmModel {
         return self.model;
     }
     isolated function getToolStore() returns ToolStore {

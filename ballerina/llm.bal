@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/openai.text;
-import ballerinax/openai.chat;
 import ballerinax/azure.openai.text as azure_text;
+import ballerinax/openai.chat;
+import ballerinax/openai.text;
 
 public type Gpt3ModelConfig readonly & record {|
     // text:CreateCompletionRequest should be included when the bug is fixed
@@ -72,7 +72,7 @@ public isolated class Gpt3Model {
     }
 
     # Completes the given prompt using the GPT3 model.
-    # 
+    #
     # + prompt - Prompt to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
@@ -99,7 +99,7 @@ public isolated class AzureGpt3Model {
     private final string apiVersion;
 
     # Initializes the GPT-3 model with the given connection configuration and model configuration.
-    # 
+    #
     # + connectionConfig - Connection Configuration for Azure OpenAI text client
     # + serviceUrl - Service URL for Azure OpenAI service
     # + deploymentId - Deployment ID for Azure OpenAI model instance
@@ -115,7 +115,7 @@ public isolated class AzureGpt3Model {
     }
 
     # Completes the given prompt using the GPT3 model.
-    # 
+    #
     # + prompt - Prompt to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
@@ -140,7 +140,7 @@ public isolated class ChatGptModel {
     private final ChatGptModelConfig modelConfig;
 
     # Initializes the ChatGPT model with the given connection configuration and model configuration.
-    # 
+    #
     # + connectionConfig - Connection Configuration for OpenAI chat client
     # + modelConfig - Model Configuration for OpenAI chat client
     # + return - Error if the model initialization fails
@@ -150,7 +150,7 @@ public isolated class ChatGptModel {
     }
 
     # Completes the given prompt using the ChatGPT model.
-    # 
+    #
     # + messages - Messages to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed message or error if the completion fails
