@@ -27,6 +27,11 @@ public type AdditionInfoFlags record {|
     boolean extractDefault = false;
 |};
 
+# Extracts the Http tools from the given OpenAPI specification file.
+#
+# + filePath - Path to the OpenAPI specification file
+# + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
+# + return - HttpApiSpecification record with the extracted tools
 public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
     OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);

@@ -50,8 +50,8 @@ public type PromptConstruct record {|
     ExecutionStep[] history;
 |};
 
-# Extendable LLM model object that can be used for completion tasks
-# Useful to initialize the agents 
+# Extendable LLM model object that can be used for completion tasks.
+# Useful to initialize the agents.
 public type LlmModel distinct isolated object {
     isolated function generate(PromptConstruct prompt) returns string|error;
 };
@@ -61,11 +61,21 @@ public isolated class Gpt3Model {
     final text:Client llmClient;
     private final Gpt3ModelConfig modelConfig;
 
+    # Initializes the GPT-3 model with the given connection configuration and model configuration.
+    #
+    # + connectionConfig - Connection Configuration for OpenAI text client 
+    # + modelConfig - Model Configuration for OpenAI text client
+    # + return - Error if the model initialization fails
     public isolated function init(text:ConnectionConfig connectionConfig, Gpt3ModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
         self.modelConfig = modelConfig;
     }
 
+    # Completes the given prompt using the GPT3 model.
+    # 
+    # + prompt - Prompt to be completed
+    # + stop - Stop sequence to stop the completion
+    # + return - Completed prompt or error if the completion fails
     public isolated function complete(string prompt, string? stop = ()) returns string|error {
         text:CreateCompletionRequest modelConfig = {
             ...self.modelConfig,
@@ -88,6 +98,14 @@ public isolated class AzureGpt3Model {
     private final string deploymentId;
     private final string apiVersion;
 
+    # Initializes the GPT-3 model with the given connection configuration and model configuration.
+    # 
+    # + connectionConfig - Connection Configuration for Azure OpenAI text client
+    # + serviceUrl - Service URL for Azure OpenAI service
+    # + deploymentId - Deployment ID for Azure OpenAI model instance
+    # + apiVersion - API version for Azure OpenAI model instance
+    # + modelConfig - Model Configuration for Azure OpenAI text client
+    # + return - Error if the model initialization fails
     public isolated function init(azure_text:ConnectionConfig connectionConfig, string serviceUrl, string deploymentId,
             string apiVersion, AzureGpt3ModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig, serviceUrl);
@@ -96,6 +114,11 @@ public isolated class AzureGpt3Model {
         self.apiVersion = apiVersion;
     }
 
+    # Completes the given prompt using the GPT3 model.
+    # 
+    # + prompt - Prompt to be completed
+    # + stop - Stop sequence to stop the completion
+    # + return - Completed prompt or error if the completion fails
     public isolated function complete(string prompt, string? stop = ()) returns string|error {
         azure_text:Deploymentid_completions_body modelConfig = {
             ...self.modelConfig,
@@ -116,11 +139,21 @@ public isolated class ChatGptModel {
     final chat:Client llmClient;
     private final ChatGptModelConfig modelConfig;
 
+    # Initializes the ChatGPT model with the given connection configuration and model configuration.
+    # 
+    # + connectionConfig - Connection Configuration for OpenAI chat client
+    # + modelConfig - Model Configuration for OpenAI chat client
+    # + return - Error if the model initialization fails
     public isolated function init(chat:ConnectionConfig connectionConfig, ChatGptModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig);
         self.modelConfig = modelConfig;
     }
 
+    # Completes the given prompt using the ChatGPT model.
+    # 
+    # + messages - Messages to be completed
+    # + stop - Stop sequence to stop the completion
+    # + return - Completed message or error if the completion fails
     public isolated function chatComplete(chat:ChatCompletionRequestMessage[] messages, string? stop = ()) returns string|error {
         chat:CreateChatCompletionRequest modelConfig = {
             ...self.modelConfig,

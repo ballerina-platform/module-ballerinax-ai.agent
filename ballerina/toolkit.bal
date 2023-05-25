@@ -31,6 +31,13 @@ public isolated class HttpServiceToolKit {
     private final HttpHeader headers;
     private final http:Client httpClient;
 
+    # Initializes the toolkit with the given service url and http tools.
+    # 
+    # + serviceUrl - The url of the service to be called
+    # + httpTools - The http tools to be initialized
+    # + clientConfig - The http client configuration associated to the tools
+    # + headers - The http headers to be used in the requests
+    # + returns - error if the initialization fails
     public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, HttpHeader headers = {}) returns error? {
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);

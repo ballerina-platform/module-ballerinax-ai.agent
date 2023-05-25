@@ -75,14 +75,14 @@ public class AgentExecutor {
         self.isCompleted = false;
     }
 
-    # Checks whether agent has more steps to execute
+    # Checks whether agent has more steps to execute.
     # 
     # + return - True if agent has more steps to execute, false otherwise
     public isolated function hasNext() returns boolean {
         return !self.isCompleted;
     }
 
-    # Build the prompts during each decision iterations 
+    # Build the prompts during each decision iterations.
     #
     # + thought - Thought by the model during the previous iterations
     # + observation - Observation returned by the performed tool
@@ -90,12 +90,12 @@ public class AgentExecutor {
         self.prompt.history.push({thought, observation});
     }
 
-    # Use LLMs to decide the next tool 
+    # Use LLMs to decide the next tool.
     # + return - Decision by the LLM or an error if call to the LLM fails
     private isolated function decideNextTool() returns string|error =>
         self.model.generate(self.prompt);
 
-    # Parse the LLM response in string form to an LLMResponse record
+    # Parse the LLM response in string form to an LLMResponse record.
     #
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
@@ -121,7 +121,7 @@ public class AgentExecutor {
         return nextTool;
     }
 
-    # Execute the next step of the agent
+    # Execute the next step of the agent.
     # 
     # + return - ExecutionStep record or an error if the execution failed
     public isolated function nextStep() returns ExecutionStep|error {
@@ -169,14 +169,14 @@ public class AgentExecutor {
     }
 }
 
-# Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs
+# Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs.
 public isolated class Agent {
 
     private final LlmModel model;
     private final ToolStore toolStore;
     private final string instructionPrompt;
 
-    # Initialize an Agent
+    # Initialize an Agent.
     #
     # + model - LLM model instance
     # + toolLoader - ToolLoader instance to load tools from (optional)
@@ -200,7 +200,7 @@ public isolated class Agent {
     }
 
     # Initialize the agent executor for a given query. 
-    # Agent executor is useful for streaming-like execution of the agent
+    # Agent executor is useful for streaming-like execution of the agent.
     #
     # + query - User's query
     # + previousSteps - Execution steps perviously taken by the agent for the query given
@@ -211,7 +211,7 @@ public isolated class Agent {
     }
 
     # Initialize the agent iterator for a given query.
-    # Agent executor is useful for foreach execution of the agent 
+    # Agent executor is useful for foreach execution of the agent.
     #
     # + query - User's query
     # + context - Context information to be used by the LLM
@@ -220,7 +220,7 @@ public isolated class Agent {
         return new (self, query, context);
     }
 
-    # Execute the agent for a given user's query
+    # Execute the agent for a given user's query.
     #
     # + query - Natural langauge commands to the agent  
     # + maxIter - No. of max iterations that agent will run to execute the task  

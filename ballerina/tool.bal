@@ -37,7 +37,7 @@ isolated class ToolStore {
     private final map<AgentTool> & readonly tools;
 
     # Register tools to the agent. 
-    # These tools will be by the LLM to perform tasks 
+    # These tools will be by the LLM to perform tasks.
     #
     # + tools - A list of tools that are available to the LLM
     # + return - An error if the tool is already registered
@@ -47,7 +47,7 @@ isolated class ToolStore {
         self.tools = toolMap.cloneReadOnly();
     }
 
-    # execute the tool decided by the LLM
+    # execute the tool decided by the LLM.
     #
     # + toolName - Name of the tool to be executed
     # + inputs - Variable inputs to the tool
@@ -77,7 +77,8 @@ isolated class ToolStore {
         return observation;
     }
 
-    # Generate descriptions for the tools registered
+    # Generate descriptions for the tools registered.
+    # 
     # + return - Return a record with tool names and descriptions
     isolated function extractToolInfo() returns ToolInfo {
         string[] toolNameList = [];
