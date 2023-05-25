@@ -13,9 +13,11 @@ HttpTool[] tools = [
         method: POST,
         description: "test HTTP POST tool with simple schema",
         requestBody: {
-            "attribute1": STRING,
-            "attribute2": INTEGER,
-            "attribute3": "string[]"
+            properties: {
+                attribute1: {'type: STRING},
+                attribute2: {'type: INTEGER},
+                attribute3: {'type: "array", items: {'type: STRING}}
+            }
         }
     },
     {
@@ -71,8 +73,7 @@ function testHttpToolKitInitialization() {
         'type: "object",
         properties: {
             path: {
-                'type: "string",
-                pattern: "/example-get/{pathParam}"
+                'const: "/example-get/{pathParam}"
             }
         }
     });
@@ -80,11 +81,19 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[1].name, "httpPostWithSimpleSchema");
     test:assertEquals(tools[1].description, "test HTTP POST tool with simple schema");
     test:assertEquals(tools[1].inputSchema, {
-        path: "/example-post",
-        requestBody: {
-            attribute1: "string",
-            attribute2: "integer",
-            attribute3: "string[]"
+        'type: "object",
+        properties: {
+            path: {
+                'const: "/example-post"
+            },
+            requestBody: {
+                'type: "object",
+                properties: {
+                    attribute1: {'type: "string"},
+                    attribute2: {'type: "integer"},
+                    attribute3: {'type: "array", items: {'type: "string"}}
+                }
+            }
         }
     });
 
@@ -94,8 +103,7 @@ function testHttpToolKitInitialization() {
         'type: "object",
         properties: {
             path: {
-                'type: "string",
-                pattern: "/example-delete"
+                'const: "/example-delete"
             },
             requestBody: {
                 'type: "object",

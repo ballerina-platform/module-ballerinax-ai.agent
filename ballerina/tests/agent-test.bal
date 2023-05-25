@@ -3,14 +3,22 @@ import ballerina/test;
 Tool searchTool = {
     name: "Search",
     description: " A search engine. Useful for when you need to answer questions about current events",
-    inputSchema: {"query": "string"},
+    inputSchema: {
+        properties: {
+            query: {'type: "string", description: "The search query"}
+        }
+    },
     caller: searchToolMock
 };
 
 Tool calculatorTool = {
     name: "Calculator",
     description: "Useful for when you need to answer questions about math.",
-    inputSchema: {"expression": "string mathematical expression"},
+    inputSchema: {
+        properties: {
+            expression: {'type: "string", description: "The mathematical expression to evaluate"}
+        }
+    },
     caller: calculatorToolMock
 };
 
@@ -58,7 +66,8 @@ function testInitializedPrompt() returns error? {
         "... (this Thought/Action/Observation can repeat N times)\n" +
         "Thought: I now know the final answer\n" +
         "Final Answer: the final answer to the original input question\n\n" +
-        "Begin!";
+        "Begin! Reminder to always use the exact characters 'Final Answer' when responding.";
+
     test:assertEquals(agentExecutor.getPromptConstruct().instruction, instruction);
 }
 

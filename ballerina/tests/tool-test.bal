@@ -63,10 +63,12 @@ function testResolveSchema() {
                 'type: OBJECT,
                 properties: {
                     q: {
-                        'type: STRING
+                        'type: STRING,
+                        default: "AIzaSyAYFLQpxzp5XlQGkAR8URuBJGr9YiiZyIU"
                     },
                     cx: {
-                        'type: STRING
+                        'type: STRING,
+                        default: "d60e6379e9234405a"
                     },
                     key: {
                         'type: STRING,

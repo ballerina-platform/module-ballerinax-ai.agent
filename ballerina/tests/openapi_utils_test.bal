@@ -12,9 +12,9 @@ function testParseWifiOpenAPISpec() {
     test:assertTrue(openAPISpec.paths is Paths, "Paths are not parsed correctly");
     Paths paths = <Paths>openAPISpec.paths;
     test:assertEquals(paths.keys(), [
-        "/guest-wifi-accounts/{ownerEmail}",
         "/guest-wifi-accounts",
-        "/guest-wifi-accounts/{ownerEmail}/{username}"
+        "/guest-wifi-accounts/{ownerEmail}/{username}",
+        "/guest-wifi-accounts/{ownerEmail}"
     ]);
 
 }
@@ -31,23 +31,23 @@ function testParseOpenAPISpec2() {
     test:assertTrue(openAPISpec.paths is Paths, "Paths are not parsed correctly");
     Paths paths = <Paths>openAPISpec.paths;
     test:assertEquals(paths.keys(), [
-        "/engines",
-        "/engines/{engine_id}",
-        "/completions",
-        "/chat/completions",
-        "/edits",
-        "/embeddings",
-        "/engines/{engine_id}/search",
-        "/files/{file_id}/content",
-        "/answers",
-        "/classifications",
-        "/fine-tunes",
-        "/fine-tunes/{fine_tune_id}",
         "/fine-tunes/{fine_tune_id}/cancel",
-        "/fine-tunes/{fine_tune_id}/events",
+        "/files/{file_id}/content",
+        "/edits",
         "/models",
+        "/chat/completions",
+        "/fine-tunes/{fine_tune_id}",
+        "/embeddings",
+        "/answers",
+        "/completions",
+        "/engines/{engine_id}",
+        "/moderations",
+        "/fine-tunes/{fine_tune_id}/events",
         "/models/{model}",
-        "/moderations"
+        "/classifications",
+        "/engines",
+        "/fine-tunes",
+        "/engines/{engine_id}/search"
     ]);
 
 }
@@ -61,15 +61,6 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
 
     HttpTool[] tools = [
         {
-            name: "getGuestWifiAccountsOwneremail",
-            description: "Get list of guest WiFi accounts of a given owner email address",
-            method: GET,
-            path: "/guest-wifi-accounts/{ownerEmail}",
-            queryParams: (),
-            requestBody: (),
-            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}}}
-        },
-        {
             name: "postGuestWifiAccounts",
             description: "Create new guest WiFi account",
             method: "POST",
@@ -77,8 +68,8 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             queryParams: (),
             requestBody: {
                 allOf: [
-                    {'type: "object", properties: {email: {'type: "string"}, username: {'type: "string"}}},
-                    {'type: "object", properties: {password: {'type: "string"}}}
+                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
                 ]
             }
         },
@@ -90,6 +81,15 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             queryParams: (),
             requestBody: (),
             pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+        },
+        {
+            name: "getGuestWifiAccountsOwneremail",
+            description: "Get list of guest WiFi accounts of a given owner email address",
+            method: GET,
+            path: "/guest-wifi-accounts/{ownerEmail}",
+            queryParams: (),
+            requestBody: (),
+            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}}}
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
@@ -117,7 +117,6 @@ function testVisitorWithOpenAISpec() returns error? {
                 description: "Creates a completion for the provided prompt and parameters",
                 method: POST,
                 path: "/completions",
-                "queryParams": (),
                 requestBody: {
                     'type: "object",
                     properties:
@@ -151,8 +150,12 @@ function testVisitorWithOpenAISpec() returns error? {
                         best_of: {'type: "integer"},
                         logit_bias: {'type: "object", properties: {}},
                         user: {'type: "string"}
-                    }
+                    },
+                    required: [
+                        "model"
+                    ]
                 }
+
             });
         }
         else if tool.name == "createChatCompletion" {
@@ -161,7 +164,6 @@ function testVisitorWithOpenAISpec() returns error? {
                 description: "Creates a completion for the chat message",
                 method: POST,
                 path: "/chat/completions",
-                queryParams: (),
                 requestBody: {
                     'type: "object",
                     properties: {
@@ -170,6 +172,7 @@ function testVisitorWithOpenAISpec() returns error? {
                             'type: "array",
                             items: {
                                 'type: "object",
+                                required: ["role", "content"],
                                 properties: {role: {'type: "string", 'enum: ["system", "user", "assistant"]}, content: {'type: "string"}, name: {'type: "string"}}
                             }
                         },
@@ -183,8 +186,10 @@ function testVisitorWithOpenAISpec() returns error? {
                         frequency_penalty: {'type: "float"},
                         logit_bias: {'type: "object", properties: {}},
                         user: {'type: "string"}
-                    }
+                    },
+                    required: ["model", "messages"]
                 }
+
             });
         }
     }
