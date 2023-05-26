@@ -1,6 +1,5 @@
 ## Overview
-This module provides functionality required to build ReAct Agent using Large Language Models (LLMs).
-
+This module provides the functionality required to build ReAct Agent using Large Language Models (LLMs).
 
 ## Prerequisites
 
@@ -9,11 +8,11 @@ Before using this module in your Ballerina application, complete the following:
 * Create an [OpenAI account](https://beta.openai.com/signup/).
 * Obtain an API key by following [these instructions](https://platform.openai.com/docs/api-reference/authentication).
 
-Alternatively, it is possible to use Azure OpenAI account by completing the following steps. 
+Alternatively, it is possible to use an Azure OpenAI account by completing the following steps. 
 
 - Create an [Azure](https://azure.microsoft.com/en-us/features/azure-portal/) account.
 - Create an [Azure OpenAI resource](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/how-to/create-resource).
-- Obtain the tokens. Refer to [Azure OpenAI Authentication](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication) guide to learn how to generate and use tokens.
+- Obtain the tokens. Refer to the [Azure OpenAI Authentication](https://learn.microsoft.com/en-us/azure/cognitive-services/openai/reference#authentication) guide to learn how to generate and use tokens.
 
 ## Tool 
 
@@ -46,7 +45,7 @@ agent:Tool exampleTool = {
 
 ### HTTP resource as a Tool
 
-To use an API resource as a tool, a HTTP tool definition can be created as follows. 
+To use an API resource as a tool, an HTTP tool definition can be created as follows. 
 
 ```
 agent:HttpTool httpResourceTool = {
@@ -61,7 +60,7 @@ agent:HttpTool httpResourceTool = {
         // a JSON schema defining path parameters of the HTTP resource
     }
     requestBody: {
-        // a JSON schema defining request body of the HTTP resource
+        // a JSON schema defining the request body of the HTTP resource
     }
 }
 ```
@@ -197,8 +196,8 @@ while(agentExecutor.hasNext()){
     agent:ExecutionStep step = check agentExecutor.nextStep();
     any|error observation = step?.observation;
     if observation is error {
-        // handle error using a tool
-        // push manually to traces for the manually performed actions if needed
+        // handle the error using a tool
+        // push manually to trace the execution steps of the manually performed actions if needed
         // clean the traces if needed
         agentExecutor = agent.getExecutor(QUERY, trace);
         continue;
