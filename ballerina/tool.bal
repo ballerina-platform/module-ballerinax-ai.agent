@@ -71,7 +71,7 @@ isolated class ToolStore {
             map<json> & readonly toolParams = inputValues.cloneReadOnly();
             observation = trap check function:call(caller, toolParams);
         }
-        if observation is error {
+        if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
             log:printWarn(string `Tool '${toolName}' is provide with invalid inputs: ${inputValues.toString()}`);
             return error ToolInvalidInputError(string `Tool '${toolName}' is provide with invalid inputs: ${(inputs ?: {}).toString()}`);
         }
