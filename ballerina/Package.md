@@ -22,7 +22,7 @@ A tool refers to a single action used to retrieve, process, or manipulate data. 
 
 When using a Ballerina function as a tool, the function should adhere to the following template:
 
-```
+```ballerina
 isolated function functionName(record parameters) returns anydata|error {
     // function body 
 }
@@ -32,7 +32,7 @@ In this template, `record parameters` represents a Ballerina record that contain
 
 To define a tool using the above function, you can use the following syntax:
 
-```
+```ballerina
 agent:Tool exampleTool = {
     name: "exampleTool", // used as an identifier 
     description: "defines the purpose of the function", // provides information about the behavior
@@ -47,7 +47,7 @@ agent:Tool exampleTool = {
 
 To use an API resource as a tool, an HTTP tool definition can be created as follows. 
 
-```
+```ballerina
 agent:HttpTool httpResourceTool = {
     name: "exampleTool", // used as an identifier 
     description: "defines the purpose of the API resource", // provides information about the behavior
@@ -69,7 +69,7 @@ agent:HttpTool httpResourceTool = {
 
 You can automatically extract tools from a valid  [OpenAPI specification](https://swagger.io/specification/) (3.x) using the `extractToolsFromOpenApiSpec` function, as demonstrated below:
 
-```
+```ballerina
 string openApiPath = "<PATH TO THE JSON FILE>"
 agent:HttpTool[] tools = extractToolsFromOpenApiSpec(openApiPath)
 ```
@@ -81,7 +81,7 @@ The tool utilizes a JSON schema to define the input schema. This schema specifie
 For example, the input schema for a Ballerina record can be defined as follows:
 
 Ballerina record:
-```
+```ballerina
 type SendEmailInput record {|
     string recipient = "<DEFAULT EMAIL>"; // should be an email address from the contacts
     string subject;
@@ -91,7 +91,7 @@ type SendEmailInput record {|
 ```
 
 JSON input schema: 
-```
+```ballerina
  agent:InputSchema schema = {
         'type: agent:OBJECT,
         properties: {
@@ -111,7 +111,7 @@ To illustrate this point, let's consider an HTTP service that encompasses multip
 
 Furthermore, the `HttpServiceToolKit` extends the definition of a `Tool` to encompass `HttpTool` specifics, effectively encapsulating HTTP-related details. By interpreting an `HttpTool` as a `Tool`, the `HttpServiceToolKit` eliminates the need for additional effort in writing separate Tools for HTTP services. This streamlined interpretation simplifies the development process and saves valuable time.
 
-```
+```ballerina
 agent:HttpTool resource1 = {
     // defines resource 1
 }
@@ -136,17 +136,17 @@ This is a large language model (LLM) instance. Currently, Agent module has suppo
 
 1) OpenAI GPT3 
 
-    ```
+    ```ballerina
     agent:Gpt3Model model = check new ({auth: {token: <OPENAI API KEY>}});
 
     ```
 2) OpenAI ChatGPT (e.g. GPT3.5, GPT4)
-    ```
+    ```ballerina
     agent:ChatGptModel model = check new ({auth: {token: <OPENAI API KEY>}});
 
     ```
 3) Azure OpenAI GPT3
-    ```
+    ```ballerina
     agent:AzureGpt3Model model = check new ({auth: {token: <AZURE OPENAI API KEY>}}, string serviceUrl, string deploymentId, string apiVersion);
     ```
 
@@ -157,7 +157,7 @@ The Agent facilitates the execution of natural language (NL) commands by leverag
 To create an Agent, you need an LLM model and a set of Tool (or ToolKit) definitions.
 
 
-```
+```ballerina
 agent:Agent agent = check new (LLMModel model, (ToolKit|Tool)... tools);
 ```
 
@@ -167,7 +167,7 @@ There are multiple ways to utilize the Agent.
 
 The Agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
 
-```
+```ballerina
 agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 ```
 
@@ -175,7 +175,7 @@ agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 
 The Agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
 
-```
+```ballerina
 agent:AgentIterator agentIterator = agent.getIterator("<NL COMMAND>");
 foreach agent:ExecutionStep step in agentIterator{
     // logic goes here
@@ -188,7 +188,7 @@ The Agent can be executed as a stream using AgentExecutor. This allows more flex
 
 This approach is useful in scenarios where you need to remove specific steps during execution (e.g., unsuccessful or older steps). It also allows for manual execution in certain cases (e.g., handling specific errors or obtaining user inputs). You can manipulate the execution trace as required using AgentExecutor.
 
-```
+```ballerina
 string QUERY = "<NL COMMAND>";
 agent:AgentExecutor agentExecutor = agent.getExecutor(QUERY);
 agent:ExecutionStep[] trace = [];
@@ -226,7 +226,7 @@ Follow the steps below to create a simple sample:
 First, we need to wrap the connector actions using another function since Ballerina doesn't allow invoking remote function pointers directly. Here, we create the `sendEmail` function that wraps the connector action.
 
 
-```
+```ballerina
 isolated function sendEmail(gmail:MessageRequest messageRequest) returns string|error {
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
     gmail:Message|error sendMessage = gmail->sendMessage(messageRequest);
@@ -242,7 +242,7 @@ isolated function sendEmail(gmail:MessageRequest messageRequest) returns string|
 
 First, define `sendMail` function as a tool.
 
-```
+```ballerina
 agent:Tool sendEmailTool = {
     name: "Send mail",
     description: "useful to send emails to a given recipient",
@@ -260,7 +260,7 @@ agent:Tool sendEmailTool = {
 
 Next, create `HttpTools` for the resources of the GuestWifi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service.
 
-```
+```ballerina
 agent:HttpTool listWifiHttpTool = {
     name: "List wifi",
     path: "/guest-wifi-accounts/{ownerEmail}",
@@ -301,7 +301,7 @@ To create the Agent, we first need to initialize a model (e.g., GPT3, GPT4). In 
 <!-- To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc. -->
 
 
-```
+```ballerina
 agent:ChatGptModel model = check new ({auth: {token:  <OPENAI API KEY>}});
 agent:Agent agent = check new (model, wifiServiceToolKit, sendEmailTool);
 ```
@@ -310,7 +310,7 @@ agent:Agent agent = check new (model, wifiServiceToolKit, sendEmailTool);
 
 Now we can run the agent with NL commands from the user. Note that in this case, we use a query template and pass unknowns as interpolations to the `queryTemplate`.
 
-```
+```ballerina
 string queryTemplate = string`create a new guest WiFi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the available list of WiFi accounts for that email to ${recipientEmail}`;
 
 agent:ExecutionStep[] run = agent.run(query);
