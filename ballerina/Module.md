@@ -208,7 +208,7 @@ while(agentExecutor.hasNext()){
 
 ## Quickstart
 
-Let's walk through the usage of the `ai.agent` library using [this sample](examples/multi-type-tools/main.bal). The example demonstrates the use of two types of tools:
+Let's walk through the usage of the `ai.agent` library using [this sample](/examples/multi-type-tools/README.md). The example demonstrates the use of two types of tools:
 
 - To send a Google email, we utilize the sendMessage function from the `ballerinax/googleapis.gmail` connector as a tool.
 - HttpTools are used to create and list WiFi accounts through the `GuestWifi` HTTP service.
