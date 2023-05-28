@@ -1,5 +1,5 @@
 ## Overview
-This module provides the functionality required to build ReAct Agent using Large Language Models (LLMs).
+This module provides the functionality required to build ReAct agent using Large Language Models (LLMs).
 
 ## Prerequisites
 
@@ -132,7 +132,7 @@ agent:HttpServiceToolKit serviceAToolKit = check new (
 
 ## Model
 
-This is a large language model (LLM) instance. Currently, Agent module has support for the following LLM APIs. 
+This is a large language model (LLM) instance. Currently, the agent module has support for the following LLM APIs. 
 
 1) OpenAI GPT3 
 
@@ -152,20 +152,20 @@ This is a large language model (LLM) instance. Currently, Agent module has suppo
 
 ## Agent
 
-The Agent facilitates the execution of natural language (NL) commands by leveraging the reasoning and text generation capabilities of LLMs (Language Models). It follows the [ReAct framework](https://arxiv.org/pdf/2210.03629.pdf):
+The agent facilitates the execution of natural language (NL) commands by leveraging the reasoning and text generation capabilities of LLMs (Language Models). It follows the [ReAct framework](https://arxiv.org/pdf/2210.03629.pdf):
 
-To create an Agent, you need an LLM model and a set of Tool (or ToolKit) definitions.
+To create an agent, you need an LLM model and a set of Tool (or ToolKit) definitions.
 
 
 ```ballerina
 agent:Agent agent = check new (LLMModel model, (ToolKit|Tool)... tools);
 ```
 
-There are multiple ways to utilize the Agent.
+There are multiple ways to utilize the agent.
 
 ### Agent.run() for batch execution
 
-The Agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
+The agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
 
 ```ballerina
 agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
@@ -173,7 +173,7 @@ agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 
 ### AgentIterator for foreach execution
 
-The Agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
+The agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
 
 ```ballerina
 agent:AgentIterator agentIterator = agent.getIterator("<NL COMMAND>");
@@ -184,7 +184,7 @@ foreach agent:ExecutionStep step in agentIterator{
 ```
 
 ### AgentExecutor for streaming execution 
-The Agent can be executed as a stream using AgentExecutor. This allows more flexibility in controlling the agent's execution. AgentExecutor can take previous execution steps as input to resume a task that was partially executed.
+The agent can be executed as a stream using AgentExecutor. This allows more flexibility in controlling the agent's execution. AgentExecutor can take previous execution steps as input to resume a task that was partially executed.
 
 This approach is useful in scenarios where you need to remove specific steps during execution (e.g., unsuccessful or older steps). It also allows for manual execution in certain cases (e.g., handling specific errors or obtaining user inputs). You can manipulate the execution trace as required using AgentExecutor.
 
@@ -211,7 +211,7 @@ while(agentExecutor.hasNext()){
 Let's walk through the usage of the `ai.agent` library using [this sample](/examples/multi-type-tools/README.md). The example demonstrates the use of two types of tools:
 
 - To send a Google email, we utilize the sendMessage function from the `ballerinax/googleapis.gmail` connector as a tool.
-- HttpTools are used to create and list WiFi accounts through the `GuestWifi` HTTP service.
+- HttpTools are used to create and list WiFi accounts through the `GuestWiFi` HTTP service.
     - List available WiFi accounts:`GET /guest-wifi-accounts/{ownerEmail}`
     - Create a new WiFi account: `POST /guest-wifi-accounts`
 
@@ -258,7 +258,7 @@ agent:Tool sendEmailTool = {
 };
 ```
 
-Next, create `HttpTools` for the resources of the GuestWifi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service.
+Next, create `HttpTools` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service.
 
 ```ballerina
 agent:HttpTool listWifiHttpTool = {
@@ -292,11 +292,11 @@ agent:HttpServiceToolKit wifiServiceToolKit = check new (wifiServiceUrl, [listWi
 });
 ```
 
-Note that when creating the `HttpServiceToolKit` for the `GuestWifi` service, we provide the service URL and authentication configurations to the `HttpServiceToolKit` initializer to establish the connection with the service
+Note that when creating the `HttpServiceToolKit` for the `GuestWiFi` service, we provide the service URL and authentication configurations to the `HttpServiceToolKit` initializer to establish the connection with the service.
 
 ### Step 4 - Create the Agent
 
-To create the Agent, we first need to initialize a model (e.g., GPT3, GPT4). In this example, we initialize the agent with the `ChatGptModel` model as follows:
+To create the agent, we first need to initialize a model (e.g., GPT3, GPT4). In this example, we initialize the agent with the `ChatGptModel` model as follows:
 
 <!-- To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc. -->
 
@@ -318,7 +318,7 @@ agent:ExecutionStep[] run = agent.run(query);
 
 ## Output
 
-Let's examine the output produced by the above example. Assuming the following natural language (NL) command given to the agent:
+Let's examine the output produced by the above example. Assuming the following natural language (NL) command is given to the agent:
 
 NL Command: `create a new guest WiFi account for email johnny@gmail.com with user guest123 and password john123. Send the available list of WiFi accounts for that email to alexa@gmail.com`
 
