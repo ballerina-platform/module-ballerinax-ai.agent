@@ -14,12 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;
 import ballerinax/openai.text;
 
 public type Gpt3ModelConfig readonly & record {|
-    // text:CreateCompletionRequest should be included when the bug is fixed
+    // TODO: text:CreateCompletionRequest should be included when the bug is fixed
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
@@ -28,7 +29,7 @@ public type Gpt3ModelConfig readonly & record {|
 |};
 
 public type AzureGpt3ModelConfig readonly & record {|
-    // azure_text:Deploymentid_completions_body should be included when the bug is fixed
+    // TODO: azure_text:Deploymentid_completions_body should be included when the bug is fixed
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
@@ -37,7 +38,7 @@ public type AzureGpt3ModelConfig readonly & record {|
 |};
 
 public type ChatGptModelConfig readonly & record {|
-    // chat:CreateChatCompletionRequest should be included when the bug is fixed
+    // TODO: chat:CreateChatCompletionRequest should be included when the bug is fixed
     string model = GPT3_5_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     never messages?;

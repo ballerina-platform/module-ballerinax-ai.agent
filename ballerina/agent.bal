@@ -33,7 +33,7 @@ type NextTool record {|
 
 public type ExecutionStep record {|
     string thought;
-    any|error observation?;
+    any|error feedback?;
 |};
 
 public class AgentIterator {
@@ -82,14 +82,6 @@ public class AgentExecutor {
         return !self.isCompleted;
     }
 
-    # Build the prompts during each decision iterations.
-    #
-    # + thought - Thought by the model during the previous iterations
-    # + observation - Observation returned by the performed tool
-    private isolated function updatePromptHistory(string thought, any|error observation) {
-        self.prompt.history.push({thought, observation});
-    }
-
     # Use LLMs to decide the next tool.
     # + return - Decision by the LLM or an error if call to the LLM fails
     private isolated function decideNextTool() returns string|error =>
@@ -121,10 +113,10 @@ public class AgentExecutor {
         return nextTool;
     }
 
-    # Execute the next step of the agent.
+    # Reason the next step of the agent.
     #
-    # + return - ExecutionStep record or an error if the execution failed
-    public isolated function nextStep() returns ExecutionStep?|error {
+    # + return - Thought to be executed by the agent or an error if the reasoning failed
+    public isolated function reason() returns string|error? {
         if self.isCompleted {
             return ();
         }
@@ -132,26 +124,56 @@ public class AgentExecutor {
         if decision is error {
             return error("Error while communicating to LLM. Task is terminated due to: " + decision.toString());
         }
-        string thought = string `${THOUGHT_KEY} ${decision.trim()}`;
+        return string `${THOUGHT_KEY} ${decision.trim()}`;
+    }
 
+    # Execute the next step of the agent.
+    #
+    # + thought - Thought to be executed by the agent
+    # + return - Feedback from the tool or an error if the execution failed
+    public isolated function act(string thought) returns any|error? {
         NextTool|LLMInputParseError nextTool = self.parseLlmOutput(thought);
         if nextTool is LLMInputParseError {
-            return {thought, observation: nextTool};
+            return nextTool;
         }
         if nextTool.isCompleted {
             self.isCompleted = true;
-            return {thought};
+            return ();
         }
 
-        any|error observation = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
-        if observation is ToolNotFoundError {
-            observation = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
-        } else if observation is ToolInvalidInputError {
-            observation = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
+        any|error feedback = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
+        if feedback is ToolNotFoundError {
+            feedback = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
+        } else if feedback is ToolInvalidInputError {
+            feedback = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
         }
+        self.update({thought, feedback});
+        return feedback;
+    }
 
-        self.updatePromptHistory(thought, observation);
-        return {thought, observation};
+    # Update the agent with the latest exectuion step.
+    #
+    # + step - Latest step to be added to the history
+    public isolated function update(ExecutionStep step) {
+        ExecutionStep[] history = self.prompt.history;
+        ExecutionStep lastStep = history[history.length() - 1];
+        if lastStep.thought == step.thought {
+            lastStep.feedback = step?.feedback;
+            return;
+        }
+        history.push(step);
+    }
+
+    # Execute the next step of the agent.
+    #
+    # + return - ExecutionStep record or an error if the execution failed
+    public isolated function nextStep() returns ExecutionStep?|error {
+        string|error? thought = self.reason();
+        if thought !is string {
+            return thought;
+        }
+        any|error? feedback = self.act(thought);
+        return {thought, feedback};
     }
 
     public isolated function next() returns record {|ExecutionStep value;|}? {
@@ -239,7 +261,7 @@ public isolated class Agent {
             if verbose {
                 io:println("\n\nReasoning iteration: " + (iter).toString());
                 io:println(step.thought);
-                any|error observation = step?.observation;
+                any|error observation = step?.feedback;
                 if observation is error {
                     io:println("Observation (Error): " + observation.toString());
                 } else {
@@ -261,7 +283,7 @@ public isolated class Agent {
 }
 
 isolated function constructPrompt(string toolList, string toolIntro) returns string {
-    return string `Answer the following questions as best you can without making any assumptions. You have access to the following tools:
+    return string `Answer the following questions as best you can without making any assumptions. You have access to the following tools. If required, you can use them multiple times to perform repeated tasks:
 
 ${toolIntro.trim()}
 
@@ -288,7 +310,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     string historyPrompt = "";
     foreach ExecutionStep step in history {
         string observationStr;
-        any|error observation = step?.observation;
+        any|error observation = step?.feedback;
         if observation is () {
             observationStr = "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
         }
