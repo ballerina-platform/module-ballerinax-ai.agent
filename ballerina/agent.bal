@@ -18,7 +18,7 @@ import ballerina/io;
 import ballerina/log;
 import ballerina/regex;
 
-type LLMInputParseError distinct error;
+type LlmInputParseError distinct error;
 
 # Parsed response from the LLM
 #
@@ -33,7 +33,7 @@ type NextTool record {|
 
 public type ExecutionStep record {|
     string thought;
-    any|error feedback?;
+    any|error observation?;
 |};
 
 public class AgentIterator {
@@ -46,7 +46,7 @@ public class AgentIterator {
     }
 
     public function iterator() returns object {
-        public function next() returns record {|ExecutionStep value;|}?;
+        public function next() returns record {|ExecutionStep|error value;|}?;
     } {
         return self.executor;
     }
@@ -91,7 +91,7 @@ public class AgentExecutor {
     #
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
-    private isolated function parseLlmOutput(string llmResponse) returns NextTool|LLMInputParseError {
+    private isolated function parseLlmOutput(string llmResponse) returns NextTool|LlmInputParseError {
         if llmResponse.includes(FINAL_ANSWER_KEY) {
             return {
                 tool: "complete",
@@ -102,13 +102,13 @@ public class AgentExecutor {
         string[] content = regex:split(llmResponse + "<endtoken>", "```");
         if content.length() < 3 {
             log:printError("Unexpected LLM response is given: \n`" + llmResponse + "`");
-            return error LLMInputParseError("Error: Unable to extract the tool due to the invalid generation. Can you use the specified format?");
+            return error LlmInputParseError("Error: Unable to extract the tool due to the invalid generation. Can you use the specified format?");
         }
 
         NextTool|error nextTool = content[1].fromJsonStringWithType();
         if nextTool is error {
             log:printError(string `Error while extracting actions from LLM response. ${nextTool.toString()}`);
-            return error LLMInputParseError("Error: Provide with an invalid `action` JSON blob. Can you follow the specified format?");
+            return error LlmInputParseError("Error: Provide with an invalid `action` JSON blob. Can you follow the specified format?");
         }
         return nextTool;
     }
@@ -116,9 +116,9 @@ public class AgentExecutor {
     # Reason the next step of the agent.
     #
     # + return - Thought to be executed by the agent or an error if the reasoning failed
-    public isolated function reason() returns string|error? {
+    public isolated function reason() returns string|error {
         if self.isCompleted {
-            return ();
+            return error("Agent has already completed the task. Can't reason anymore.");
         }
         string|error decision = self.decideNextTool();
         if decision is error {
@@ -130,25 +130,26 @@ public class AgentExecutor {
     # Execute the next step of the agent.
     #
     # + thought - Thought to be executed by the agent
-    # + return - Feedback from the tool or an error if the execution failed
-    public isolated function act(string thought) returns any|error? {
-        NextTool|LLMInputParseError nextTool = self.parseLlmOutput(thought);
-        if nextTool is LLMInputParseError {
+    # + return - Observations from the tool can be any|error|null
+    public isolated function act(string thought) returns any|error {
+        NextTool|LlmInputParseError nextTool = self.parseLlmOutput(thought);
+        if nextTool is LlmInputParseError {
             return nextTool;
         }
         if nextTool.isCompleted {
             self.isCompleted = true;
             return ();
         }
-
-        any|error feedback = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
-        if feedback is ToolNotFoundError {
-            feedback = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
-        } else if feedback is ToolInvalidInputError {
-            feedback = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
+        any|error observation = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
+        if observation is ToolNotFoundError { // whether tool was found
+            observation = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
+        } else if observation is ToolInvalidInputError { // whether tool is given correct inputs 
+            observation = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
+        } else if observation is () { // whether tool return any value or error 
+            observation = string `Tool '${nextTool.tool}' didn't return any values or errors. Verify whether it was successful.`;
         }
-        self.update({thought, feedback});
-        return feedback;
+        self.update({thought, observation});
+        return observation;
     }
 
     # Update the agent with the latest exectuion step.
@@ -156,35 +157,31 @@ public class AgentExecutor {
     # + step - Latest step to be added to the history
     public isolated function update(ExecutionStep step) {
         ExecutionStep[] history = self.prompt.history;
-        ExecutionStep lastStep = history[history.length() - 1];
-        if lastStep.thought == step.thought {
-            lastStep.feedback = step?.feedback;
-            return;
+        if history.length() > 0 {
+            ExecutionStep lastStep = history[history.length() - 1];
+            if lastStep.thought == step.thought {
+                log:printWarn("Step with the same thought already exists. Updating the only observations for that step.");
+                lastStep.observation = step?.observation;
+                return;
+            }
         }
         history.push(step);
     }
 
     # Execute the next step of the agent.
     #
-    # + return - ExecutionStep record or an error if the execution failed
-    public isolated function nextStep() returns ExecutionStep?|error {
-        string|error? thought = self.reason();
-        if thought !is string {
-            return thought;
-        }
-        any|error? feedback = self.act(thought);
-        return {thought, feedback};
-    }
-
-    public isolated function next() returns record {|ExecutionStep value;|}? {
+    # + return - A record with ExecutionStep or error 
+    public isolated function next() returns record {|ExecutionStep|error value;|}? {
         if self.isCompleted {
             return ();
         }
-        ExecutionStep?|error step = self.nextStep();
-        if step is error {
-            log:printError("Error occured while executing the agent: " + step.toString());
+        string|error thought = self.reason();
+        if thought is error {
+            self.isCompleted = true;
+            return {value: thought};
         }
-        return step is ExecutionStep ? {value: step} : ();
+        any|error observation = self.act(thought);
+        return {value: {thought, observation}};
     }
 
     isolated function getPromptConstruct() returns PromptConstruct {
@@ -254,14 +251,18 @@ public isolated class Agent {
         ExecutionStep[] exectutorResults = [];
         AgentIterator iterator = self.getIterator(query, context = context);
         int iter = 0;
-        foreach ExecutionStep step in iterator {
+        foreach ExecutionStep|error step in iterator {
+            if step is error {
+                log:printError("Error occured while executing the agent: " + step.toString());
+                break;
+            }
             iter += 1;
             exectutorResults.push(step);
 
             if verbose {
                 io:println("\n\nReasoning iteration: " + (iter).toString());
                 io:println(step.thought);
-                any|error observation = step?.feedback;
+                any|error observation = step?.observation;
                 if observation is error {
                     io:println("Observation (Error): " + observation.toString());
                 } else {
@@ -310,7 +311,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     string historyPrompt = "";
     foreach ExecutionStep step in history {
         string observationStr;
-        any|error observation = step?.feedback;
+        any|error observation = step?.observation;
         if observation is () {
             observationStr = "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
         }
