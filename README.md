@@ -3,7 +3,6 @@ Ballerina AI Agent Library
 ===================
 <Build Status>
 
-
 This library provides functionality required to build ReAct Agent using Large Language Models (LLMs).
 
 
@@ -19,7 +18,7 @@ For more information, go to the module(s).
        > **Note:** Set the JAVA_HOME environment variable to the path name of the directory into which you installed JDK.
 
 
-2. Download and install [Ballerina Swan Lake Beta2](https://ballerina.io/)
+2. Download and install [Ballerina Swan Lake](https://ballerina.io/).
 
 
 ### Building the source
@@ -30,11 +29,11 @@ Execute the commands below to build from the source.
 
 * To build the package:
    ```   
-   bal build -c
+   bal build ./ballerina
    ```
 * To build the package without tests:
    ```
-   bal build -c --skip-tests
+   bal test ./ballerina
    ```
 ## Contributing to Ballerina
 
