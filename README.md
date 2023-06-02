@@ -23,18 +23,17 @@ For more information, go to the module(s).
 
 ### Building the source
 
-
-Execute the commands below to build from the source.
-
+Execute the commands below to build from the source after installing Ballerina Swan Lake:
 
 * To build the package:
-   ```   
-   bal build ./ballerina
-   ```
-* To build the package without tests:
-   ```
-   bal test ./ballerina
-   ```
+    ```    
+    bal build ./github
+    ```
+* To run the tests:
+    ```
+    bal test ./github
+    ```
+
 ## Contributing to Ballerina
 
 
@@ -54,5 +53,5 @@ All contributors are encouraged to read the [Ballerina Code of Conduct](https://
 
 
 * Discuss code changes of the Ballerina project in [ballerina-dev@googlegroups.com](mailto:ballerina-dev@googlegroups.com).
-* Chat live with us via our [Slack channel](https://ballerina.io/community/slack/).
+* Chat live with us via our [Discord server](https://discord.gg/ballerinalang)
 * Post all technical questions on Stack Overflow with the [#ballerina](https://stackoverflow.com/questions/tagged/ballerina) tag.
