@@ -13,8 +13,9 @@ jobs:
         uses: ballerina-platform/ballerina-action@nightly
         with:
           args:
-            build ./ballerina
+            build
         env:
+          WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm
 
   ballerina-tests:
@@ -28,7 +29,7 @@ jobs:
         uses: ballerina-platform/ballerina-action@nightly
         with:
           args:
-            test --code-coverage ./ballerina
+            test --code-coverage
         env:
           WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm

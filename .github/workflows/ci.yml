@@ -27,7 +27,7 @@ jobs:
           args:
             test --code-coverage ./ballerina
         env:
-          WORKING_DIR: ./ballerina
+          WORKING_DIR: ballerina/
           JAVA_HOME: /usr/lib/jvm/default-jvm
 
       # Read the ballerina test results
