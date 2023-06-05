@@ -40,7 +40,7 @@ type HttpInput record {|
 
 # Defines a constant value field in the schema.
 #
-# + const - The constant value.
+# + 'const - The constant value.
 public type ConstantValueSchema record {|
 
     json 'const;
@@ -48,7 +48,7 @@ public type ConstantValueSchema record {|
 
 # Defines a base input type schema.
 #
-# + type - Input data type
+# + 'type - Input data type
 # + description - Description of the input
 # + default - Default value of the input
 public type BaseInputTypeSchema record {|
@@ -59,10 +59,10 @@ public type BaseInputTypeSchema record {|
 
 # Defines a primitive input field in the schema.
 #
-# + type - Input data type. Should be one of STRING, INTEGER, NUMBER, FLOAT or BOOLEAN.
+# + 'type - Input data type. Should be one of STRING, INTEGER, NUMBER, FLOAT or BOOLEAN.
 # + format - Format of the input. This is not applicable for BOOLEAN type.
 # + pattern - Pattern of the input. This is only applicable for STRING type.
-# + enum - Enum values of the input. This is only applicable for STRING type.
+# + 'enum - Enum values of the input. This is only applicable for STRING type.
 public type PrimitiveInputSchema record {|
     *BaseInputTypeSchema;
     STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
@@ -101,7 +101,7 @@ public type NotInputSchema record {|
 
 # Defines an array input field in the schema.
 #
-# + type - Input data type. Should be ARRAY.
+# + 'type - Input data type. Should be ARRAY.
 # + items - Schema of the array items
 # + default - Default value for the array
 public type ArrayInputSchema record {|
@@ -113,7 +113,7 @@ public type ArrayInputSchema record {|
 
 # Defines an object input field in the schema.
 #
-# + type - Input data type. Should be OBJECT.
+# + 'type - Input data type. Should be OBJECT.
 # + required - List of required properties
 # + properties - Schema of the object properties
 public type ObjectInputSchema record {|
