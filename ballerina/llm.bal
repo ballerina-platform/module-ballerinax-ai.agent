@@ -19,19 +19,27 @@ import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;
 import ballerinax/openai.text;
 
+# GPT-3 model configurations
 public type Gpt3ModelConfig readonly & record {|
     // TODO: text:CreateCompletionRequest should be included when the bug is fixed
+    # model type to be used for the completion. Default is `text-davinci-003`.
     string model = GPT3_MODEL_NAME;
+    # temperature value to be used for the completion. Default is `0.7`.
     decimal temperature = DEFAULT_TEMPERATURE;
+    # maximum number of tokens to be generated for the completion. Default is `512`.
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
     never stop?;
     never prompt?;
 |};
 
+# Azure GPT-3 model configurations
 public type AzureGpt3ModelConfig readonly & record {|
     // TODO: azure_text:Deploymentid_completions_body should be included when the bug is fixed
+    # model type to be used for the completion. Default is `text-davinci-003`.
     string model = GPT3_MODEL_NAME;
+    # temperature value to be used for the completion. Default is `0.7`.
     decimal temperature = DEFAULT_TEMPERATURE;
+    # maximum number of tokens to be generated for the completion. Default is `512`.
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
     never stop?;
     never prompt?;
@@ -39,13 +47,15 @@ public type AzureGpt3ModelConfig readonly & record {|
 
 public type ChatGptModelConfig readonly & record {|
     // TODO: chat:CreateChatCompletionRequest should be included when the bug is fixed
+    # model type to be used for the completion. Default is `gpt-3.5-turbo`.
     string model = GPT3_5_MODEL_NAME;
+    # temperature value to be used for the completion. Default is `0.7`.
     decimal temperature = DEFAULT_TEMPERATURE;
     never messages?;
     never stop?;
 |};
 
-public type PromptConstruct record {|
+type PromptConstruct record {|
     string instruction;
     string query;
     ExecutionStep[] history;
