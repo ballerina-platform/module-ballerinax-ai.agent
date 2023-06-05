@@ -42,7 +42,6 @@ type HttpInput record {|
 #
 # + 'const - The constant value.
 public type ConstantValueSchema record {|
-
     json 'const;
 |};
 
@@ -59,10 +58,10 @@ public type BaseInputTypeSchema record {|
 
 # Defines a primitive input field in the schema.
 #
-# + 'type - Input data type. Should be one of STRING, INTEGER, NUMBER, FLOAT or BOOLEAN.
-# + format - Format of the input. This is not applicable for BOOLEAN type.
-# + pattern - Pattern of the input. This is only applicable for STRING type.
-# + 'enum - Enum values of the input. This is only applicable for STRING type.
+# + 'type - Input data type. Should be one of `STRING`, `INTEGER`, `NUMBER`, `FLOAT`, or `BOOLEAN`.
+# + format - Format of the input. This is not applicable for `BOOLEAN` type.
+# + pattern - Pattern of the input. This is only applicable for `STRING` type.
+# + 'enum - Enum values of the input. This is only applicable for `STRING` type.
 public type PrimitiveInputSchema record {|
     *BaseInputTypeSchema;
     STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
@@ -71,28 +70,28 @@ public type PrimitiveInputSchema record {|
     string[] 'enum?;
 |};
 
-# Defines an anyOf input field in the schema. Follows OpenAPI 3.x specification.
+# Defines an `anyOf` input field in the schema. Follows OpenAPI 3.x specification.
 #
 # + anyOf - List of possible input types
 public type AnyOfInputSchema record {|
     ObjectInputSchema[] anyOf;
 |};
 
-# Defines an allOf input field in the schema. Follows OpenAPI 3.x specification.
+# Defines an `allOf` input field in the schema. Follows OpenAPI 3.x specification.
 #
 # + allOf - List of possible input types
 public type AllOfInputSchema record {|
     ObjectInputSchema[] allOf;
 |};
 
-# Defines an oneOf input field in the schema. Follows OpenAPI 3.x specification.
+# Defines an `oneOf` input field in the schema. Follows OpenAPI 3.x specification.
 #
 # + oneOf - List of possible input types
 public type OneOfInputSchema record {|
     JsonSubSchema[] oneOf;
 |};
 
-# Defines a not input field in the schema. Follows OpenAPI 3.x specification.
+# Defines a `not` input field in the schema. Follows OpenAPI 3.x specification.
 #
 # + not - Schema that is not accepted as an input
 public type NotInputSchema record {|
@@ -101,7 +100,7 @@ public type NotInputSchema record {|
 
 # Defines an array input field in the schema.
 #
-# + 'type - Input data type. Should be ARRAY.
+# + 'type - Input data type. Should be `ARRAY`.
 # + items - Schema of the array items
 # + default - Default value for the array
 public type ArrayInputSchema record {|
@@ -113,7 +112,7 @@ public type ArrayInputSchema record {|
 
 # Defines an object input field in the schema.
 #
-# + 'type - Input data type. Should be OBJECT.
+# + 'type - Input data type. Should be `OBJECT`.
 # + required - List of required properties
 # + properties - Schema of the object properties
 public type ObjectInputSchema record {|
@@ -143,11 +142,11 @@ public type Tool record {|
     isolated function caller;
 |};
 
-# Defines an HTTP tool. This is a special type of tool that can be used to invoked  HTTP resources.
+# Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
 #
 # + name - Name of the tool
 # + description - A description of the tool. This is used by the LLMs to understand the behavior of the tool.
-# + method - HTTP method of the resource. Should be one of GET, POST, DELETE, PUT, PATCH, HEAD or OPTIONS.
+# + method - HTTP method of the resource. Should be one of `GET`, `POST`, `DELETE`, `PUT`, `PATCH`, `HEAD`, or `OPTIONS`.
 # + path - Path of the HTTP resource.
 # + queryParams - Schema of the query parameters to the HTTP resource. Leave this empty if the resource doesn't expect any query parameters.
 # + pathParams - Schema of the path parameters to the HTTP resource. Leave this empty if the resource doesn't expect any path parameters.
