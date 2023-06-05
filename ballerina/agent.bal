@@ -45,6 +45,8 @@ public class AgentIterator {
         self.executor = new (agent, query, context = context);
     }
 
+    # Iterate over the agent's execution steps.
+    # + return - a record with the execution step or an error if the agent failed
     public function iterator() returns object {
         public function next() returns record {|ExecutionStep|error value;|}?;
     } {
@@ -189,7 +191,7 @@ public class AgentExecutor {
     }
 }
 
-# Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs.
+# ReAct Agent implementation to execute actions with LLMs.
 public isolated class Agent {
 
     private final LlmModel model;
@@ -220,7 +222,7 @@ public isolated class Agent {
     }
 
     # Initialize the agent executor for a given query. 
-    # Agent executor is useful for streaming-like execution of the agent.
+    # Agent executor is useful for streaming-like execution of the agent or to make use of reason-act interface of the agent.
     #
     # + query - User's query
     # + previousSteps - Execution steps perviously taken by the agent for the query given
