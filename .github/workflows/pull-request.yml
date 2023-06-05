@@ -18,6 +18,7 @@ jobs:
           JAVA_HOME: /usr/lib/jvm/default-jvm
 
   ballerina-tests:
+    # Run Ballerina tests
     name: Run Ballerina Tests
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +29,8 @@ jobs:
         with:
           args:
             test --code-coverage ./ballerina
+        env:
+          WORKING_DIR: ./ballerina
       # Read the ballerina test results
       - name: Read Ballerina Test Results
         id: test_results
