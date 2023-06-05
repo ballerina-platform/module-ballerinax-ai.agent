@@ -30,7 +30,9 @@ jobs:
               with:
                   args:
                       test --code-coverage ./ballerina
-
+              env:
+                WORKING_DIR: ./ballerina
+                JAVA_HOME: /usr/lib/jvm/default-jvm
             # Read the ballerina test results
             - name: Read Ballerina Test Results
               id: test_results
