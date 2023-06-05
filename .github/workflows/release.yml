@@ -13,8 +13,9 @@ jobs:
         uses: ballerina-platform/ballerina-action/@2201.5.0
         with:
           args:
-            pack ./ballerina
-
+            pack
+        env:
+          WORKING_DIR: ./ballerina
       - name: Ballerina Push
         uses: ballerina-platform/ballerina-action/@2201.5.0
         with:
