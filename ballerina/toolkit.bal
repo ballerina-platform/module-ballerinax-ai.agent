@@ -18,11 +18,12 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/regex;
 
-# allows implmenting custom toolkits by extending this type
+# Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
 public type BaseToolKit distinct object {
     isolated function getTools() returns Tool[]|error;
 };
 
+# Provide definition to an HTTP header
 public type HttpHeader readonly & record {|string|string[]...;|};
 
 public isolated class HttpServiceToolKit {

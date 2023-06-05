@@ -18,7 +18,7 @@ Alternatively, it is possible to use an Azure OpenAI account by completing the f
 
 A tool refers to a single action used to retrieve, process, or manipulate data. It can be a function or an API call, which may require certain inputs following a specific input schema.
 
-### Function as a tool
+### Function as a Tool
 
 When using a Ballerina function as a tool, the function should adhere to the following template:
 
@@ -43,7 +43,7 @@ agent:Tool exampleTool = {
 }
 ```
 
-### HTTP resource as a Tool
+### HTTP Resource as a Tool
 
 To use an API resource as a tool, an HTTP tool definition can be created as follows. 
 
@@ -166,7 +166,7 @@ agent.Agent agent = check new (model, ...tools);
 
 There are multiple ways to utilize the agent.
 
-### Agent.run() for batch execution
+### Agent.run() for Batch Execution
 
 The agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
 
@@ -174,7 +174,7 @@ The agent can be executed without interruptions using `Agent.run()`. It attempts
 agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 ```
 
-### AgentIterator for foreach execution
+### AgentIterator for `foreach` Execution
 
 The agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
 
@@ -186,7 +186,7 @@ foreach agent:ExecutionStep|error step in agentIterator{
 }
 ```
 
-### AgentExecutor for reason-act interface
+### AgentExecutor for Reason-Act Interface
 
 The `AgentExecutor` offers enhanced flexibility for running agents through its `reason()` and `act(string thought)` methods. This separation of reasoning and acting enables developers to obtain user confirmation before executing actions based on the agent's reasoning. This feature is particularly valuable for verifying, validating, or refining the agent's reasoning by incorporating user intervention or feedback as new observations, which can be achieved using the `update(ExecutionStep step)` method of `AgentExecutor`.
 
@@ -219,22 +219,22 @@ while(agentExecutor.hasNext()){
 
 ## Quickstart
 
-Let's walk through the usage of the `ai.agent` library using [this sample](/examples/multi-type-tools/README.md). The example demonstrates the use of two types of tools:
+Let's walk through the usage of the `ai.agent` library using [this sample](https://github.com/ballerina-platform/module-ballerinax-ai.agent/tree/main/examples/multi-type-tools). The example demonstrates the use of two types of tools:
 
 - To send a Google email, we utilize the sendMessage function from the `ballerinax/googleapis.gmail` connector as a tool.
 - HttpTools are used to create and list WiFi accounts through the `GuestWiFi` HTTP service.
     - List available WiFi accounts:`GET /guest-wifi-accounts/{ownerEmail}`
     - Create a new WiFi account: `POST /guest-wifi-accounts`
 
-Follow the steps below to create a simple sample:
+By following the four steps below, we can easily configure and run an agent:
 
-### Step 1 - Import library
+### Step 1 - Import Library
     import ballerinax/ai.agent;
     import ballerinax/googleapis.gmail;
        
-### Step 2 - Preparation Gmail `gmail->sendMessage` tool as a function (optional)
+### Step 2 - Defining Tools for the Agent
 
-First, we need to wrap the connector actions using another function since Ballerina doesn't allow invoking remote function pointers directly. Here, we create the `sendEmail` function that wraps the connector action.
+To begin, we need to define a `gmail->sendMessage` function as a tool. However, it's not possible to define a tool for a remote function directly without a wrapper function. If you attempt to do so, you won't be able to obtain the pointer for the remote function. Therefore, we start by creating the `sendEmail` function, which wraps the connector action `gmail->sendMessage`.
 
 
 ```ballerina
@@ -248,10 +248,7 @@ isolated function sendEmail(gmail:MessageRequest messageRequest) returns string|
 }
 ```
 
-
-### Step 3 - Defining Tools for the Agent
-
-First, define `sendMail` function as a tool.
+Now that we have the `sendEmail` function defined, we can proceed with creating the tool that utilizes this function. To define the `inputSchema` for the tool, we inspect the structure of the `gmail:MessageRequest` record and include only the necessary fields required for our task. Since the rest of the fields are not mandatory for the tool's execution, we can safely ignore them.
 
 ```ballerina
 agent:Tool sendEmailTool = {
@@ -305,7 +302,7 @@ agent:HttpServiceToolKit wifiServiceToolKit = check new (wifiServiceUrl, [listWi
 
 Note that when creating the `HttpServiceToolKit` for the `GuestWiFi` service, we provide the service URL and authentication configurations to the `HttpServiceToolKit` initializer to establish the connection with the service.
 
-### Step 4 - Create the Agent
+### Step 3 - Create the Agent
 
 To create the agent, we first need to initialize a model (e.g., GPT3, GPT4). In this example, we initialize the agent with the `ChatGptModel` model as follows:
 
@@ -317,7 +314,7 @@ agent:ChatGptModel model = check new ({auth: {token:  <OPENAI API KEY>}});
 agent:Agent agent = check new (model, wifiServiceToolKit, sendEmailTool);
 ```
 
-### Step 5 - Run the agent
+### Step 4 - Run the Agent
 
 Now we can run the agent with NL commands from the user. Note that in this case, we use a query template and pass unknowns as interpolations to the `queryTemplate`.
 
@@ -333,7 +330,7 @@ Let's examine the output produced by the above example. Assuming the following n
 
 NL Command: `create a new guest WiFi account for email johnny@gmail.com with user guest123 and password john123. Send the available list of WiFi accounts for that email to alexa@gmail.com`
 
-The agent will proceed with multiple reasoning-action iterations following the [ReAct Framework](https://arxiv.org/pdf/2210.03629.pdf).
+The agent will proceed with multiple reasoning-action iterations as follows to execute the given command. 
 
 1) Agent creates a new WiFi account for owner `johnny@gmail.com`:
 

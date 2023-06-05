@@ -20,7 +20,7 @@ import ballerina/regex;
 
 type LlmInputParseError distinct error;
 
-# Parsed response from the LLM
+# Parsed response from the LLM.
 #
 # + tool - Name of the tool to be performed
 # + tool_input - Input to the tool
@@ -31,6 +31,10 @@ type NextTool record {|
     boolean isCompleted = false;
 |};
 
+# Prompt to be given to the LLM.
+#
+# + thought - Thoughts produced by the LLM during the reasoning
+# + observation - Observations produced by the tool during the execution
 public type ExecutionStep record {|
     string thought;
     any|error observation?;
@@ -45,6 +49,8 @@ public class AgentIterator {
         self.executor = new (agent, query, context = context);
     }
 
+    # Iterate over the agent's execution steps.
+    # + return - a record with the execution step or an error if the agent failed
     public function iterator() returns object {
         public function next() returns record {|ExecutionStep|error value;|}?;
     } {
@@ -189,7 +195,7 @@ public class AgentExecutor {
     }
 }
 
-# Agent implementation to perform tools with LLMs to add computational power and knowledge to the LLMs.
+# ReAct Agent implementation to execute actions with LLMs.
 public isolated class Agent {
 
     private final LlmModel model;
@@ -220,7 +226,7 @@ public isolated class Agent {
     }
 
     # Initialize the agent executor for a given query. 
-    # Agent executor is useful for streaming-like execution of the agent.
+    # Agent executor is useful for streaming-like execution of the agent or to make use of reason-act interface of the agent.
     #
     # + query - User's query
     # + previousSteps - Execution steps perviously taken by the agent for the query given

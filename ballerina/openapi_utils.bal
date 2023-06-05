@@ -17,11 +17,19 @@
 import ballerina/io;
 import ballerina/log;
 
+# Provides extracted tools and service URL from the OpenAPI specification.
+#
+# + serviceUrl - Extracted service URL from the OpenAPI specification if there is any
+# + tools - Extracted Http tools from the OpenAPI specification
 public type HttpApiSpecification record {|
     string serviceUrl?;
     HttpTool[] tools;
 |};
 
+# Defines additional information to be extracted from the OpenAPI specification.
+#
+# + extractDescription - Flag to extract description of parameters and schema attributes from the OpenAPI specification
+# + extractDefault - Flag to extract default values of parameters and schema attributes from the OpenAPI specification
 public type AdditionInfoFlags record {|
     boolean extractDescription = false;
     boolean extractDefault = false;
@@ -31,7 +39,7 @@ public type AdditionInfoFlags record {|
 #
 # + filePath - Path to the OpenAPI specification file
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
-# + return - HttpApiSpecification record with the extracted tools
+# + return - A record with the list of extracted tools and the service URL (if available)
 public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
     OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
