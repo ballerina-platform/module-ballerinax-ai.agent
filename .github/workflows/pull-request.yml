@@ -1,26 +1,29 @@
-name: CI
+name: PR Build
 
-on:
-  push:
-    branches-ignore:
-      - "automated/dependency_version_update"
-      - "automated/dependency_version_update_tmp"
-  repository_dispatch:
-    types:
-      check_connector_for_breaking_changes
+on: [ pull_request ]
 
 jobs:
-  build:
+  ballerina-build:
+    name: Run Ballerina Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
       - name: Ballerina Build
         uses: ballerina-platform/ballerina-action@nightly
         with:
           args:
-            pack ./ballerina
+            build ./ballerina
         env:
           JAVA_HOME: /usr/lib/jvm/default-jvm
+
+  ballerina-tests:
+    # Run Ballerina tests
+    name: Run Ballerina Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
       - name: Ballerina Tests
         uses: ballerina-platform/ballerina-action@nightly
         with:
@@ -29,7 +32,6 @@ jobs:
         env:
           WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm
-
       # Read the ballerina test results
       - name: Read Ballerina Test Results
         id: test_results
@@ -39,25 +41,9 @@ jobs:
           content="${content//$'\n'/'%0A'}"
           content="${content//$'\r'/'%0D'}"
           echo "::set-output name=testResultsJson::$content"
-
       # Print the code coverage information
       - name: Code Coverage
         run: |
           echo "Covered Code Lines : ${{fromJson(steps.test_results.outputs.testResultsJson).coveredLines}}"
           echo "Total Code Lines : $(expr ${{fromJson(steps.test_results.outputs.testResultsJson).missedLines}} + ${{fromJson(steps.test_results.outputs.testResultsJson).coveredLines}})"
           echo "Code Coverage Percentage : ${{fromJson(steps.test_results.outputs.testResultsJson).coveragePercentage}}"
-
-      - name: Alert notifier on failure
-        if: failure() && (github.event.action == 'check_connector_for_breaking_changes')
-        run: |
-          curl -X POST \
-          'https://api.github.com/repos/ballerina-platform/ballerina-release/dispatches' \
-          --header 'Accept: application/vnd.github.v3+json' \
-          --header 'Authorization: Bearer ${{ secrets.BALLERINA_BOT_TOKEN }}' \
-          --data-raw '{
-            "event_type": "notify-ballerinax-connector-build-failure",
-            "client_payload": {
-              "repoName": "module-ballerinax-ai.agent",
-              "workflow": "CI"
-            }
-          }'
