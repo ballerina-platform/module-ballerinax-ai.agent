@@ -68,7 +68,7 @@ public class AgentExecutor {
     isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();
         if context != {} {
-            instruction = string `${instruction}{"\n"}You can use these information if needed: ${context.toString()}$`;
+            instruction = string `${instruction}${"\n"}You can use these information if needed: ${context.toString()}$`;
         }
         log:printDebug("Instruction Prompt: \n" + instruction);
         self.prompt = {
@@ -98,7 +98,7 @@ public class AgentExecutor {
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
     private isolated function parseLlmOutput(string llmResponse) returns NextTool|LlmInputParseError {
-        if llmResponse.includes(FINAL_ANSWER_KEY) {
+        if llmResponse.toLowerAscii().includes(FINAL_ANSWER_KEY) {
             return {
                 tool: "complete",
                 isCompleted: true
@@ -297,20 +297,20 @@ ${toolIntro.trim()}
 ALWAYS use the following format:
 
 Question: the input question you must answer
-Thought: you should always think about what to do
-Action: always should be a single tool using the following format within BACKTICKS
+Thought: you should always think about what to do.
+Action: always should be a single tool using the following format within BACKTICKS. This field is mandatory after 'Thought'.
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
   "tool": the tool to take, should be one of [${toolList}]",
-  "tool_input": JSON input record to the tool following "inputSchema". Required properties are mandatory.
+  "tool_input": JSON input record to the tool following "inputSchema" with the specified types. Required properties are mandatory.
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: the result of the action
 ... (this Thought/Action/Observation can repeat N times)
 Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Final Answer: the final answer to the original input question. Always use characters 'Final Answer:' to indicate the final answer.
 
-Begin! Reminder to always use the exact characters 'Final Answer' when responding.`;
+Begin!`;
 }
 
 isolated function constructHistoryPrompt(ExecutionStep[] history) returns string {
@@ -320,8 +320,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
         any|error observation = step?.observation;
         if observation is () {
             observationStr = "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
-        }
-        else if observation is error {
+        } else if observation is error {
             record {|string message; string cause?;|} errorInfo = {
                 message: observation.message().trim()
             };
@@ -330,8 +329,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
                 errorInfo.cause = cause.message().trim();
             }
             observationStr = "Error occured while trying to execute the tool: " + errorInfo.toString();
-        }
-        else {
+        } else {
             observationStr = observation.toString().trim();
         }
         historyPrompt += string `${step.thought}${"\n"}Observation: ${observationStr}${"\n"}`;

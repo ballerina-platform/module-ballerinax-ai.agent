@@ -32,7 +32,7 @@ const OPENAPI_PATH_PARAM_SUPPORTED_STYLE = "simple";
 const OPENAPI_QUERY_PARAM_SUPPORTED_STYLE = "form";
 
 //agent
-const FINAL_ANSWER_KEY = "Final Answer";
+const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 
