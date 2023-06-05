@@ -18,16 +18,17 @@ jobs:
         uses: ballerina-platform/ballerina-action@nightly
         with:
           args:
-            pack ./ballerina
+            pack
         env:
+          WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm
       - name: Ballerina Tests
         uses: ballerina-platform/ballerina-action@nightly
         with:
           args:
-            test --code-coverage ./ballerina
+            test --code-coverage
         env:
-          WORKING_DIR: ballerina/
+          WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm
 
       # Read the ballerina test results
