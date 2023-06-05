@@ -25,12 +25,10 @@ import ballerinax/openai.text;
 # + temperature - Temperature value to be used for the completion. Default is `0.7`.
 # + max_tokens - Maximum number of tokens to be generated for the completion. Default is `512`.
 public type Gpt3ModelConfig readonly & record {|
-    // TODO: include text:CreateCompletionRequest when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
+    // TODO: include *text:CreateCompletionRequest never prompt?; never stop?; when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
-    never stop?;
-    never prompt?;
 |};
 
 # Azure GPT-3 model configurations.
@@ -39,12 +37,10 @@ public type Gpt3ModelConfig readonly & record {|
 # + temperature - Temperature value to be used for the completion. Default is `0.7`.
 # + max_tokens - Maximum number of tokens to be generated for the completion. Default is `512`.
 public type AzureGpt3ModelConfig readonly & record {|
-    // TODO: Include azure_text:Deploymentid_completions_body when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed.
+    // TODO: Include *azure_text:Deploymentid_completions_body; never prompt?; never stop?; when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed.
     string model = GPT3_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
-    never stop?;
-    never prompt?;
 |};
 
 # ChatGPT model configurations.
@@ -52,11 +48,9 @@ public type AzureGpt3ModelConfig readonly & record {|
 # + model - Model type to be used for the completion. Default is `gpt-3.5-turbo`.
 # + temperature - Temperature value to be used for the completion. Default is `0.7`.
 public type ChatGptModelConfig readonly & record {|
-    // TODO: Include chat:CreateChatCompletionRequest when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
+    // TODO: Include `*chat:CreateChatCompletionRequest; never messages?; never stop?; when https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
     string model = GPT3_5_MODEL_NAME;
     decimal temperature = DEFAULT_TEMPERATURE;
-    never messages?;
-    never stop?;
 |};
 
 type PromptConstruct record {|
