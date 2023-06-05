@@ -23,6 +23,7 @@ public type BaseToolKit distinct object {
     isolated function getTools() returns Tool[]|error;
 };
 
+# Provide definition to an HTTP header
 public type HttpHeader readonly & record {|string|string[]...;|};
 
 public isolated class HttpServiceToolKit {
