@@ -346,10 +346,10 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
         "email": "johnny@wso2.com",
         "username": "guest123",
         "password": "john123"
+            }
         }
     }
-    }
-    ````
+    ```
     Observation: Successfully added the wifi account
     ``````
 
@@ -364,7 +364,7 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     "tool": "List wifi",
     "tool_input": {
         "path": "/guest-wifi-accounts/johnny@wso2.com"
-    }
+        }
     }
     ```
     Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
@@ -385,7 +385,7 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
         "recipient": "alexa@wso2.com",
         "subject": "Available Wifi List",
         "messageBody": "The available wifi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny"
-    }
+        }
     }
     ```
     Observation: {"threadId":"1884d1bda3d2c286","id":"1884d1bda3d2c286","labelIds":["SENT"]}
