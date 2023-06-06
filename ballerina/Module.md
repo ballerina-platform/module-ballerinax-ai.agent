@@ -95,10 +95,14 @@ JSON input schema:
  agent:InputSchema schema = {
         'type: agent:OBJECT,
         properties: {
-            recipient: {'type: agent:STRING, description: "should be an email address from the contacts", default: "<DEFAULT EMAIL>"},
+            recipient: {
+                'type: agent:STRING, 
+                description: "should be an email address from the contacts", 
+                default: "<DEFAULT EMAIL>"
+            },
             subject: {'type: agent:STRING},
             messageBody: {'type: agent:STRING},
-            contentType: {'const: "text/plain"} // constant value 
+            contentType: {'const: "text/plain"} // a constant value 
         }
 }
 ```
@@ -116,12 +120,11 @@ agent:HttpTool resource1 = {
     // defines resource 1
 }
 
-....
+...
 
 agent:HttpTool resourceN = {
     // defines resource N
 }
-
 agent:HttpServiceToolKit serviceAToolKit = check new (
     serviceUrl, 
     [resource1,...,resourceN], 
@@ -138,12 +141,10 @@ This is a large language model (LLM) instance. Currently, the agent module has s
 
     ```ballerina
     agent:Gpt3Model model = check new ({auth: {token: <OPENAI API KEY>}});
-
     ```
 2) OpenAI ChatGPT (e.g. GPT3.5, GPT4)
     ```ballerina
     agent:ChatGptModel model = check new ({auth: {token: <OPENAI API KEY>}});
-
     ```
 3) Azure OpenAI GPT3
     ```ballerina
@@ -166,7 +167,7 @@ agent.Agent agent = check new (model, ...tools);
 
 There are multiple ways to utilize the agent.
 
-### Agent.run() for Batch Execution
+### 1. Agent.run() for Batch Execution
 
 The agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
 
@@ -174,7 +175,7 @@ The agent can be executed without interruptions using `Agent.run()`. It attempts
 agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 ```
 
-### AgentIterator for `foreach` Execution
+### 2. AgentIterator for `foreach` Execution
 
 The agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
 
@@ -186,7 +187,7 @@ foreach agent:ExecutionStep|error step in agentIterator{
 }
 ```
 
-### AgentExecutor for Reason-Act Interface
+### 3. AgentExecutor for Reason-Act Interface
 
 The `AgentExecutor` offers enhanced flexibility for running agents through its `reason()` and `act(string thought)` methods. This separation of reasoning and acting enables developers to obtain user confirmation before executing actions based on the agent's reasoning. This feature is particularly valuable for verifying, validating, or refining the agent's reasoning by incorporating user intervention or feedback as new observations, which can be achieved using the `update(ExecutionStep step)` method of `AgentExecutor`.
 
@@ -229,9 +230,11 @@ Let's walk through the usage of the `ai.agent` library using [this sample](https
 By following the four steps below, we can easily configure and run an agent:
 
 ### Step 1 - Import Library
-    import ballerinax/ai.agent;
-    import ballerinax/googleapis.gmail;
-       
+```ballerina
+import ballerinax/ai.agent;
+import ballerinax/googleapis.gmail;
+```
+
 ### Step 2 - Defining Tools for the Agent
 
 To begin, we need to define a `gmail->sendMessage` function as a tool. However, it's not possible to define a tool for a remote function directly without a wrapper function. If you attempt to do so, you won't be able to obtain the pointer for the remote function. Therefore, we start by creating the `sendEmail` function, which wraps the connector action `gmail->sendMessage`.
@@ -304,7 +307,7 @@ Note that when creating the `HttpServiceToolKit` for the `GuestWiFi` service, we
 
 ### Step 3 - Create the Agent
 
-To create the agent, we first need to initialize a model (e.g., GPT3, GPT4). In this example, we initialize the agent with the `ChatGptModel` model as follows:
+To create the agent, we first need to initialize a LLM (e.g., `Gpt3Model`, `ChatGptModel`). In this example, we initialize the agent with the `ChatGptModel` model as follows:
 
 <!-- To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc. -->
 
@@ -320,7 +323,6 @@ Now we can run the agent with NL commands from the user. Note that in this case,
 
 ```ballerina
 string queryTemplate = string`create a new guest WiFi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the available list of WiFi accounts for that email to ${recipientEmail}`;
-
 agent:ExecutionStep[] run = agent.run(query);
 ```
 
@@ -334,7 +336,7 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
 
 1) Agent creates a new WiFi account for owner `johnny@gmail.com`:
 
-    <pre>
+    ``````
     Reasoning iteration: 1
     Thought: We need to create a new guest WiFi account with the given username and password, and then list the available WiFi accounts for the email owner and send it to a specified recipient. 
     Action: 
@@ -346,16 +348,16 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
         "email": "johnny@wso2.com",
         "username": "guest123",
         "password": "john123"
+            }
         }
     }
-    }
-    ````
+    ```
     Observation: Successfully added the wifi account
-    </pre>
+    ``````
 
 2) Agent finds existing guest WiFi accounts under the owner `johnny@gmail.com`:
 
-    <pre>
+    ``````
     Reasoning iteration: 2
     Thought: Now we need to list the available WiFi accounts for the email owner and send it to a specified recipient.
     Action:
@@ -364,17 +366,17 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     "tool": "List wifi",
     "tool_input": {
         "path": "/guest-wifi-accounts/johnny@wso2.com"
-    }
+        }
     }
     ```
-Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
-</pre>
+    Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
+    ``````
 
 3) Agent sends an email to `alexa@gmail.com` with the information about the existing accounts:
 
     In this step, the agent is responsible for generating the email subject and message body as well. The user provides only the recipient's email.
     
-    <pre>
+    ``````
     Reasoning iteration: 3
     Thought: Finally, we need to send the available wifi list to the specified recipient.
     Action:
@@ -385,11 +387,11 @@ Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
         "recipient": "alexa@wso2.com",
         "subject": "Available Wifi List",
         "messageBody": "The available wifi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny"
-    }
+        }
     }
     ```
     Observation: {"threadId":"1884d1bda3d2c286","id":"1884d1bda3d2c286","labelIds":["SENT"]}
-    </pre>
+    ``````
 
 4) Agent concludes the task:
 
@@ -399,4 +401,4 @@ Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
     Final Answer: Successfully created a new guest wifi account with username "guest123" and password "john123" for the email owner "johnny@wso2.com". The available wifi accounts for "johnny@wso2.com" are "guest123.guestOf.johnny" and "newGuest.guestOf.johnny", and this list has been sent to the specified recipient "alexa@wso2.com".
     ```
 
-As a result, alexa@gmail.com will receive an email generated by the agent with the subject "Available WiFi List" and the message body "The available WiFi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny".
+As a result, `alexa@gmail.com` will receive an email generated by the agent with the subject "Available WiFi List" and the message body "The available WiFi accounts for `johnny@wso2.com` are: guest123.guestOf.johnny, newGuest.guestOf.johnny".
