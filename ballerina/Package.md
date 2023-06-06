@@ -334,7 +334,7 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
 
 1) Agent creates a new WiFi account for owner `johnny@gmail.com`:
 
-    <pre>
+    ``````
     Reasoning iteration: 1
     Thought: We need to create a new guest WiFi account with the given username and password, and then list the available WiFi accounts for the email owner and send it to a specified recipient. 
     Action: 
@@ -351,11 +351,11 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     }
     ````
     Observation: Successfully added the wifi account
-    </pre>
+    ``````
 
 2) Agent finds existing guest WiFi accounts under the owner `johnny@gmail.com`:
 
-    <pre>
+    ``````
     Reasoning iteration: 2
     Thought: Now we need to list the available WiFi accounts for the email owner and send it to a specified recipient.
     Action:
@@ -367,14 +367,14 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     }
     }
     ```
-Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
-</pre>
+    Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
+    ``````
 
 3) Agent sends an email to `alexa@gmail.com` with the information about the existing accounts:
 
     In this step, the agent is responsible for generating the email subject and message body as well. The user provides only the recipient's email.
     
-    <pre>
+    ``````
     Reasoning iteration: 3
     Thought: Finally, we need to send the available wifi list to the specified recipient.
     Action:
@@ -389,7 +389,7 @@ Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
     }
     ```
     Observation: {"threadId":"1884d1bda3d2c286","id":"1884d1bda3d2c286","labelIds":["SENT"]}
-    </pre>
+    ``````
 
 4) Agent concludes the task:
 
