@@ -215,7 +215,7 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    private function verfyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
+    private function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
         if parameterSchema is PrimitiveInputSchema {
             return parameterSchema;
         } else if parameterSchema is ArrayInputSchema {
@@ -259,7 +259,7 @@ class OpenApiSpecVisitor {
                 if explode !is () && !explode {
                     return error("Supported only the query parmaters with explode=true");
                 }
-                ParameterType parameterType = check self.verfyParameterType(check self.visitSchema(schema));
+                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
                 boolean? required = resolvedParameter.required;
                 if required is boolean && required {
                     queryRequired.push(resolvedParameter.name);
@@ -273,7 +273,7 @@ class OpenApiSpecVisitor {
                 if explode !is () && explode {
                     return error("Supported only the path parmaters with explode=false");
                 }
-                ParameterType parameterType = check self.verfyParameterType(check self.visitSchema(schema));
+                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
                 boolean? required = resolvedParameter.required;
                 if required is boolean && required {
                     pathRequired.push(resolvedParameter.name);
