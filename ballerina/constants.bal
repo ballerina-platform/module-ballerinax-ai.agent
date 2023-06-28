@@ -41,8 +41,8 @@ const USER_ROLE = "user";
 const SYSTEM_ROLE = "system";
 
 //toolkit
-const QUERY_PARAM_KEY = "queryParams";
+const QUERY_PARAM_KEY = "queryParameters";
+const PATH_PARAM_KEY = "pathParameters";
 const REQUEST_BODY_KEY = "requestBody";
-const PATH_PARAM_KEY = "pathParams";
 const PATH_KEY = "path";
 

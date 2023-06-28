@@ -174,14 +174,14 @@ class OpenApiSpecVisitor {
             return error(string `OperationId is mandotory. It is missing for ${path} and method ${method}`);
         }
 
-        // resolve queryParameters
-        JsonInputSchema? queryParams = ();
-        JsonInputSchema? pathParams = ();
+        // resolve Parameters
+        ParameterSchema? queryParameters = ();
+        ParameterSchema? pathParameters = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
         if parameters is (Parameter|Reference)[] {
-            record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|} mappingResult = check self.visitParameters(parameters);
-            queryParams = mappingResult.queryParams;
-            pathParams = mappingResult.pathParams;
+            record {|ParameterSchema? pathParameters; ParameterSchema? queryParameters;|} parameterSchemas = check self.visitParameters(parameters);
+            queryParameters = parameterSchemas.queryParameters;
+            pathParameters = parameterSchemas.pathParameters;
         }
 
         JsonInputSchema? requestBody = ();
@@ -198,8 +198,8 @@ class OpenApiSpecVisitor {
             description,
             path,
             method,
-            queryParams,
-            pathParams,
+            queryParameters,
+            pathParameters,
             requestBody
         });
     }
@@ -215,9 +215,28 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|}|error {
-        map<JsonSubSchema> queryParams = {};
-        map<JsonSubSchema> pathParams = {};
+    private function verfyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
+        if parameterSchema is PrimitiveInputSchema {
+            return parameterSchema;
+        } else if parameterSchema is ArrayInputSchema {
+            JsonSubSchema items = parameterSchema.items;
+            json[]? default = parameterSchema.default;
+            if items is PrimitiveInputSchema && default is PrimitiveType? {
+                return {
+                    items: items,
+                    default,
+                    description: parameterSchema?.description
+                };
+            }
+        }
+        return error("Supported only the primitive and array types for query and path parameters. Found: " + parameterSchema.toString());
+    }
+
+    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
+        map<ParameterType> pathParams = {};
+        map<ParameterType> queryParams = {};
+        string[] pathRequired = [];
+        string[] queryRequired = [];
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -240,25 +259,33 @@ class OpenApiSpecVisitor {
                 if explode !is () && !explode {
                     return error("Supported only the query parmaters with explode=true");
                 }
-                queryParams[resolvedParameter.name] = check self.visitSchema(schema);
-            }
-            if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
+                ParameterType parameterType = check self.verfyParameterType(check self.visitSchema(schema));
+                boolean? required = resolvedParameter.required;
+                if required is boolean && required {
+                    queryRequired.push(resolvedParameter.name);
+                }
+                queryParams[resolvedParameter.name] = parameterType;
+
+            } else if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
                 if style !is () && style != OPENAPI_PATH_PARAM_SUPPORTED_STYLE {
                     return error("Supported only the path parameters with style=" + OPENAPI_PATH_PARAM_SUPPORTED_STYLE);
                 }
                 if explode !is () && explode {
-                    return error("Supported only the path parmaters with explode=fale");
+                    return error("Supported only the path parmaters with explode=false");
                 }
-                pathParams[resolvedParameter.name] = check self.visitSchema(schema);
+                ParameterType parameterType = check self.verfyParameterType(check self.visitSchema(schema));
+                boolean? required = resolvedParameter.required;
+                if required is boolean && required {
+                    pathRequired.push(resolvedParameter.name);
+                }
+                pathParams[resolvedParameter.name] = parameterType;
             }
         }
+        ParameterSchema pathParameters = {properties: pathParams, required: pathRequired.length() > 0 ? pathRequired : ()};
+        ParameterSchema queryParameters = {properties: queryParams, required: queryRequired.length() > 0 ? queryRequired : ()};
         return {
-            queryParams: queryParams.length() > 0 ? {
-                    properties: queryParams
-                } : (),
-            pathParams: pathParams.length() > 0 ? {
-                    properties: pathParams
-                } : ()
+            pathParameters: pathParams.length() > 0 ? pathParameters : (),
+            queryParameters: queryParams.length() > 0 ? queryParameters : ()
         };
     }
 
@@ -334,7 +361,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
+    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema|error {
         PrimitiveInputSchema inputSchmea = {
             'type: schema.'type
         };
@@ -343,7 +370,7 @@ class OpenApiSpecVisitor {
             inputSchmea.description = schema.description;
         }
         if self.additionalInfoFlags.extractDefault {
-            inputSchmea.default = schema?.default;
+            inputSchmea.default = check schema?.default.ensureType();
         }
 
         if schema is StringSchema {

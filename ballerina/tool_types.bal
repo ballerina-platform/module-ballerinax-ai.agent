@@ -25,18 +25,8 @@ public enum InputType {
     ARRAY = "array"
 }
 
-# Supported HTTP methods.
-public enum HttpMethod {
-    GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
-}
-
-// input record definitions ----------------------------
-type HttpInput record {|
-    string path;
-    map<json> queryParams?;
-    map<json> pathParams?;
-    map<json> requestBody?;
-|};
+# Primitive types supported by the Tool schemas.
+public type PrimitiveType int|string|boolean|float|decimal;
 
 # Defines a constant value field in the schema.
 #
@@ -62,12 +52,14 @@ public type BaseInputTypeSchema record {|
 # + format - Format of the input. This is not applicable for `BOOLEAN` type.
 # + pattern - Pattern of the input. This is only applicable for `STRING` type.
 # + 'enum - Enum values of the input. This is only applicable for `STRING` type.
+# + default - Default value of the input
 public type PrimitiveInputSchema record {|
     *BaseInputTypeSchema;
     STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
     string format?;
     string pattern?;
     string[] 'enum?;
+    PrimitiveType default?;
 |};
 
 # Defines an `anyOf` input field in the schema. Follows OpenAPI 3.x specification.
@@ -133,31 +125,12 @@ public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema|ConstantValueSche
 #
 # + name - Name of the tool
 # + description - A description of the tool. This is used by the LLMs to understand the behavior of the tool.
-# + inputSchema - Input schema expected by the tool. If the tool doesn't expect any input, this should be null.
+# + parameters - Input schema expected by the tool. If the tool doesn't expect any input, this should be null.
 # + caller - Pointer to the function that should be called when the tool is invoked.
 public type Tool record {|
     string name;
     string description;
-    JsonInputSchema? inputSchema = ();
+    JsonInputSchema? parameters = ();
     isolated function caller;
-|};
-
-# Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
-#
-# + name - Name of the tool
-# + description - A description of the tool. This is used by the LLMs to understand the behavior of the tool.
-# + method - HTTP method of the resource. Should be one of `GET`, `POST`, `DELETE`, `PUT`, `PATCH`, `HEAD`, or `OPTIONS`.
-# + path - Path of the HTTP resource.
-# + queryParams - Schema of the query parameters to the HTTP resource. Leave this empty if the resource doesn't expect any query parameters.
-# + pathParams - Schema of the path parameters to the HTTP resource. Leave this empty if the resource doesn't expect any path parameters.
-# + requestBody - Schema of the request body to the HTTP resource. Leave this empty if the resource doesn't expect any request body.
-public type HttpTool record {|
-    string name;
-    string description;
-    HttpMethod method;
-    string path;
-    JsonInputSchema queryParams?;
-    JsonInputSchema pathParams?;
-    JsonInputSchema requestBody?;
 |};
 

@@ -107,7 +107,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
             return error(string `Duplicated tools. Tool '${tool.name}' is already registered.`);
         }
 
-        JsonInputSchema? variables = check tool.inputSchema.cloneWithType();
+        JsonInputSchema? variables = check tool.parameters.cloneWithType();
         map<json> constants = {};
 
         if variables is JsonInputSchema {
@@ -166,15 +166,13 @@ isolated function mergeInputs(map<json>? inputs, map<json> constants) returns ma
     if inputs is () {
         return constants;
     }
-
     foreach [string, json] [key, value] in constants.entries() {
         if inputs.hasKey(key) {
             json inputValue = inputs[key];
             if inputValue is map<json> && value is map<json> {
                 inputs[key] = mergeInputs(inputValue, value);
             }
-        }
-        else {
+        } else {
             inputs[key] = value;
         }
     }
