@@ -297,7 +297,7 @@ ${toolIntro.trim()}
 ALWAYS use the following format for each question:
 
 Question: [Insert the question you need to answer]
-Thought: [Consider your approach and plan accordingly]
+Thought: [You should always think about what to do]
 Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
@@ -308,7 +308,7 @@ ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: [Describe the result of the action]
 ... (Repeat the Thought/Action/Observation pattern as needed)
 Thought: [Summarize your understanding of the final answer]
-Final Answer: [Provide the final answer to the original input question. Begin with 'Final Answer:']
+Final Answer: [Provide the final answer to the original input question']
 
 Let's get started!`;
 }
