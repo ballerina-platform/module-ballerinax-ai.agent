@@ -290,27 +290,27 @@ public isolated class Agent {
 }
 
 isolated function constructPrompt(string toolList, string toolIntro) returns string {
-    return string `Answer the following questions as best you can without making any assumptions. You have access to the following tools. If required, you can use them multiple times to perform repeated tasks:
+    return string `Answer the following questions without making assumptions. You have access to the following tools. If needed, you can use them multiple times for repeated tasks:
 
 ${toolIntro.trim()}
 
-ALWAYS use the following format:
+ALWAYS use the following format for each question:
 
-Question: the input question you must answer
-Thought: you should always think about what to do.
-Action: always should be a single tool using the following format within BACKTICKS. This field is mandatory after 'Thought'.
+Question: [Insert the question you need to answer]
+Thought: [Consider your approach and plan accordingly]
+Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
-  "tool": the tool to take, should be one of [${toolList}]",
-  "tool_input": JSON input record to the tool following "inputSchema" with the specified types. Required properties are mandatory.
+  "tool": "[Insert the tool you are using from the given options: [${toolList}]",
+  "tool_input": "[Insert the JSON input record to the tool following the 'inputSchema' with the specified types. Required properties are mandatory.]"
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
-Observation: the result of the action
-... (this Thought/Action/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question. Always use characters 'Final Answer:' to indicate the final answer.
+Observation: [Describe the result of the action]
+... (Repeat the Thought/Action/Observation pattern as needed)
+Thought: [Summarize your understanding of the final answer]
+Final Answer: [Provide the final answer to the original input question. Begin with 'Final Answer:']
 
-Begin!`;
+Let's get started!`;
 }
 
 isolated function constructHistoryPrompt(ExecutionStep[] history) returns string {
