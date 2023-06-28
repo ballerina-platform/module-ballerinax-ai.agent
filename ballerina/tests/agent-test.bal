@@ -3,7 +3,7 @@ import ballerina/test;
 Tool searchTool = {
     name: "Search",
     description: " A search engine. Useful for when you need to answer questions about current events",
-    inputSchema: {
+    parameters: {
         properties: {
             query: {'type: "string", description: "The search query"}
         }
@@ -14,7 +14,7 @@ Tool searchTool = {
 Tool calculatorTool = {
     name: "Calculator",
     description: "Useful for when you need to answer questions about math.",
-    inputSchema: {
+    parameters: {
         properties: {
             expression: {'type: "string", description: "The mathematical expression to evaluate"}
         }
@@ -33,8 +33,8 @@ function testAgentInitialization() {
 
     ToolInfo toolInfo = {
         toolList: string `${searchTool.name}, ${calculatorTool.name}`,
-        "toolIntro": string `Search: ${{"description": searchTool.description, "inputSchema": searchTool.inputSchema}.toString()}
-Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.inputSchema}.toString()}`
+        "toolIntro": string `Search: ${{"description": searchTool.description, "inputSchema": searchTool.parameters}.toString()}
+Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.parameters}.toString()}`
     };
 
     ToolStore store = agent.getToolStore();
@@ -50,23 +50,23 @@ function testInitializedPrompt() returns error? {
 
     ToolInfo toolInfo = agent.getToolStore().extractToolInfo();
 
-    string instruction = "Answer the following questions as best you can without making any assumptions. You have access to the following tools. If required, you can use them multiple times to perform repeated tasks:\n\n" +
+    string instruction = "Answer the following questions without making assumptions. You have access to the following tools. If needed, you can use them multiple times for repeated tasks:\n\n" +
         toolInfo.toolIntro + "\n\n" +
-        "ALWAYS use the following format:\n\n" +
-        "Question: the input question you must answer\n" +
-        "Thought: you should always think about what to do\n" +
-        "Action: always should be a single tool using the following format within BACKTICKS\n" +
+        "ALWAYS use the following format for each question:\n\n" +
+        "Question: [Insert the question you need to answer]\n" +
+        "Thought: [Consider your approach and plan accordingly]\n" +
+        "Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]\n" +
         "```\n" +
         "{\n" +
-        "  \"tool\": the tool to take, should be one of [" + toolInfo.toolList + "]\",\n" +
-        "  \"tool_input\": JSON input record to the tool following \"inputSchema\". Required properties are mandatory.\n" +
+        "  \"tool\": \"[Insert the tool you are using from the given options: [" + toolInfo.toolList + "]\",\n" +
+        "  \"tool_input\": \"[Insert the JSON input record to the tool following the 'inputSchema' with the specified types. Required properties are mandatory.]\"\n" +
         "}\n" +
         "```\n" +
-        "Observation: the result of the action\n" +
-        "... (this Thought/Action/Observation can repeat N times)\n" +
-        "Thought: I now know the final answer\n" +
-        "Final Answer: the final answer to the original input question\n\n" +
-        "Begin! Reminder to always use the exact characters 'Final Answer' when responding.";
+        "Observation: [Describe the result of the action]\n" +
+        "... (Repeat the Thought/Action/Observation pattern as needed)\n" +
+        "Thought: [Summarize your understanding of the final answer]\n" +
+        "Final Answer: [Provide the final answer to the original input question. Begin with 'Final Answer:']\n\n" +
+        "Let's get started!";
 
     test:assertEquals(agentExecutor.getPromptConstruct().instruction, instruction);
 }
