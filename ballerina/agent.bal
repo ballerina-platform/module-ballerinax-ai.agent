@@ -306,9 +306,9 @@ ${BACKTICK}${BACKTICK}${BACKTICK}
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
 Observation: [Describe the result of the action]
-... (Repeat the Thought/Action/Observation pattern as needed)
+... (this Thought/Action/Observation can repeat N times)
 Thought: [Summarize your understanding of the final answer]
-Final Answer: [Provide the final answer to the original input question']
+Final Answer: [Provide the final answer to the original input question]
 
 Let's get started!`;
 }

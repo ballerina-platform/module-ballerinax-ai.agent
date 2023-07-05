@@ -54,7 +54,7 @@ function testInitializedPrompt() returns error? {
         toolInfo.toolIntro + "\n\n" +
         "ALWAYS use the following format for each question:\n\n" +
         "Question: [Insert the question you need to answer]\n" +
-        "Thought: [Consider your approach and plan accordingly]\n" +
+        "Thought: [You should always think about what to do]\n" +
         "Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]\n" +
         "```\n" +
         "{\n" +
@@ -63,9 +63,9 @@ function testInitializedPrompt() returns error? {
         "}\n" +
         "```\n" +
         "Observation: [Describe the result of the action]\n" +
-        "... (Repeat the Thought/Action/Observation pattern as needed)\n" +
+        "... (this Thought/Action/Observation can repeat N times)\n" +
         "Thought: [Summarize your understanding of the final answer]\n" +
-        "Final Answer: [Provide the final answer to the original input question. Begin with 'Final Answer:']\n\n" +
+        "Final Answer: [Provide the final answer to the original input question]\n\n" +
         "Let's get started!";
 
     test:assertEquals(agentExecutor.getPromptConstruct().instruction, instruction);

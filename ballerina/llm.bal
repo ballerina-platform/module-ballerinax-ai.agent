@@ -168,10 +168,13 @@ public isolated class ChatGptModel {
             messages
         });
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
-        if message is () {
-            return error("Empty response from the model");
+        if message !is () {
+            string? content = message?.content;
+            if content !is () {
+                return content;
+            }
         }
-        return message.content;
+        return error("Empty response from the model");
     }
 
     isolated function generate(PromptConstruct prompt) returns string|error {
