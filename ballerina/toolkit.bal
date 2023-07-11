@@ -225,10 +225,9 @@ isolated function pathParameterSerialization(PrimitiveType|PrimitiveType[] value
     // implements only the default serialization (style:simple and explode:false)
     if value is PrimitiveType {
         return value.toString();
-    } else {
-        string result = value.toString();
-        return result.substring(1, result.length() - 1);
     }
+    string result = value.toString();
+    return result.substring(1, result.length() - 1);
 }
 
 isolated function queryParameterSerialization(string key, PrimitiveType|PrimitiveType[] value) returns string {
@@ -243,23 +242,21 @@ isolated function queryParameterSerialization(string key, PrimitiveType|Primitiv
 }
 
 isolated function extractParamValue(string key, json parameterValue) returns PrimitiveType|PrimitiveType[]|error {
-    PrimitiveType|PrimitiveType[] value;
     if parameterValue is PrimitiveType {
-        value = parameterValue;
-    } else if parameterValue is json[] {
-        PrimitiveType[] arrayValues = [];
-        foreach json element in parameterValue {
-            if element is PrimitiveType {
-                arrayValues.push(element);
-            } else {
-                return error(string `Unsupported parameter value: ${element.toString()} for key ${key}`);
-            }
-        }
-        value = arrayValues;
-    } else {
-        return error(string `Unsupported parameter value: ${parameterValue.toString()} for key ${key}`);
+        return parameterValue;
     }
-    return value;
+    if parameterValue !is json[] {
+        return error(string `Unsupported HTTP parameter value. Expected primitive type or array type, but found '${parameterValue.toString()}' for key '${key}'`);
+    }
+    PrimitiveType[] arrayValues = [];
+    foreach json element in parameterValue {
+        if element is PrimitiveType {
+            arrayValues.push(element);
+        } else {
+            return error(string `Unsupported value for array type HTTP parameter. Expected primitive type, but found '${element.toString()}' for key '${key}'`);
+        }
+    }
+    return arrayValues;
 }
 
 isolated function getPathWithParams(string path, map<json>? pathParameters, map<json>? queryParameters) returns string|error {
@@ -291,9 +288,7 @@ isolated function getPathWithParams(string path, map<json>? pathParameters, map<
 }
 
 isolated function extractPathParams(string path, ParameterSchema? pathParameters = ()) returns ParameterSchema? {
-    regex:Match[]
-        pathParams = regex:searchAll(path, "\\{(\\w*?)\\}");
-
+    regex:Match[] pathParams = regex:searchAll(path, "\\{(\\w*?)\\}");
     if pathParams.length() == 0 {
         if pathParameters is () {
             return ();

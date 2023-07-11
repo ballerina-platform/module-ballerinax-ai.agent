@@ -179,9 +179,7 @@ class OpenApiSpecVisitor {
         ParameterSchema? pathParameters = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
         if parameters is (Parameter|Reference)[] {
-            record {|ParameterSchema? pathParameters; ParameterSchema? queryParameters;|} parameterSchemas = check self.visitParameters(parameters);
-            queryParameters = parameterSchemas.queryParameters;
-            pathParameters = parameterSchemas.pathParameters;
+            {pathParameters, queryParameters} = check self.visitParameters(parameters);
         }
 
         JsonInputSchema? requestBody = ();
@@ -218,18 +216,23 @@ class OpenApiSpecVisitor {
     private function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
         if parameterSchema is PrimitiveInputSchema {
             return parameterSchema;
-        } else if parameterSchema is ArrayInputSchema {
-            JsonSubSchema items = parameterSchema.items;
-            json[]? default = parameterSchema.default;
-            if items is PrimitiveInputSchema && default is PrimitiveType? {
-                return {
-                    items: items,
-                    default,
-                    description: parameterSchema?.description
-                };
-            }
         }
-        return error("Supported only the primitive and array types for query and path parameters. Found: " + parameterSchema.toString());
+        if parameterSchema !is ArrayInputSchema {
+            return error("Unsupported HTTP parameter type. Expects only primitive or array type, but found:" + parameterSchema.toString());
+        }
+        JsonSubSchema items = parameterSchema.items;
+        json[]? default = parameterSchema.default;
+        if items !is PrimitiveInputSchema {
+            return error("Unsupported HTTP parameter type. Expects only primitive values for array type parameters, but found:" + items.toString());
+        }
+        if default !is PrimitiveType? {
+            return error("Unsupported default value for array type parameter. Expects a primitive type array, but found:" + default.toString());
+        }
+        return {
+            items,
+            default,
+            description: parameterSchema?.description
+        };
     }
 
     private function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
@@ -260,8 +263,7 @@ class OpenApiSpecVisitor {
                     return error("Supported only the query parmaters with explode=true");
                 }
                 ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
-                boolean? required = resolvedParameter.required;
-                if required is boolean && required {
+                if resolvedParameter.required == true {
                     queryRequired.push(resolvedParameter.name);
                 }
                 queryParams[resolvedParameter.name] = parameterType;
