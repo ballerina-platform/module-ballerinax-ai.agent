@@ -234,11 +234,11 @@ isolated function queryParameterSerialization(string key, PrimitiveType|Primitiv
     // implements only the default serialization (style=form and explode=false)
     if value is PrimitiveType {
         return string `${key}=${value}`;
-    } else {
-        string result = <string>from PrimitiveType element in value
-            select string `${key}=${element}&`;
-        return result.substring(0, result.length() - 1);
     }
+    string result = <string>from PrimitiveType element in value
+        select string `${key}=${element}&`;
+    return result.substring(0, result.length() - 1);
+
 }
 
 isolated function extractParamValue(string key, json parameterValue) returns PrimitiveType|PrimitiveType[]|error {
@@ -273,17 +273,16 @@ isolated function getPathWithParams(string path, map<json>? pathParameters, map<
             }
         }
     }
-
-    if queryParameters !is () {
-        string query = "?";
-        foreach [string, json] [parameterKey, parameterValue] in queryParameters.entries() {
-            string key = parameterKey; // TODO: remove later. temp added due to null pointer issue
-            PrimitiveType|PrimitiveType[] value = check extractParamValue(key, parameterValue);
-            query += string `${queryParameterSerialization(key, value)}&`;
-        }
-        pathWithParams = pathWithParams + query.substring(0, query.length() - 1);
+    if queryParameters is () {
+        return pathWithParams;
     }
-
+    string query = "?";
+    foreach [string, json] [parameterKey, parameterValue] in queryParameters.entries() {
+        string key = parameterKey; // TODO: remove later. temp added due to null pointer issue
+        PrimitiveType|PrimitiveType[] value = check extractParamValue(key, parameterValue);
+        query += string `${queryParameterSerialization(key, value)}&`;
+    }
+    pathWithParams = pathWithParams + query.substring(0, query.length() - 1);
     return pathWithParams;
 }
 

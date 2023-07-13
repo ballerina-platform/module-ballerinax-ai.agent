@@ -218,15 +218,15 @@ class OpenApiSpecVisitor {
             return parameterSchema;
         }
         if parameterSchema !is ArrayInputSchema {
-            return error("Unsupported HTTP parameter type. Expects only primitive or array type, but found:" + parameterSchema.toString());
+            return error("Unsupported HTTP parameter type. Expected only primitive or array type, but found:" + parameterSchema.toString());
         }
         JsonSubSchema items = parameterSchema.items;
-        json[]? default = parameterSchema.default;
         if items !is PrimitiveInputSchema {
-            return error("Unsupported HTTP parameter type. Expects only primitive values for array type parameters, but found:" + items.toString());
+            return error("Unsupported HTTP parameter type. Expected only primitive type values for array type parameters, but found:" + items.toString());
         }
+        json[]? default = parameterSchema.default;
         if default !is PrimitiveType? {
-            return error("Unsupported default value for array type parameter. Expects a primitive type array, but found:" + default.toString());
+            return error("Unsupported default value for array type parameter. Expected a primitive type array, but found:" + default.toString());
         }
         return {
             items,
@@ -276,8 +276,7 @@ class OpenApiSpecVisitor {
                     return error("Supported only the path parmaters with explode=false");
                 }
                 ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
-                boolean? required = resolvedParameter.required;
-                if required is boolean && required {
+                if resolvedParameter.required == true {
                     pathRequired.push(resolvedParameter.name);
                 }
                 pathParams[resolvedParameter.name] = parameterType;

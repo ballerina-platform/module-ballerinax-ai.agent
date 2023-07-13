@@ -296,7 +296,7 @@ ${toolIntro.trim()}
 
 ALWAYS use the following format for each question:
 
-Question: [Insert the question you need to answer]
+Question: [The input question you must answer]
 Thought: [You should always think about what to do]
 Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]
 ${BACKTICK}${BACKTICK}${BACKTICK}

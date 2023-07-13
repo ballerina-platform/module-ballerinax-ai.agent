@@ -53,7 +53,7 @@ function testInitializedPrompt() returns error? {
     string instruction = "Answer the following questions without making assumptions. You have access to the following tools. If needed, you can use them multiple times for repeated tasks:\n\n" +
         toolInfo.toolIntro + "\n\n" +
         "ALWAYS use the following format for each question:\n\n" +
-        "Question: [Insert the question you need to answer]\n" +
+        "Question: [The input question you must answer]\n" +
         "Thought: [You should always think about what to do]\n" +
         "Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]\n" +
         "```\n" +

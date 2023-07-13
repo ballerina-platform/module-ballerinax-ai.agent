@@ -53,10 +53,10 @@ agent:HttpTool httpResourceTool = {
     description: "defines the purpose of the API resource", // provides information about the behavior
     path: "/path/resourceA/" // path to the resource
     method: "get" // the HTTP request method (e.g., GET, POST, DELETE, PUT, etc.)
-    queryParams: {
+    queryParameters: {
         // a JSON schema defining the query parameters of the HTTP resource
     }
-    pathParams: {
+    pathParameters: {
         // a JSON schema defining path parameters of the HTTP resource
     }
     requestBody: {
@@ -175,7 +175,7 @@ The agent can be executed without interruptions using `Agent.run()`. It attempts
 agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
 ```
 
-### 2. AgentIterator for `foreach` Execution
+### 2. `AgentIterator` for `foreach` Execution
 
 The agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
 
@@ -187,7 +187,7 @@ foreach agent:ExecutionStep|error step in agentIterator{
 }
 ```
 
-### 3. AgentExecutor for Reason-Act Interface
+### 3. `AgentExecutor` for Reason-Act Interface
 
 The `AgentExecutor` offers enhanced flexibility for running agents through its `reason()` and `act(string thought)` methods. This separation of reasoning and acting enables developers to obtain user confirmation before executing actions based on the agent's reasoning. This feature is particularly valuable for verifying, validating, or refining the agent's reasoning by incorporating user intervention or feedback as new observations, which can be achieved using the `update(ExecutionStep step)` method of `AgentExecutor`.
 
@@ -269,7 +269,7 @@ agent:Tool sendEmailTool = {
 };
 ```
 
-Next, create `HttpTools` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service.
+Next, create `HttpTools` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service. While creating the `HttpTools`, there is no need to explicitly define `pathParameters` since the Agent can automatically extract them from the provided `path`.
 
 ```ballerina
 agent:HttpTool listWifiHttpTool = {
@@ -309,8 +309,6 @@ Note that when creating the `HttpServiceToolKit` for the `GuestWiFi` service, we
 
 To create the agent, we first need to initialize a LLM (e.g., `Gpt3Model`, `ChatGptModel`). In this example, we initialize the agent with the `ChatGptModel` model as follows:
 
-<!-- To initialize the `GPT3Model`, we need to provide OpenAI API key `openAIToken`. We can set the `modelConfig` parameter to change the model name (`default:text-davinci-003`) or other hyperparameters such as `temperature`, `max_tokens` etc. -->
-
 
 ```ballerina
 agent:ChatGptModel model = check new ({auth: {token:  <OPENAI API KEY>}});
@@ -330,11 +328,11 @@ agent:ExecutionStep[] run = agent.run(query);
 
 Let's examine the output produced by the above example. Assuming the following natural language (NL) command is given to the agent:
 
-NL Command: `create a new guest WiFi account for email johnny@gmail.com with user guest123 and password john123. Send the available list of WiFi accounts for that email to alexa@gmail.com`
+NL Command: **"create a new guest WiFi account for email johnny@wso2.com with user guest123 and password john123. Send the available list of WiFi accounts for that email to alexa@wso2.com"**
 
 The agent will proceed with multiple reasoning-action iterations as follows to execute the given command. 
 
-1) Agent creates a new WiFi account for owner `johnny@gmail.com`:
+1) Agent creates a new WiFi account for owner `johnny@wso2.com`:
 
     ``````
     Reasoning iteration: 1
@@ -355,24 +353,26 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     Observation: Successfully added the wifi account
     ``````
 
-2) Agent finds existing guest WiFi accounts under the owner `johnny@gmail.com`:
+2) Agent finds existing guest WiFi accounts under the owner `johnny@wso2.com`:
 
     ``````
     Reasoning iteration: 2
-    Thought: Now we need to list the available WiFi accounts for the email owner and send it to a specified recipient.
+    Thought: Now we need to use the "List wifi" tool to get the available list of wifi accounts for the email "alexa@wso2.com".
     Action:
     ```
     {
     "tool": "List wifi",
     "tool_input": {
-        "path": "/guest-wifi-accounts/johnny@wso2.com"
+        "pathParameters": {
+            "ownerEmail": "johnny@wso2.com"
+            }
         }
     }
     ```
     Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
     ``````
 
-3) Agent sends an email to `alexa@gmail.com` with the information about the existing accounts:
+3) Agent sends an email to `alexa@wso2.com` with the information about the existing accounts:
 
     In this step, the agent is responsible for generating the email subject and message body as well. The user provides only the recipient's email.
     
@@ -401,4 +401,4 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     Final Answer: Successfully created a new guest wifi account with username "guest123" and password "john123" for the email owner "johnny@wso2.com". The available wifi accounts for "johnny@wso2.com" are "guest123.guestOf.johnny" and "newGuest.guestOf.johnny", and this list has been sent to the specified recipient "alexa@wso2.com".
     ```
 
-As a result, `alexa@gmail.com` will receive an email generated by the agent with the subject "Available WiFi List" and the message body "The available WiFi accounts for `johnny@wso2.com` are: guest123.guestOf.johnny, newGuest.guestOf.johnny".
+As a result, `alexa@wso2.com` will receive an email generated by the agent with the subject "Available WiFi List" and the message body "The available WiFi accounts for `johnny@wso2.com` are: guest123.guestOf.johnny, newGuest.guestOf.johnny".
