@@ -24,7 +24,7 @@ function testParseOpenAPISpec2() {
     string openAISpecPath = "tests/resources/openai-spec.json";
     OpenApiSpec|error openAPISpec = parseOpenApiSpec(openAISpecPath);
     if openAPISpec is error {
-        test:assertFail("OpenAPI spec is not parsed correctly");
+        test:assertFail("OpenAPI spec is not parsed correctly. Error: " + openAPISpec.toString());
     }
 
     test:assertEquals(openAPISpec.openapi, "3.0.0");
@@ -65,7 +65,6 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             description: "Create new guest WiFi account",
             method: "POST",
             path: "/guest-wifi-accounts",
-            queryParams: (),
             requestBody: {
                 allOf: [
                     {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
@@ -78,18 +77,14 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            queryParams: (),
-            requestBody: (),
-            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
         },
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            queryParams: (),
-            requestBody: (),
-            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}}}
+            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
         }
     ];
     test:assertEquals(apiSpec.tools, tools);

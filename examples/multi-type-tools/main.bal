@@ -39,7 +39,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
-        inputSchema: {
+        parameters: {
             properties: {
                 recipient: {'type: agent:STRING},
                 subject: {'type: agent:STRING},
@@ -56,7 +56,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             path: "/guest-wifi-accounts/{ownerEmail}",
             method: agent:GET,
             description: "useful to list the guest wifi accounts.",
-            pathParams: {
+            pathParameters: {
                 properties: {
                     ownerEmail: {'type: agent:STRING}
                 }
@@ -92,5 +92,4 @@ public function main(string query = DEFAULT_QUERY) returns error? {
 
     // Execute the query using agent iterator
     _ = agent.run(query, context = {"userEmail": "johnny@wso2.com"});
-
 }

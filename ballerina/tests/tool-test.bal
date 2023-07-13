@@ -31,16 +31,6 @@ function testResolveSchema() {
         }
     };
 
-    // map<AgentTool> toolMap = {};
-    // Tool tool = {
-    //     name: "Test tool",
-    //     description: "Test tool description",
-    //     inputSchema,
-    //     caller: searchToolMock
-    // };
-
-    // registerTool(toolMap, [tool]);
-
     map<json>|json[]? resolvedSchema = resolveSchema(inputSchema);
 
     if resolvedSchema !is map<json> {

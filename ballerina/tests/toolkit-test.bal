@@ -29,10 +29,10 @@ HttpTool[] tools = [
             'type: "object",
             properties:
                 {
-                model: {'type: "string"},
+                model: {'type: "string", default: "davinci"},
                 prompt: {
                     oneOf: [
-                        {'type: "string"},
+                        {'type: "string", default: "test"},
                         {'type: "array", items: {'type: "string"}},
                         {'type: "array", items: {'type: "integer"}},
                         {
@@ -40,6 +40,34 @@ HttpTool[] tools = [
                             items: {
                                 'type: "array",
                                 items: {'type: "integer"}
+                            }
+                        }
+                    ]
+                },
+                suffix: {'type: "string"}
+            }
+        }
+    },
+    {
+        name: "testDefaultWithNull",
+        path: "/example-delete",
+        method: DELETE,
+        description: "test HTTP DELETE tool with complex schema",
+        requestBody: {
+            'type: "object",
+            properties:
+                {
+                model: {'type: "string"},
+                prompt: {
+                    oneOf: [
+                        {'type: "string", default: ()},
+                        {'type: "array", items: {'type: "string"}},
+                        {'type: "array", items: {'type: "integer"}},
+                        {
+                            'type: "array",
+                            items: {
+                                'type: "array",
+                                items: {'type: "integer", default: ()}
                             }
                         }
                     ]
@@ -65,22 +93,23 @@ function testHttpToolKitInitialization() {
     if tools is error {
         test:assertFail("Error occurred while getting tools from HttpToolKit");
     }
-    test:assertEquals(tools.length(), 3);
+    test:assertEquals(tools.length(), 4);
 
     test:assertEquals(tools[0].name, "httpGet");
     test:assertEquals(tools[0].description, "test HTTP GET tool");
-    test:assertEquals(tools[0].inputSchema, {
+    test:assertEquals(tools[0].parameters, {
         'type: "object",
         properties: {
             path: {
                 'const: "/example-get/{pathParam}"
-            }
+            },
+            pathParameters: {'type: OBJECT, required: ["pathParam"], properties: {pathParam: {'type: STRING}}}
         }
     });
 
     test:assertEquals(tools[1].name, "httpPostWithSimpleSchema");
     test:assertEquals(tools[1].description, "test HTTP POST tool with simple schema");
-    test:assertEquals(tools[1].inputSchema, {
+    test:assertEquals(tools[1].parameters, {
         'type: "object",
         properties: {
             path: {
@@ -99,7 +128,40 @@ function testHttpToolKitInitialization() {
 
     test:assertEquals(tools[2].name, "httpDeleteWithComplexSchema");
     test:assertEquals(tools[2].description, "test HTTP DELETE tool with complex schema");
-    test:assertEquals(tools[2].inputSchema, {
+    test:assertEquals(tools[2].parameters, {
+        'type: "object",
+        properties: {
+            path: {
+                'const: "/example-delete"
+            },
+            requestBody: {
+                'type: "object",
+                properties:
+                {
+                    model: {'type: "string", default: "davinci"},
+                    prompt: {
+                        oneOf: [
+                            {'type: "string", default: "test"},
+                            {'type: "array", items: {'type: "string"}},
+                            {'type: "array", items: {'type: "integer"}},
+                            {
+                                'type: "array",
+                                items: {
+                                    'type: "array",
+                                    items: {'type: "integer"}
+                                }
+                            }
+                        ]
+                    },
+                    suffix: {'type: "string"}
+                }
+            }
+        }
+    });
+
+    test:assertEquals(tools[3].name, "testDefaultWithNull");
+    test:assertEquals(tools[3].description, "test HTTP DELETE tool with complex schema");
+    test:assertEquals(tools[3].parameters, {
         'type: "object",
         properties: {
             path: {

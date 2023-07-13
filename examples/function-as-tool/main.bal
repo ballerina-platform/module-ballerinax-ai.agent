@@ -60,7 +60,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool listwifi = {
         name: "List_Wifi",
         description: "useful to list the guest wifi accounts",
-        inputSchema: {
+        parameters: {
             properties: {
                 email: {
                     'type: "string"
@@ -73,7 +73,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool addWifi = {
         name: "Add_Wifi",
         description: "useful to add a new guest wifi account",
-        inputSchema: {
+        parameters: {
             properties: {
                 email: {
                     'type: "string"

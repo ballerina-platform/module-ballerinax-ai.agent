@@ -56,7 +56,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool searchTool = {
         name: "Search",
         description: " A search engine. Useful for when you need to answer questions about current events",
-        inputSchema: {
+        parameters: {
             'properties: {
                 "query": {
                     "type": "string",
@@ -70,7 +70,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool calculatorTool = {
         name: "Calculator",
         description: "Useful for when you need to answer questions about math.",
-        inputSchema: {
+        parameters: {
             'properties: {
                 "expression": {
                     "type": "string",

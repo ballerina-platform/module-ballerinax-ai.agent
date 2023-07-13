@@ -18,20 +18,18 @@ import ballerina/io;
 import ballerina/log;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
-#
-# + serviceUrl - Extracted service URL from the OpenAPI specification if there is any
-# + tools - Extracted Http tools from the OpenAPI specification
 public type HttpApiSpecification record {|
+    # Extracted service URL from the OpenAPI specification if there is any
     string serviceUrl?;
+    # Extracted Http tools from the OpenAPI specification
     HttpTool[] tools;
 |};
 
 # Defines additional information to be extracted from the OpenAPI specification.
-#
-# + extractDescription - Flag to extract description of parameters and schema attributes from the OpenAPI specification
-# + extractDefault - Flag to extract default values of parameters and schema attributes from the OpenAPI specification
 public type AdditionInfoFlags record {|
+    # Flag to extract description of parameters and schema attributes from the OpenAPI specification
     boolean extractDescription = false;
+    # Flag to extract default values of parameters and schema attributes from the OpenAPI specification
     boolean extractDefault = false;
 |};
 
@@ -174,14 +172,12 @@ class OpenApiSpecVisitor {
             return error(string `OperationId is mandotory. It is missing for ${path} and method ${method}`);
         }
 
-        // resolve queryParameters
-        JsonInputSchema? queryParams = ();
-        JsonInputSchema? pathParams = ();
+        // resolve Parameters
+        ParameterSchema? queryParameters = ();
+        ParameterSchema? pathParameters = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
         if parameters is (Parameter|Reference)[] {
-            record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|} mappingResult = check self.visitParameters(parameters);
-            queryParams = mappingResult.queryParams;
-            pathParams = mappingResult.pathParams;
+            {pathParameters, queryParameters} = check self.visitParameters(parameters);
         }
 
         JsonInputSchema? requestBody = ();
@@ -198,8 +194,8 @@ class OpenApiSpecVisitor {
             description,
             path,
             method,
-            queryParams,
-            pathParams,
+            queryParameters,
+            pathParameters,
             requestBody
         });
     }
@@ -215,9 +211,33 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ObjectInputSchema queryParams?; ObjectInputSchema pathParams?;|}|error {
-        map<JsonSubSchema> queryParams = {};
-        map<JsonSubSchema> pathParams = {};
+    private function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
+        if parameterSchema is PrimitiveInputSchema {
+            return parameterSchema;
+        }
+        if parameterSchema !is ArrayInputSchema {
+            return error("Unsupported HTTP parameter type. Expected only primitive or array type, but found:" + parameterSchema.toString());
+        }
+        JsonSubSchema items = parameterSchema.items;
+        if items !is PrimitiveInputSchema {
+            return error("Unsupported HTTP parameter type. Expected only primitive type values for array type parameters, but found:" + items.toString());
+        }
+        json[]? default = parameterSchema.default;
+        if default !is PrimitiveType? {
+            return error("Unsupported default value for array type parameter. Expected a primitive type array, but found:" + default.toString());
+        }
+        return {
+            items,
+            default,
+            description: parameterSchema?.description
+        };
+    }
+
+    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
+        map<ParameterType> pathParams = {};
+        map<ParameterType> queryParams = {};
+        string[] pathRequired = [];
+        string[] queryRequired = [];
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -240,25 +260,31 @@ class OpenApiSpecVisitor {
                 if explode !is () && !explode {
                     return error("Supported only the query parmaters with explode=true");
                 }
-                queryParams[resolvedParameter.name] = check self.visitSchema(schema);
-            }
-            if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
+                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
+                if resolvedParameter.required == true {
+                    queryRequired.push(resolvedParameter.name);
+                }
+                queryParams[resolvedParameter.name] = parameterType;
+
+            } else if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
                 if style !is () && style != OPENAPI_PATH_PARAM_SUPPORTED_STYLE {
                     return error("Supported only the path parameters with style=" + OPENAPI_PATH_PARAM_SUPPORTED_STYLE);
                 }
                 if explode !is () && explode {
-                    return error("Supported only the path parmaters with explode=fale");
+                    return error("Supported only the path parmaters with explode=false");
                 }
-                pathParams[resolvedParameter.name] = check self.visitSchema(schema);
+                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
+                if resolvedParameter.required == true {
+                    pathRequired.push(resolvedParameter.name);
+                }
+                pathParams[resolvedParameter.name] = parameterType;
             }
         }
+        ParameterSchema pathParameters = {properties: pathParams, required: pathRequired.length() > 0 ? pathRequired : ()};
+        ParameterSchema queryParameters = {properties: queryParams, required: queryRequired.length() > 0 ? queryRequired : ()};
         return {
-            queryParams: queryParams.length() > 0 ? {
-                    properties: queryParams
-                } : (),
-            pathParams: pathParams.length() > 0 ? {
-                    properties: pathParams
-                } : ()
+            pathParameters: pathParams.length() > 0 ? pathParameters : (),
+            queryParameters: queryParams.length() > 0 ? queryParameters : ()
         };
     }
 
@@ -334,7 +360,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema {
+    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema|error {
         PrimitiveInputSchema inputSchmea = {
             'type: schema.'type
         };
@@ -343,7 +369,7 @@ class OpenApiSpecVisitor {
             inputSchmea.description = schema.description;
         }
         if self.additionalInfoFlags.extractDefault {
-            inputSchmea.default = schema?.default;
+            inputSchmea.default = check schema?.default.ensureType();
         }
 
         if schema is StringSchema {

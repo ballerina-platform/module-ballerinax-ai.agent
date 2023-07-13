@@ -21,22 +21,20 @@ import ballerina/regex;
 type LlmInputParseError distinct error;
 
 # Parsed response from the LLM.
-#
-# + tool - Name of the tool to be performed
-# + tool_input - Input to the tool
-# + isCompleted - Whether the task is completed
 type NextTool record {|
+    # Name of the tool to be performed
     string tool;
+    # Input to the tool
     map<json> tool_input = {};
+    # Whether the task is completed
     boolean isCompleted = false;
 |};
 
 # Prompt to be given to the LLM.
-#
-# + thought - Thoughts produced by the LLM during the reasoning
-# + observation - Observations produced by the tool during the execution
 public type ExecutionStep record {|
+    # Thought produced by the LLM during the reasoning
     string thought;
+    # Observations produced by the tool during the execution
     any|error observation?;
 |};
 
@@ -68,7 +66,7 @@ public class AgentExecutor {
     isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();
         if context != {} {
-            instruction = string `${instruction}{"\n"}You can use these information if needed: ${context.toString()}$`;
+            instruction = string `${instruction}${"\n"}You can use these information if needed: ${context.toString()}$`;
         }
         log:printDebug("Instruction Prompt: \n" + instruction);
         self.prompt = {
@@ -98,7 +96,7 @@ public class AgentExecutor {
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
     private isolated function parseLlmOutput(string llmResponse) returns NextTool|LlmInputParseError {
-        if llmResponse.includes(FINAL_ANSWER_KEY) {
+        if llmResponse.toLowerAscii().includes(FINAL_ANSWER_KEY) {
             return {
                 tool: "complete",
                 isCompleted: true
@@ -290,27 +288,27 @@ public isolated class Agent {
 }
 
 isolated function constructPrompt(string toolList, string toolIntro) returns string {
-    return string `Answer the following questions as best you can without making any assumptions. You have access to the following tools. If required, you can use them multiple times to perform repeated tasks:
+    return string `Answer the following questions without making assumptions. You have access to the following tools. If needed, you can use them multiple times for repeated tasks:
 
 ${toolIntro.trim()}
 
-ALWAYS use the following format:
+ALWAYS use the following format for each question:
 
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: always should be a single tool using the following format within BACKTICKS
+Question: [The input question you must answer]
+Thought: [You should always think about what to do]
+Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]
 ${BACKTICK}${BACKTICK}${BACKTICK}
 {
-  "tool": the tool to take, should be one of [${toolList}]",
-  "tool_input": JSON input record to the tool following "inputSchema". Required properties are mandatory.
+  "tool": "[Insert the tool you are using from the given options: [${toolList}]",
+  "tool_input": "[Insert the JSON input record to the tool following the 'inputSchema' with the specified types. Required properties are mandatory.]"
 }
 ${BACKTICK}${BACKTICK}${BACKTICK}
-Observation: the result of the action
+Observation: [Describe the result of the action]
 ... (this Thought/Action/Observation can repeat N times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
+Thought: [Summarize your understanding of the final answer]
+Final Answer: [Provide the final answer to the original input question]
 
-Begin! Reminder to always use the exact characters 'Final Answer' when responding.`;
+Let's get started!`;
 }
 
 isolated function constructHistoryPrompt(ExecutionStep[] history) returns string {
@@ -320,8 +318,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
         any|error observation = step?.observation;
         if observation is () {
             observationStr = "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
-        }
-        else if observation is error {
+        } else if observation is error {
             record {|string message; string cause?;|} errorInfo = {
                 message: observation.message().trim()
             };
@@ -330,8 +327,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
                 errorInfo.cause = cause.message().trim();
             }
             observationStr = "Error occured while trying to execute the tool: " + errorInfo.toString();
-        }
-        else {
+        } else {
             observationStr = observation.toString().trim();
         }
         historyPrompt += string `${step.thought}${"\n"}Observation: ${observationStr}${"\n"}`;
