@@ -27,53 +27,50 @@ public enum HttpMethod {
 public type ParameterType ConstantValueSchema|PrimitiveInputSchema|ArrayTypeParameterSchema;
 
 # Defines a HTTP parameter schema for Array type parameters.
-#
-# + items - Array item type
-# + default - Default value of the parameter
 public type ArrayTypeParameterSchema record {|
     *ArrayInputSchema;
+    # Array item type
     PrimitiveInputSchema|ConstantValueSchema items;
+    # Default value of the parameter
     PrimitiveType[] default?;
 |};
 
 # Defines a HTTP parameter schema (can be query parameter or path parameters).
-#
-# + required - A list of mandatory parameters
-# + properties - A map of parameter names and their types
 public type ParameterSchema record {|
+    # A list of mandatory parameters
     string[] required?;
+    # A map of parameter names and their types
     map<ParameterType> properties;
 |};
 
 # Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
-#
-# + name - Name of the Http resource tool
-# + description - Description of the Http resource tool used by the LLM
-# + method - Http method type (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)
-# + path - Path of the Http resource
-# + queryParameters - Query parameters definitions of the Http resource
-# + pathParameters - Path parameter definitions of the Http resource
-# + requestBody - Request body definition of the Http resource
 public type HttpTool record {|
+    # Name of the Http resource tool
     string name;
+    # Description of the Http resource tool used by the LLM
     string description;
+    # Http method type (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)
     HttpMethod method;
+    # Path of the Http resource
     string path;
+    # Query parameters definitions of the Http resource
     ParameterSchema queryParameters?;
+    # Path parameter definitions of the Http resource
     ParameterSchema pathParameters?;
+    # Request body definition of the Http resource
     JsonInputSchema requestBody?;
 |};
 
 // input record definitions ----------------------------
 # Defines an HTTP input record.
-# + path - Path of the Http resource
-# + queryParameters - Query parameters of the Http resource
-# + pathParameters - Path parameters of the Http resource
-# + requestBody - Request body of the Http resource
 type HttpInput record {|
+    # Path of the Http resource
     string path;
+    # Query parameters of the Http resource
     map<json> queryParameters?;
+    # Path parameters of the Http resource
     map<json> pathParameters?;
+    # Request body of the Http resource
     map<json> requestBody?;
 |};
 

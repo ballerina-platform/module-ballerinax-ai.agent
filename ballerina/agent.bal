@@ -21,22 +21,20 @@ import ballerina/regex;
 type LlmInputParseError distinct error;
 
 # Parsed response from the LLM.
-#
-# + tool - Name of the tool to be performed
-# + tool_input - Input to the tool
-# + isCompleted - Whether the task is completed
 type NextTool record {|
+    # Name of the tool to be performed
     string tool;
+    # Input to the tool
     map<json> tool_input = {};
+    # Whether the task is completed
     boolean isCompleted = false;
 |};
 
 # Prompt to be given to the LLM.
-#
-# + thought - Thoughts produced by the LLM during the reasoning
-# + observation - Observations produced by the tool during the execution
 public type ExecutionStep record {|
+    # Thought produced by the LLM during the reasoning
     string thought;
+    # Observations produced by the tool during the execution
     any|error observation?;
 |};
 

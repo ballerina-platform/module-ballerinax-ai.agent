@@ -18,20 +18,18 @@ import ballerina/io;
 import ballerina/log;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
-#
-# + serviceUrl - Extracted service URL from the OpenAPI specification if there is any
-# + tools - Extracted Http tools from the OpenAPI specification
 public type HttpApiSpecification record {|
+    # Extracted service URL from the OpenAPI specification if there is any
     string serviceUrl?;
+    # Extracted Http tools from the OpenAPI specification
     HttpTool[] tools;
 |};
 
 # Defines additional information to be extracted from the OpenAPI specification.
-#
-# + extractDescription - Flag to extract description of parameters and schema attributes from the OpenAPI specification
-# + extractDefault - Flag to extract default values of parameters and schema attributes from the OpenAPI specification
 public type AdditionInfoFlags record {|
+    # Flag to extract description of parameters and schema attributes from the OpenAPI specification
     boolean extractDescription = false;
+    # Flag to extract default values of parameters and schema attributes from the OpenAPI specification
     boolean extractDefault = false;
 |};
 
