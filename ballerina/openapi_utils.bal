@@ -176,7 +176,7 @@ class OpenApiSpecVisitor {
         ParameterSchema? queryParameters = ();
         ParameterSchema? pathParameters = ();
         (Parameter|Reference)[]? parameters = operation.parameters;
-        if parameters is (Parameter|Reference)[] {
+        if parameters !is () {
             {pathParameters, queryParameters} = check self.visitParameters(parameters);
         }
 
@@ -211,20 +211,20 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    private function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
+    function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
         if parameterSchema is PrimitiveInputSchema {
             return parameterSchema;
         }
         if parameterSchema !is ArrayInputSchema {
-            return error("Unsupported HTTP parameter type. Expected only primitive or array type, but found:" + parameterSchema.toString());
+            return error("Unsupported HTTP parameter type.", cause = "Expected only primitive or array type, but found: " + (typeof parameterSchema).toString());
         }
         JsonSubSchema items = parameterSchema.items;
         if items !is PrimitiveInputSchema {
-            return error("Unsupported HTTP parameter type. Expected only primitive type values for array type parameters, but found:" + items.toString());
+            return error("Unsupported HTTP parameter type.", cause = "Expected only primitive type values for array type parameters, but found: " + (typeof items).toString());
         }
         json[]? default = parameterSchema.default;
         if default !is PrimitiveType? {
-            return error("Unsupported default value for array type parameter. Expected a primitive type array, but found:" + default.toString());
+            return error("Unsupported default value for array type parameter.", cause = "Expected a primitive type array, but found: " + (typeof default).toString());
         }
         return {
             items,

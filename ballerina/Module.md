@@ -111,7 +111,7 @@ JSON input schema:
 ## ToolKit
 A Toolkit is a highly valuable asset when it comes to organizing a collection of tools that share common attributes. Not only does it provide organization, but it also offers the flexibility to extend and define new types of tools.
 
-To illustrate this point, let's consider an HTTP service that encompasses multiple resources. Typically, these resources share the same service URL and client configurations. In such cases, utilizing an `HttpServiceToolKit` allows for the convenient grouping of all the `HttpTools` associated with the resources of that specific service. 
+To illustrate this point, let's consider an HTTP service that encompasses multiple resources. Typically, these resources share the same service URL and client configurations. In such cases, utilizing an `HttpServiceToolKit` allows for the convenient grouping of all the `HttpTool` records associated with the resources of that specific service. 
 
 Furthermore, the `HttpServiceToolKit` extends the definition of a `Tool` to encompass `HttpTool` specifics, effectively encapsulating HTTP-related details. By interpreting an `HttpTool` as a `Tool`, the `HttpServiceToolKit` eliminates the need for additional effort in writing separate Tools for HTTP services. This streamlined interpretation simplifies the development process and saves valuable time.
 
@@ -223,7 +223,7 @@ while(agentExecutor.hasNext()){
 Let's walk through the usage of the `ai.agent` library using [this sample](https://github.com/ballerina-platform/module-ballerinax-ai.agent/tree/main/examples/multi-type-tools). The example demonstrates the use of two types of tools:
 
 - To send a Google email, we utilize the sendMessage function from the `ballerinax/googleapis.gmail` connector as a tool.
-- HttpTools are used to create and list WiFi accounts through the `GuestWiFi` HTTP service.
+- `HttpTool` records are used to create and list WiFi accounts through the `GuestWiFi` HTTP service.
     - List available WiFi accounts:`GET /guest-wifi-accounts/{ownerEmail}`
     - Create a new WiFi account: `POST /guest-wifi-accounts`
 
@@ -269,7 +269,7 @@ agent:Tool sendEmailTool = {
 };
 ```
 
-Next, create `HttpTools` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service. While creating the `HttpTools`, there is no need to explicitly define `pathParameters` since the Agent can automatically extract them from the provided `path`.
+Next, create `HttpTool` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service. While creating the `HttpTool`, there is no need to explicitly define `pathParameters` since the Agent can automatically extract them from the provided `path`.
 
 ```ballerina
 agent:HttpTool listWifiHttpTool = {
@@ -340,12 +340,12 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     Action: 
     ```
     {
-    "tool": "Create wifi",
-    "tool_input": {
-        "requestBody": {
-        "email": "johnny@wso2.com",
-        "username": "guest123",
-        "password": "john123"
+        "tool": "Create wifi",
+        "tool_input": {
+            "requestBody": {
+            "email": "johnny@wso2.com",
+            "username": "guest123",
+            "password": "john123"
             }
         }
     }
@@ -361,10 +361,10 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     Action:
     ```
     {
-    "tool": "List wifi",
-    "tool_input": {
-        "pathParameters": {
-            "ownerEmail": "johnny@wso2.com"
+        "tool": "List wifi",
+        "tool_input": {
+            "pathParameters": {
+                "ownerEmail": "johnny@wso2.com"
             }
         }
     }
@@ -382,11 +382,11 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     Action:
     ```
     {
-    "tool": "Send mail",
-    "tool_input": {
-        "recipient": "alexa@wso2.com",
-        "subject": "Available Wifi List",
-        "messageBody": "The available wifi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny"
+        "tool": "Send mail",
+        "tool_input": {
+            "recipient": "alexa@wso2.com",
+            "subject": "Available Wifi List",
+            "messageBody": "The available wifi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny"
         }
     }
     ```

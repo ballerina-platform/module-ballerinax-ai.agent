@@ -189,3 +189,52 @@ function testVisitorWithOpenAISpec() returns error? {
         }
     }
 }
+
+@test:Config {}
+function testParameterSchema() returns error? {
+    OpenApiSpecVisitor visitor = new;
+
+    JsonSubSchema stringParameterSchema = {'type: "string", description: "Name of the person"};
+    JsonSubSchema integerParameterSchema = {'type: "integer", description: "Age of the person"};
+
+    JsonSubSchema arrayParameterSchema = {
+        items: stringParameterSchema
+    };
+
+    JsonSubSchema objectParameterSchema = {
+        properties:
+        {
+            name: stringParameterSchema,
+            age: integerParameterSchema
+        }
+    };
+
+    JsonSubSchema arrayParameterSchemaWithObjItems = {
+        items: objectParameterSchema
+    };
+
+    ParameterType|error verifiedParameterType = visitor.verifyParameterType(stringParameterSchema);
+    if verifiedParameterType !is PrimitiveInputSchema {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType, stringParameterSchema);
+
+    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchema);
+    if verifiedParameterType !is ArrayTypeParameterSchema {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType, arrayParameterSchema);
+
+    verifiedParameterType = visitor.verifyParameterType(objectParameterSchema);
+    if verifiedParameterType !is error {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only primitive or array type, but found: typedesc ai.agent:ObjectInputSchema"});
+
+    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchemaWithObjItems);
+    if verifiedParameterType !is error {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only primitive type values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
+
+}
