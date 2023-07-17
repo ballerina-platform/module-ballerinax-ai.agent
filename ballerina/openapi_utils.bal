@@ -172,7 +172,7 @@ class OpenApiSpecVisitor {
             return error(string `OperationId is mandotory. It is missing for ${path} and method ${method}`);
         }
 
-        // resolve Parameters
+        // resolve parameters
         ParameterSchema? queryParameters = ();
         ParameterSchema? pathParameters = ();
         (Parameter|Reference)[]? parameters = operation.parameters;

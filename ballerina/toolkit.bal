@@ -289,14 +289,16 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
         if pathParameters is () {
             return ();
         }
+        map<ParameterType> properties = pathParameters.properties;
         return {
-            required: pathParameters.properties.keys(),
-            properties: pathParameters.properties
+            required: properties.keys(),
+            properties: properties
         };
     }
 
     map<ParameterType> extractedParameters = map from regex:Match param in pathParams
-        select [param.matched.substring(1, param.matched.length() - 1), {'type: STRING}]; // mandotory parameters by default
+        let var matched = param.matched
+        select [matched.substring(1, matched.length() - 1), {'type: STRING}]; // mandotory parameters by default
 
     if pathParameters !is () {
         foreach [string, ParameterType] param in pathParameters.properties.entries() {
