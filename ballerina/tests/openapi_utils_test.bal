@@ -229,12 +229,12 @@ function testParameterSchema() returns error? {
     if verifiedParameterType !is error {
         test:assertFail("Parameter type is not verified correctly");
     }
-    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only primitive or array type, but found: typedesc ai.agent:ObjectInputSchema"});
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` or array type, but found: typedesc ai.agent:ObjectInputSchema"});
 
     verifiedParameterType = visitor.verifyParameterType(arrayParameterSchemaWithObjItems);
     if verifiedParameterType !is error {
         test:assertFail("Parameter type is not verified correctly");
     }
-    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only primitive type values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
 
 }

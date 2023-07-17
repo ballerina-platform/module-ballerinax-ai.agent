@@ -220,11 +220,11 @@ class OpenApiSpecVisitor {
         }
         JsonSubSchema items = parameterSchema.items;
         if items !is PrimitiveInputSchema {
-            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` type values for array type parameters, but found: " + (typeof items).toString());
+            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` values for array type parameters, but found: " + (typeof items).toString());
         }
         json[]? default = parameterSchema.default;
         if default !is PrimitiveType? {
-            return error("Unsupported default value for array type parameter.", cause = "Expected a `PrimitiveType` type array, but found: " + (typeof default).toString());
+            return error("Unsupported default value for array type parameter.", cause = "Expected a `PrimitiveType` items in the array, but found: " + (typeof default).toString());
         }
         return {
             items,
