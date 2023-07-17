@@ -216,15 +216,15 @@ class OpenApiSpecVisitor {
             return parameterSchema;
         }
         if parameterSchema !is ArrayInputSchema {
-            return error("Unsupported HTTP parameter type.", cause = "Expected only primitive or array type, but found: " + (typeof parameterSchema).toString());
+            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` or array type, but found: " + (typeof parameterSchema).toString());
         }
         JsonSubSchema items = parameterSchema.items;
         if items !is PrimitiveInputSchema {
-            return error("Unsupported HTTP parameter type.", cause = "Expected only primitive type values for array type parameters, but found: " + (typeof items).toString());
+            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` type values for array type parameters, but found: " + (typeof items).toString());
         }
         json[]? default = parameterSchema.default;
         if default !is PrimitiveType? {
-            return error("Unsupported default value for array type parameter.", cause = "Expected a primitive type array, but found: " + (typeof default).toString());
+            return error("Unsupported default value for array type parameter.", cause = "Expected a `PrimitiveType` type array, but found: " + (typeof default).toString());
         }
         return {
             items,
@@ -261,11 +261,11 @@ class OpenApiSpecVisitor {
                     return error("Supported only the query parmaters with explode=true");
                 }
                 ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
+                string name = resolvedParameter.name;
                 if resolvedParameter.required == true {
-                    queryRequired.push(resolvedParameter.name);
+                    queryRequired.push(name);
                 }
-                queryParams[resolvedParameter.name] = parameterType;
-
+                queryParams[name] = parameterType;
             } else if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
                 if style !is () && style != OPENAPI_PATH_PARAM_SUPPORTED_STYLE {
                     return error("Supported only the path parameters with style=" + OPENAPI_PATH_PARAM_SUPPORTED_STYLE);
@@ -274,10 +274,11 @@ class OpenApiSpecVisitor {
                     return error("Supported only the path parmaters with explode=false");
                 }
                 ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
+                string name = resolvedParameter.name;
                 if resolvedParameter.required == true {
-                    pathRequired.push(resolvedParameter.name);
+                    pathRequired.push(name);
                 }
-                pathParams[resolvedParameter.name] = parameterType;
+                pathParams[name] = parameterType;
             }
         }
         ParameterSchema pathParameters = {properties: pathParams, required: pathRequired.length() > 0 ? pathRequired : ()};

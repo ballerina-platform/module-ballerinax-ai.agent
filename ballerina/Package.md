@@ -269,7 +269,7 @@ agent:Tool sendEmailTool = {
 };
 ```
 
-Next, create `HttpTool` for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service. While creating the `HttpTool`, there is no need to explicitly define `pathParameters` since the Agent can automatically extract them from the provided `path`.
+Next, define a `HttpTool` record for the resources of the GuestWiFi HTTP service. Then use `HttpServiceToolKit` to create a toolkit for that HTTP service. While creating the `HttpTool` record, there is no need to explicitly define `pathParameters` since the Agent can automatically extract them from the provided `path`.
 
 ```ballerina
 agent:HttpTool listWifiHttpTool = {
