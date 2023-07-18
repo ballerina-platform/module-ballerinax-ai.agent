@@ -74,6 +74,14 @@ type HttpInput record {|
     map<json> requestBody?;
 |};
 
+# Defines an HTTP output record for requests.
+public type HttpOutput record {|
+    # HTTP status code of the response
+    int code;
+    # Content of the response
+    string payload?;
+|};
+
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
 public type BaseToolKit distinct object {
     isolated function getTools() returns Tool[]|error;
@@ -168,53 +176,60 @@ public isolated class HttpServiceToolKit {
 
     isolated function getTools() returns Tool[]|error => self.tools;
 
-    private isolated function get(HttpInput httpInput) returns json|error {
+    private isolated function get(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
-        return getResult.getTextPayload(); // TODO improve http:Client error response handling
+        string payload = check getResult.getTextPayload();
+        return {code: getResult.statusCode, payload};
     }
 
-    private isolated function post(HttpInput httpInput) returns string|error {
+    private isolated function post(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
-        return postResult.getTextPayload();
+        string payload = check postResult.getTextPayload();
+        return {code: postResult.statusCode, payload};
     }
 
-    private isolated function delete(HttpInput httpInput) returns string|error {
+    private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
-        return deleteResult.getTextPayload();
+        string payload = check deleteResult.getTextPayload();
+        return {code: deleteResult.statusCode, payload};
     }
 
-    private isolated function put(HttpInput httpInput) returns string|error {
+    private isolated function put(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
-        return putResult.getTextPayload();
+        string payload = check putResult.getTextPayload();
+        return {code: putResult.statusCode, payload};
     }
 
-    private isolated function patch(HttpInput httpInput) returns string|error {
+    private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
-        return patchResult.getTextPayload();
+        string payload = check patchResult.getTextPayload();
+        return {code: patchResult.statusCode, payload};
     }
 
-    private isolated function head(HttpInput httpInput) returns string|error {
+    private isolated function head(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
-        return headResult.getTextPayload();
+        string payload = check headResult.getTextPayload();
+        return {code: headResult.statusCode, payload};
     }
 
-    private isolated function options(HttpInput httpInput) returns string|error {
+    private isolated function options(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
-        return optionsResult.getTextPayload();
+        string payload = check optionsResult.getTextPayload();
+        return {code: optionsResult.statusCode, payload};
     }
 }
 
@@ -266,7 +281,7 @@ isolated function getPathWithParams(string path, map<json>? pathParameters, map<
             if pathWithParams.includes(string `{${key}}`) { // this is a path parameter
                 pathWithParams = regex:replaceAll(pathWithParams, string `\{${key}\}`, pathParameterSerialization(value));
             } else {
-                return error(string `Path parameter ${key} is not defined in the path ${path}`);
+                return error(string `Unexpected path parameter ${key} for the path ${path}`);
             }
         }
     }
