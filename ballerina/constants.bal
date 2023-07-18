@@ -32,7 +32,7 @@ const OPENAPI_PATH_PARAM_SUPPORTED_STYLE = "simple";
 const OPENAPI_QUERY_PARAM_SUPPORTED_STYLE = "form";
 
 //agent
-const FINAL_ANSWER_KEY = "Final Answer";
+const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 
@@ -41,8 +41,8 @@ const USER_ROLE = "user";
 const SYSTEM_ROLE = "system";
 
 //toolkit
-const QUERY_PARAM_KEY = "queryParams";
+const QUERY_PARAM_KEY = "queryParameters";
+const PATH_PARAM_KEY = "pathParameters";
 const REQUEST_BODY_KEY = "requestBody";
-const PATH_PARAM_KEY = "pathParams";
 const PATH_KEY = "path";
 

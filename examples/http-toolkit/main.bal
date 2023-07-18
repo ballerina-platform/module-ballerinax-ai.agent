@@ -32,7 +32,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         path: "/guest-wifi-accounts/{ownerEmail}",
         method: agent:GET,
         description: "useful to list the guest wifi accounts.",
-        pathParams: {
+        pathParameters: {
             properties:
             {
                 ownerEmail: {

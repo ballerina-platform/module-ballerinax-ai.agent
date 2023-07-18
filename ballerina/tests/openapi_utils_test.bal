@@ -24,7 +24,7 @@ function testParseOpenAPISpec2() {
     string openAISpecPath = "tests/resources/openai-spec.json";
     OpenApiSpec|error openAPISpec = parseOpenApiSpec(openAISpecPath);
     if openAPISpec is error {
-        test:assertFail("OpenAPI spec is not parsed correctly");
+        test:assertFail("OpenAPI spec is not parsed correctly. Error: " + openAPISpec.toString());
     }
 
     test:assertEquals(openAPISpec.openapi, "3.0.0");
@@ -65,7 +65,6 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             description: "Create new guest WiFi account",
             method: "POST",
             path: "/guest-wifi-accounts",
-            queryParams: (),
             requestBody: {
                 allOf: [
                     {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
@@ -78,18 +77,14 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            queryParams: (),
-            requestBody: (),
-            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
         },
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            queryParams: (),
-            requestBody: (),
-            pathParams: {'type: "object", properties: {ownerEmail: {'type: "string"}}}
+            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
@@ -193,4 +188,53 @@ function testVisitorWithOpenAISpec() returns error? {
             });
         }
     }
+}
+
+@test:Config {}
+function testParameterSchema() returns error? {
+    OpenApiSpecVisitor visitor = new;
+
+    JsonSubSchema stringParameterSchema = {'type: "string", description: "Name of the person"};
+    JsonSubSchema integerParameterSchema = {'type: "integer", description: "Age of the person"};
+
+    JsonSubSchema arrayParameterSchema = {
+        items: stringParameterSchema
+    };
+
+    JsonSubSchema objectParameterSchema = {
+        properties:
+        {
+            name: stringParameterSchema,
+            age: integerParameterSchema
+        }
+    };
+
+    JsonSubSchema arrayParameterSchemaWithObjItems = {
+        items: objectParameterSchema
+    };
+
+    ParameterType|error verifiedParameterType = visitor.verifyParameterType(stringParameterSchema);
+    if verifiedParameterType !is PrimitiveInputSchema {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType, stringParameterSchema);
+
+    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchema);
+    if verifiedParameterType !is ArrayTypeParameterSchema {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType, arrayParameterSchema);
+
+    verifiedParameterType = visitor.verifyParameterType(objectParameterSchema);
+    if verifiedParameterType !is error {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` or array type, but found: typedesc ai.agent:ObjectInputSchema"});
+
+    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchemaWithObjItems);
+    if verifiedParameterType !is error {
+        test:assertFail("Parameter type is not verified correctly");
+    }
+    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
+
 }

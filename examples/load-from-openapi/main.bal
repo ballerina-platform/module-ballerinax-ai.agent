@@ -16,21 +16,24 @@
 
 import ballerinax/ai.agent;
 
-configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;
 configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
 configurable string wifiClientSecret = ?;
 
+configurable string apiKey = ?;
+configurable string deploymentId = ?;
+configurable string apiVersion = ?;
+configurable string serviceUrl = ?;
+
 const string OPENAPI_PATH = "openapi.json";
 
 const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and password abc123 and show available accounts";
 
-
 public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
-    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
+    agent:AzureGpt3Model model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
 
     // 2) Extract tools from openAPI specification
     final agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpec(openAPIPath);
