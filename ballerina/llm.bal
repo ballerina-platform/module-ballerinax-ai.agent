@@ -55,7 +55,12 @@ public type ChatModelConfig readonly & record {|
     decimal temperature = DEFAULT_TEMPERATURE;
 |};
 
-type PromptConstruct record {|
+# Prompt construct record
+#
+# + instruction - Instructions in the prompt
+# + query - Query to the prompt
+# + history - Execution history to the prompt
+public type PromptConstruct record {|
     string instruction;
     string query;
     ExecutionStep[] history;
@@ -64,16 +69,16 @@ type PromptConstruct record {|
 # Extendable LLM model object that can be used for completion tasks.
 # Useful to initialize the agents.
 public type LlmModel distinct isolated object {
-    isolated function generate(PromptConstruct prompt) returns string|error;
+    public isolated function generate(PromptConstruct prompt) returns string|error;
 };
 
-public type CompletionLlmModel distinct isolated object {
+type CompletionLlmModel distinct isolated object {
     *LlmModel;
     CompletionModelConfig modelConfig;
     public isolated function complete(string prompt, string? stop = ()) returns string|error;
 };
 
-public type ChatLlmModel distinct isolated object {
+type ChatLlmModel distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error;
@@ -108,7 +113,11 @@ public isolated class Gpt3Model {
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
-    isolated function generate(PromptConstruct prompt) returns string|error {
+    # Generate ReAct response for the given prompt
+    #
+    # + prompt - Prompt construct
+    # + return - ReAct response
+    public isolated function generate(PromptConstruct prompt) returns string|error {
         return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
     }
 }
@@ -150,7 +159,11 @@ public isolated class AzureGpt3Model {
         return response.choices[0].text ?: error("Empty response from the model");
     }
 
-    isolated function generate(PromptConstruct prompt) returns string|error {
+    # Generate ReAct response for the given prompt
+    #
+    # + prompt - Prompt construct
+    # + return - ReAct response
+    public isolated function generate(PromptConstruct prompt) returns string|error {
         return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
     }
 }
@@ -186,9 +199,12 @@ public isolated class ChatGptModel {
         return content ?: error("Empty response from the model");
     }
 
-    isolated function generate(PromptConstruct prompt) returns string|error {
-        ChatMessage[] messages = createChatPrompt(prompt);
-        return check self.chatComplete(messages, stop = OBSERVATION_KEY);
+    # Generate ReAct response for the given prompt
+    #
+    # + prompt - Prompt construct
+    # + return - ReAct response
+    public isolated function generate(PromptConstruct prompt) returns string|error {
+        return check self.chatComplete(createChatPrompt(prompt), stop = OBSERVATION_KEY);
     }
 }
 
@@ -231,16 +247,27 @@ public isolated class AzureChatGptModel {
         return content ?: error("Empty response from the model");
     }
 
-    isolated function generate(PromptConstruct prompt) returns string|error {
-        ChatMessage[] messages = createChatPrompt(prompt);
-        return check self.chatComplete(messages, stop = OBSERVATION_KEY);
+    # Generate ReAct response for the given prompt
+    #
+    # + prompt - Prompt construct
+    # + return - ReAct response
+    public isolated function generate(PromptConstruct prompt) returns string|error {
+        return check self.chatComplete(createChatPrompt(prompt), stop = OBSERVATION_KEY);
     }
 }
 
-isolated function createCompletionPrompt(PromptConstruct prompt) returns string => string
+# Generate a ReAct prompt for completion LLMs (e.g. GPT3)
+#
+# + prompt - Prompt construct
+# + return - ReAct prompt for completion LLMs
+public isolated function createCompletionPrompt(PromptConstruct prompt) returns string => string
 `${prompt.instruction}${"\n\n"}Question: ${prompt.query}${"\n"}${constructHistoryPrompt(prompt.history)}${THOUGHT_KEY}`;
 
-isolated function createChatPrompt(PromptConstruct prompt) returns ChatMessage[] {
+# Generate a ReAct prompt for chat LLMs (e.g. ChatGPT, GPT4)
+#
+# + prompt - Prompt construct
+# + return - ReAct prompt for chat LLMs
+public isolated function createChatPrompt(PromptConstruct prompt) returns ChatMessage[] {
     string userMessage = "";
     if prompt.history.length() == 0 {
         userMessage = prompt.query;
