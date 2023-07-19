@@ -138,7 +138,6 @@ agent:HttpServiceToolKit serviceAToolKit = check new (
 This is a large language model (LLM) instance. Currently, the agent module has support for the following LLM APIs. 
 
 1) OpenAI GPT3 
-
     ```ballerina
     agent:Gpt3Model model = check new ({auth: {token: <OPENAI API KEY>}});
     ```
@@ -150,6 +149,30 @@ This is a large language model (LLM) instance. Currently, the agent module has s
     ```ballerina
     agent:AzureGpt3Model model = check new ({auth: {apiKey: <AZURE OPENAI API KEY>}}, string serviceUrl, string deploymentId, string apiVersion);
     ```
+    ```
+4) Azure OpenAI ChatGPT (e.g. GPT3.5, GPT4)
+    ```ballerina
+    agent:AzureChatGptModel model = check new ({auth: {apiKey: <AZURE OPENAI API KEY>}}, string serviceUrl, string deploymentId, string apiVersion);
+    ```
+### Extending `LlmModel` for Custom Models
+This module offers extended support for utilizing other LLMs by extending the `LlmModel` as demonstrated below:
+
+```ballerina
+isolated class NewLlmModel {
+    *agent:LlmModel; // extends LlmModel
+
+    // Implement the init method to initialize the connection with the new LLM (if required)
+
+    public isolated function generate(agent:PromptConstruct prompt) returns string|error {
+        // Utilize utilities to create a completion prompt (or chat prompt) if applicable
+        string completionPrompt = agent:createCompletionPrompt(prompt);
+        // Add logic to call the LLM with the completionPrompt
+        // Return the generated text from the LLM
+    }
+}
+```
+
+By extending `LlmModel`, the `NewLlmModel` gains the ability to interface with other LLMs seamlessly. To utilize `NewLlmModel`, you can follow a similar approach as with other built-in LLM models. This allows you to harness the power of custom LLMs while maintaining compatibility with existing functionality.
 
 ## Agent
 
