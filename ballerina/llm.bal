@@ -56,13 +56,12 @@ public type ChatModelConfig readonly & record {|
 |};
 
 # Prompt construct record
-#
-# + instruction - Instructions in the prompt
-# + query - Query to the prompt
-# + history - Execution history to the prompt
 public type PromptConstruct record {|
+    # Instructions in the prompt
     string instruction;
+    # Query to the prompt
     string query;
+    # Execution history to the prompt
     ExecutionStep[] history;
 |};
 
