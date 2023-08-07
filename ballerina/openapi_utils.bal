@@ -16,6 +16,7 @@
 
 import ballerina/io;
 import ballerina/log;
+import ballerina/yaml;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
 public type HttpApiSpecification record {|
@@ -35,13 +36,35 @@ public type AdditionInfoFlags record {|
 
 # Extracts the Http tools from the given OpenAPI specification file.
 #
-# + filePath - Path to the OpenAPI specification file
+# + filePath - Path to the OpenAPI specification file (should be JSON or YAML)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
-    OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
+public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns
+HttpApiSpecification & readonly|error {
+    map<json> openApiSpec;
+    if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
+        openApiSpec = check yaml:readFile(filePath).ensureType();
+    }
+    else if filePath.endsWith(".json") {
+        openApiSpec = check io:fileReadJson(filePath).ensureType();
+    }
+    else {
+        return error("Unsupported file type. Supported file types are .json, .yaml or .yml");
+    }
+    return extractToolsFromOpenApiJsonSpec(openApiSpec, additionInfoFlags);
+}
+
+# Extracts the Http tools from the given OpenAPI specification as a JSON 
+#
+# + openApiSpec - A valid OpenAPI specification in JSON format
+# + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
+# + return - A record with the list of extracted tools and the service URL (if available)
+public function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
+HttpApiSpecification & readonly|error {
+    cleanXTagsFromJsonSpec(openApiSpec);
+    OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(openApiSpec).cloneReadOnly();
+    return check visitor.visit(cleanedSpec).cloneReadOnly();
 }
 
 isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
@@ -62,12 +85,6 @@ isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
             _ = cleanXTagsFromJsonSpec(element);
         }
     }
-}
-
-isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
-    map<json> fileJson = check io:fileReadJson(jsonPath).ensureType();
-    cleanXTagsFromJsonSpec(fileJson);
-    return check fileJson.cloneWithType();
 }
 
 class OpenApiSpecVisitor {

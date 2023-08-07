@@ -67,12 +67,14 @@ agent:HttpTool httpResourceTool = {
 
 ### Tools from Interface Definition Languages (IDLs)
 
-You can automatically extract tools from a valid  [OpenAPI specification](https://swagger.io/specification/) (3.x) using the `extractToolsFromOpenApiSpec` function, as demonstrated below:
+You can automatically extract tools from a valid [OpenAPI specification](https://swagger.io/specification/) (3.x) file using the `extractToolsFromOpenApiSpecFile` function, as demonstrated below:
 
 ```ballerina
-string openApiPath = "<PATH TO THE JSON FILE>"
-agent:HttpTool[] tools = extractToolsFromOpenApiSpec(openApiPath)
+string openApiPath = "<PATH TO THE JSON/YAML FILE>"
+agent:HttpTool[] tools = extractToolsFromOpenApiSpecFile(openApiPath)
 ```
+
+The file containing the OpenAPI specification should be in either JSON or YAML format. To load them using a `map<json>` field, use `extractToolsFromOpenApiJsonSpec` instead of the above. 
 
 ### Tool Input Schema
 

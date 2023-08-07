@@ -1,63 +1,11 @@
 import ballerina/test;
+import ballerina/io;
 
 @test:Config {}
-function testParseWifiOpenAPISpec() {
+function testExtractToolsFromWifiOpenAPISpec() returns error? {
     string wifiSpecPath = "tests/resources/wifi-spec.json";
-    OpenApiSpec|error openAPISpec = parseOpenApiSpec(wifiSpecPath);
-    if openAPISpec is error {
-        test:assertFail("OpenAPI spec is not parsed correctly");
-    }
-
-    test:assertEquals(openAPISpec.openapi, "3.0.1");
-    test:assertTrue(openAPISpec.paths is Paths, "Paths are not parsed correctly");
-    Paths paths = <Paths>openAPISpec.paths;
-    test:assertEquals(paths.keys(), [
-        "/guest-wifi-accounts",
-        "/guest-wifi-accounts/{ownerEmail}/{username}",
-        "/guest-wifi-accounts/{ownerEmail}"
-    ]);
-
-}
-
-@test:Config {}
-function testParseOpenAPISpec2() {
-    string openAISpecPath = "tests/resources/openai-spec.json";
-    OpenApiSpec|error openAPISpec = parseOpenApiSpec(openAISpecPath);
-    if openAPISpec is error {
-        test:assertFail("OpenAPI spec is not parsed correctly. Error: " + openAPISpec.toString());
-    }
-
-    test:assertEquals(openAPISpec.openapi, "3.0.0");
-    test:assertTrue(openAPISpec.paths is Paths, "Paths are not parsed correctly");
-    Paths paths = <Paths>openAPISpec.paths;
-    test:assertEquals(paths.keys(), [
-        "/fine-tunes/{fine_tune_id}/cancel",
-        "/files/{file_id}/content",
-        "/edits",
-        "/models",
-        "/chat/completions",
-        "/fine-tunes/{fine_tune_id}",
-        "/embeddings",
-        "/answers",
-        "/completions",
-        "/engines/{engine_id}",
-        "/moderations",
-        "/fine-tunes/{fine_tune_id}/events",
-        "/models/{model}",
-        "/classifications",
-        "/engines",
-        "/fine-tunes",
-        "/engines/{engine_id}/search"
-    ]);
-
-}
-
-@test:Config {}
-function testVisitorWithWifiOpenAPISpec() returns error? {
-    string wifiSpecPath = "tests/resources/wifi-spec.json";
-    OpenApiSpec openAPISchema = check parseOpenApiSpec(wifiSpecPath);
-    OpenApiSpecVisitor visitor = new;
-    HttpApiSpecification apiSpec = check visitor.visit(openAPISchema);
+    map<json> openApiSpec = check io:fileReadJson(wifiSpecPath).ensureType();
+    HttpApiSpecification apiSpec = check extractToolsFromOpenApiJsonSpec(openApiSpec);
 
     HttpTool[] tools = [
         {
@@ -92,9 +40,83 @@ function testVisitorWithWifiOpenAPISpec() returns error? {
 }
 
 @test:Config {}
-function testVisitorWithOpenAISpec() returns error? {
+function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
+    string wifiSpecPath = "tests/resources/wifi-spec.yaml";
+    HttpApiSpecification apiSpec = check extractToolsFromOpenApiSpecFile(wifiSpecPath);
+
+    HttpTool[] tools = [
+        {
+            name: "postGuestWifiAccounts",
+            description: "Create new guest WiFi account",
+            method: "POST",
+            path: "/guest-wifi-accounts",
+            requestBody: {
+                allOf: [
+                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
+                ]
+            }
+        },
+        {
+            name: "deleteGuestWifiAccountsOwneremailUsername",
+            description: "Delete a guest WiFi account",
+            method: "DELETE",
+            path: "/guest-wifi-accounts/{ownerEmail}/{username}",
+            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+        },
+        {
+            name: "getGuestWifiAccountsOwneremail",
+            description: "Get list of guest WiFi accounts of a given owner email address",
+            method: GET,
+            path: "/guest-wifi-accounts/{ownerEmail}",
+            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
+        }
+    ];
+    test:assertEquals(apiSpec.tools, tools);
+    test:assertEquals(apiSpec.serviceUrl, "http://test-wifi-url.com");
+}
+
+@test:Config {}
+function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
+    string wifiSpecPath = "tests/resources/wifi-spec.json";
+    HttpApiSpecification apiSpec = check extractToolsFromOpenApiSpecFile(wifiSpecPath);
+
+    HttpTool[] tools = [
+        {
+            name: "postGuestWifiAccounts",
+            description: "Create new guest WiFi account",
+            method: "POST",
+            path: "/guest-wifi-accounts",
+            requestBody: {
+                allOf: [
+                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
+                ]
+            }
+        },
+        {
+            name: "deleteGuestWifiAccountsOwneremailUsername",
+            description: "Delete a guest WiFi account",
+            method: "DELETE",
+            path: "/guest-wifi-accounts/{ownerEmail}/{username}",
+            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+        },
+        {
+            name: "getGuestWifiAccountsOwneremail",
+            description: "Get list of guest WiFi accounts of a given owner email address",
+            method: GET,
+            path: "/guest-wifi-accounts/{ownerEmail}",
+            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
+        }
+    ];
+    test:assertEquals(apiSpec.tools, tools);
+    test:assertEquals(apiSpec.serviceUrl, "http://test-wifi-url.com");
+}
+
+@test:Config {}
+function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
     string wifiSpecPath = "tests/resources/openai-spec.json";
-    HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpec(wifiSpecPath);
+    HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
     if apiSpec is error {
         test:assertFail("Visitor fails with the error");

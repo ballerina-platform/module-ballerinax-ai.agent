@@ -36,7 +36,7 @@ public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_Q
     agent:AzureGpt3Model model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
 
     // 2) Extract tools from openAPI specification
-    final agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpec(openAPIPath);
+    final agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpecFile(openAPIPath);
 
     // 3) Createn httpToolKit with the extract tools from openAPI specification
     agent:HttpServiceToolKit toolKit = check new (wifiAPIUrl, apiSpecification.tools, {
