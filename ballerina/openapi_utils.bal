@@ -16,6 +16,7 @@
 
 import ballerina/io;
 import ballerina/log;
+import ballerina/yaml;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
 public type HttpApiSpecification record {|
@@ -33,22 +34,31 @@ public type AdditionInfoFlags record {|
     boolean extractDefault = false;
 |};
 
-# Extracts the Http tools from the given OpenAPI specification JSON file.
+# Extracts the Http tools from the given OpenAPI specification file.
 #
-# + filePath - Path to the OpenAPI specification file (should be json)
+# + filePath - Path to the OpenAPI specification file (should be JSON or YAML)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpecJsonFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
-    map<json> openApiSpec = check io:fileReadJson(filePath).ensureType();
-    return extractToolsFromOpenApiSpecJsonString(openApiSpec, additionInfoFlags);
+public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+    map<json> openApiSpec;
+    if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
+        openApiSpec = check yaml:readFile(filePath).ensureType();
+    }
+    else if filePath.endsWith(".json") {
+        openApiSpec = check io:fileReadJson(filePath).ensureType();
+    }
+    else {
+        return error("Unsupported file type. Supported file types are .json or .yaml");
+    }
+    return extractToolsFromOpenApiJsonSpec(openApiSpec, additionInfoFlags);
 }
 
-# Extracts the Http tools from the given OpenAPI specification JSON stream
+# Extracts the Http tools from the given OpenAPI specification as a JSON 
 #
-# + openApiSpec - Json stream of the valid OpenAPI specification
+# + openApiSpec - A valid OpenAPI specification in JSON format
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpecJsonString(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+public function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
     cleanXTagsFromJsonSpec(openApiSpec);
     OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
