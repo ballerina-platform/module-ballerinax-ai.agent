@@ -39,7 +39,8 @@ public type AdditionInfoFlags record {|
 # + filePath - Path to the OpenAPI specification file (should be JSON or YAML)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns
+HttpApiSpecification & readonly|error {
     map<json> openApiSpec;
     if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
         openApiSpec = check yaml:readFile(filePath).ensureType();
@@ -58,7 +59,8 @@ public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFl
 # + openApiSpec - A valid OpenAPI specification in JSON format
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+public function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
+HttpApiSpecification & readonly|error {
     cleanXTagsFromJsonSpec(openApiSpec);
     OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
