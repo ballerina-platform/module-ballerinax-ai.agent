@@ -33,15 +33,26 @@ public type AdditionInfoFlags record {|
     boolean extractDefault = false;
 |};
 
-# Extracts the Http tools from the given OpenAPI specification file.
+# Extracts the Http tools from the given OpenAPI specification JSON file.
 #
-# + filePath - Path to the OpenAPI specification file
+# + filePath - Path to the OpenAPI specification file (should be json)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpec(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
-    OpenApiSpec openApiSpec = check parseOpenApiSpec(filePath);
+public function extractToolsFromOpenApiSpecJsonFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+    map<json> openApiSpec = check io:fileReadJson(filePath).ensureType();
+    return extractToolsFromOpenApiSpecJsonString(openApiSpec, additionInfoFlags);
+}
+
+# Extracts the Http tools from the given OpenAPI specification JSON stream
+#
+# + openApiSpec - Json stream of the valid OpenAPI specification
+# + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
+# + return - A record with the list of extracted tools and the service URL (if available)
+public function extractToolsFromOpenApiSpecJsonString(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns HttpApiSpecification & readonly|error {
+    cleanXTagsFromJsonSpec(openApiSpec);
+    OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(openApiSpec).cloneReadOnly();
+    return check visitor.visit(cleanedSpec).cloneReadOnly();
 }
 
 isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
@@ -62,12 +73,6 @@ isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
             _ = cleanXTagsFromJsonSpec(element);
         }
     }
-}
-
-isolated function parseOpenApiSpec(string jsonPath) returns OpenApiSpec|error {
-    map<json> fileJson = check io:fileReadJson(jsonPath).ensureType();
-    cleanXTagsFromJsonSpec(fileJson);
-    return check fileJson.cloneWithType();
 }
 
 class OpenApiSpecVisitor {
