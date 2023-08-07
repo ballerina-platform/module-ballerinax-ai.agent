@@ -36,10 +36,6 @@ const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 
-//llm
-const USER_ROLE = "user";
-const SYSTEM_ROLE = "system";
-
 //toolkit
 const QUERY_PARAM_KEY = "queryParameters";
 const PATH_PARAM_KEY = "pathParameters";
