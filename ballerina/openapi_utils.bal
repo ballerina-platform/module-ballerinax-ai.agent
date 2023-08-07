@@ -49,7 +49,7 @@ HttpApiSpecification & readonly|error {
         openApiSpec = check io:fileReadJson(filePath).ensureType();
     }
     else {
-        return error("Unsupported file type. Supported file types are .json or .yaml");
+        return error("Unsupported file type. Supported file types are .json, .yaml or .yml");
     }
     return extractToolsFromOpenApiJsonSpec(openApiSpec, additionInfoFlags);
 }
