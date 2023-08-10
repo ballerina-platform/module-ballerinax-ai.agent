@@ -223,7 +223,7 @@ public isolated class AzureChatGptModel {
     # + modelConfig - Model Configuration for OpenAI chat client
     # + return - Error if the model initialization fails
     public isolated function init(azure_chat:ConnectionConfig connectionConfig, string serviceUrl, string deploymentId,
-            string apiVersion, ChatModelConfig modelConfig) returns error? {
+            string apiVersion, ChatModelConfig modelConfig = {}) returns error? {
         self.llmClient = check new (connectionConfig, serviceUrl);
         self.modelConfig = modelConfig;
         self.deploymentId = deploymentId;
