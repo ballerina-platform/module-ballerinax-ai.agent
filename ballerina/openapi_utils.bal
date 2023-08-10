@@ -39,7 +39,7 @@ public type AdditionInfoFlags record {|
 # + filePath - Path to the OpenAPI specification file (should be JSON or YAML)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns
+public isolated function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns
 HttpApiSpecification & readonly|error {
     map<json> openApiSpec;
     if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
@@ -59,7 +59,7 @@ HttpApiSpecification & readonly|error {
 # + openApiSpec - A valid OpenAPI specification in JSON format
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
+public isolated function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
 HttpApiSpecification & readonly|error {
     cleanXTagsFromJsonSpec(openApiSpec);
     OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
@@ -92,11 +92,11 @@ class OpenApiSpecVisitor {
     private final HttpTool[] tools = [];
     private final AdditionInfoFlags additionalInfoFlags;
 
-    function init(AdditionInfoFlags additionalInfoFlags = {}) {
+    isolated function init(AdditionInfoFlags additionalInfoFlags = {}) {
         self.additionalInfoFlags = additionalInfoFlags.cloneReadOnly();
     }
 
-    function visit(OpenApiSpec openApiSpec) returns HttpApiSpecification|error {
+    isolated function visit(OpenApiSpec openApiSpec) returns HttpApiSpecification|error {
         if !openApiSpec.openapi.matches(re `3\.0\..`) {
             return error("Unsupported OpenAPI version. Supports specifications with version 3.0.x only.");
         }
@@ -115,7 +115,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitServers(Server[]? servers) returns string? {
+    private isolated function visitServers(Server[]? servers) returns string? {
         if servers is () || servers.length() < 1 {
             return ();
         }
@@ -139,7 +139,7 @@ class OpenApiSpecVisitor {
         return referenceMap;
     }
 
-    private function visitPaths(Paths paths) returns error? {
+    private isolated function visitPaths(Paths paths) returns error? {
         foreach [string, PathItem|Reference] [pathUrl, pathItem] in paths.entries() {
             if pathItem is Reference {
                 check self.visitPathItem(check self.resolveReference(pathItem).ensureType(), pathUrl);
@@ -149,7 +149,7 @@ class OpenApiSpecVisitor {
         }
     }
 
-    private function visitPathItem(PathItem pathItem, string pathUrl) returns error? {
+    private isolated function visitPathItem(PathItem pathItem, string pathUrl) returns error? {
         if pathItem.get is Operation {
             check self.visitOperation(<Operation>pathItem.get, pathUrl, GET);
         }
@@ -176,7 +176,7 @@ class OpenApiSpecVisitor {
         }
     }
 
-    private function visitOperation(Operation operation, string path, HttpMethod method) returns error? {
+    private isolated function visitOperation(Operation operation, string path, HttpMethod method) returns error? {
         if operation.servers !is () {
             return error("Path-wise service URLs are not supported. Please use global server URL.");
         }
@@ -217,7 +217,7 @@ class OpenApiSpecVisitor {
         });
     }
 
-    private function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
+    private isolated function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
         map<MediaType> content = requestBody.content;
 
         // check for json content
@@ -228,7 +228,7 @@ class OpenApiSpecVisitor {
         return self.visitSchema(schema).ensureType();
     }
 
-    function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
+    isolated function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
         if parameterSchema is PrimitiveInputSchema {
             return parameterSchema;
         }
@@ -250,7 +250,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
+    private isolated function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
         map<ParameterType> pathParams = {};
         map<ParameterType> queryParams = {};
         string[] pathRequired = [];
@@ -306,7 +306,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function resolveReference(Reference reference) returns ComponentType|error {
+    private isolated function resolveReference(Reference reference) returns ComponentType|error {
         if !self.referenceMap.hasKey(reference.\$ref) {
             return error("No component found for the reference: " + reference.\$ref);
         }
@@ -318,7 +318,7 @@ class OpenApiSpecVisitor {
         return component;
     }
 
-    private function visitSchema(Schema schema) returns JsonSubSchema|error {
+    private isolated function visitSchema(Schema schema) returns JsonSubSchema|error {
 
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema);
@@ -346,7 +346,7 @@ class OpenApiSpecVisitor {
         return check self.visitSchema(resolvedSchema);
     }
 
-    private function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
+    private isolated function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
         ObjectInputSchema objectSchema = {
             'type: OBJECT,
             properties: {}
@@ -371,14 +371,14 @@ class OpenApiSpecVisitor {
         return objectSchema;
     }
 
-    private function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
+    private isolated function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
         return {
             'type: ARRAY,
             items: check self.visitSchema(schema.items)
         };
     }
 
-    private function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema|error {
+    private isolated function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema|error {
         PrimitiveInputSchema inputSchmea = {
             'type: schema.'type
         };
@@ -412,7 +412,7 @@ class OpenApiSpecVisitor {
         return inputSchmea;
     }
 
-    private function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
+    private isolated function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
         ObjectInputSchema[] anyOf = from Schema element in schema.anyOf
             select check self.visitSchema(element).ensureType();
         return {
@@ -420,7 +420,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
+    private isolated function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
         ObjectInputSchema[] allOf = from Schema element in schema.allOf
             select check self.visitSchema(element).ensureType();
         return {
@@ -428,7 +428,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
+    private isolated function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
         JsonSubSchema[] oneOf = from Schema element in schema.oneOf
             select check self.visitSchema(element);
         return {
@@ -436,7 +436,7 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
+    private isolated function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
         return {
             not: check self.visitSchema(schema.not)
         };
