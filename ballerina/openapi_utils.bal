@@ -217,14 +217,18 @@ class OpenApiSpecVisitor {
         });
     }
 
-    private isolated function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
-        map<MediaType> content = requestBody.content;
-
+    private isolated function visitContent(map<MediaType> content) returns Schema|error {
         // check for json content
         if !content.hasKey(OPENAPI_JSON_CONTENT_KEY) {
             return error("Only json content is supported.");
         }
-        Schema schema = content.get(OPENAPI_JSON_CONTENT_KEY).schema;
+        return content.get(OPENAPI_JSON_CONTENT_KEY).schema;
+
+    }
+
+    private isolated function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
+        map<MediaType> content = requestBody.content;
+        Schema schema = check self.visitContent(content);
         return self.visitSchema(schema).ensureType();
     }
 
@@ -264,7 +268,15 @@ class OpenApiSpecVisitor {
                 resolvedParameter = param;
             }
 
-            Schema? schema = resolvedParameter.schema;
+            Schema? schema;
+            map<MediaType>? content = resolvedParameter.content;
+            if content is () {
+                schema = resolvedParameter.schema;
+            }
+            else {
+                schema = check self.visitContent(content);
+            }
+
             if schema is () {
                 continue;
             }
