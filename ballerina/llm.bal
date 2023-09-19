@@ -241,7 +241,7 @@ public isolated class AzureChatGptModel {
             stop,
             messages
         });
-        chat:ChatCompletionResponseMessage? message = response.choices[0].message;
+        azure_chat:Inline_response_200_message? message = response.choices[0].message;
         string? content = message?.content;
         return content ?: error("Empty response from the model");
     }
