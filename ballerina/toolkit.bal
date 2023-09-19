@@ -17,6 +17,7 @@
 import ballerina/http;
 import ballerina/log;
 import ballerina/regex;
+import ballerina/mime;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -78,8 +79,10 @@ type HttpInput record {|
 public type HttpOutput record {|
     # HTTP status code of the response
     int code;
+    # Content type
+    string contentType;
     # Content of the response
-    string payload?;
+    json|xml payload?;
 |};
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
@@ -180,56 +183,49 @@ public isolated class HttpServiceToolKit {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
-        string payload = check getResult.getTextPayload();
-        return {code: getResult.statusCode, payload};
+        return extractResponsePayload(getResult);
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
-        string payload = check postResult.getTextPayload();
-        return {code: postResult.statusCode, payload};
+        return extractResponsePayload(postResult);
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
-        string payload = check deleteResult.getTextPayload();
-        return {code: deleteResult.statusCode, payload};
+        return extractResponsePayload(deleteResult);
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
-        string payload = check putResult.getTextPayload();
-        return {code: putResult.statusCode, payload};
+        return extractResponsePayload(putResult);
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
-        string payload = check patchResult.getTextPayload();
-        return {code: patchResult.statusCode, payload};
+        return extractResponsePayload(patchResult);
     }
 
     private isolated function head(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
-        string payload = check headResult.getTextPayload();
-        return {code: headResult.statusCode, payload};
+        return extractResponsePayload(headResult);
     }
 
     private isolated function options(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
-        string payload = check optionsResult.getTextPayload();
-        return {code: optionsResult.statusCode, payload};
+        return extractResponsePayload(optionsResult);
     }
 }
 
@@ -324,4 +320,52 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
         required: extractedParameters.keys(),
         properties: extractedParameters
     };
+}
+
+isolated function extractResponsePayload(http:Response response) returns HttpOutput|error {
+    int code = response.statusCode;
+    string contentType = response.getContentType().trim().toLowerAscii();
+    match contentType {
+        "" => {
+            return {
+                code,
+                contentType: "None"
+            };
+        }
+        mime:APPLICATION_JSON => {
+            return {
+                code,
+                contentType,
+                payload: check response.getJsonPayload()
+            };
+        }
+        mime:APPLICATION_XML => {
+            return {
+                code,
+                contentType,
+                payload: check response.getXmlPayload()
+            };
+        }
+        mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
+            return {
+                code,
+                contentType,
+                payload: check response.getTextPayload()
+            };
+        }
+        mime:IMAGE_PNG|mime:IMAGE_JPEG|mime:IMAGE_GIF => {
+            return {
+                code,
+                contentType,
+                payload: check response.getBinaryPayload()
+            };
+        }
+        _ => {
+            return {
+                code,
+                contentType,
+                payload: check response.getTextPayload()
+            };
+        }
+    }
 }
