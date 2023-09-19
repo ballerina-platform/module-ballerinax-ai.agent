@@ -19,6 +19,8 @@ import ballerina/log;
 import ballerina/regex;
 import ballerina/mime;
 
+public type HttpResponseParsingError distinct error;
+
 # Supported HTTP methods.
 public enum HttpMethod {
     GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -79,10 +81,15 @@ type HttpInput record {|
 public type HttpOutput record {|
     # HTTP status code of the response
     int code;
-    # Content type
-    string contentType;
-    # Content of the response
-    json|xml payload?;
+    # Response headers 
+    record {|
+        # Content type of the response
+        string contentType?;
+        # Content length of the response
+        int contentLength;
+    |} responseHeader;
+    # Response payload
+    json|xml responseBody?;
 |};
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
@@ -322,50 +329,47 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
     };
 }
 
-isolated function extractResponsePayload(http:Response response) returns HttpOutput|error {
+isolated function extractResponsePayload(http:Response response) returns HttpOutput|HttpResponseParsingError {
+    mime:Entity entity;
+    int contentLength;
+    mime:MediaType mediaType;
     int code = response.statusCode;
-    string contentType = response.getContentType().trim().toLowerAscii();
-    match contentType {
-        "" => {
+    do {
+        entity = check response.getEntity();
+        contentLength = check entity.getContentLength();
+        if contentLength <= 0 {
             return {
                 code,
-                contentType: "None"
+                responseHeader: {contentLength: 0}
             };
         }
+        mediaType = check mime:getMediaType(entity.getContentType());
+    } on fail error e {
+        return error HttpResponseParsingError("Error occurred while parsing the response payload.", e);
+    }
+
+    string contentType = mediaType.getBaseType();
+    json|xml|error responseBody;
+    match contentType {
         mime:APPLICATION_JSON => {
-            return {
-                code,
-                contentType,
-                payload: check response.getJsonPayload()
-            };
+            responseBody = entity.getJson();
         }
         mime:APPLICATION_XML => {
-            return {
-                code,
-                contentType,
-                payload: check response.getXmlPayload()
-            };
+            responseBody = entity.getXml();
         }
         mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
-            return {
-                code,
-                contentType,
-                payload: check response.getTextPayload()
-            };
-        }
-        mime:IMAGE_PNG|mime:IMAGE_JPEG|mime:IMAGE_GIF => {
-            return {
-                code,
-                contentType,
-                payload: check response.getBinaryPayload()
-            };
+            responseBody = entity.getText();
         }
         _ => {
-            return {
-                code,
-                contentType,
-                payload: check response.getTextPayload()
-            };
+            responseBody = "<Unsupported Content Type>";
         }
     }
+    if responseBody is error {
+        return error HttpResponseParsingError("Error occurred while parsing the response payload.", responseBody, contentType = contentType);
+    }
+    return {
+        code,
+        responseHeader: {contentType, contentLength},
+        responseBody
+    };
 }
