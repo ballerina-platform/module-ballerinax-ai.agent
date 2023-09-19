@@ -323,50 +323,49 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
 }
 
 isolated function extractResponsePayload(http:Response response) returns HttpOutput|error {
+    int code = response.statusCode;
     string contentType = response.getContentType().trim().toLowerAscii();
     match contentType {
         "" => {
             return {
-                code: response.statusCode,
+                code,
                 contentType: "None"
             };
         }
         mime:APPLICATION_JSON => {
             return {
-                code: response.statusCode,
-                contentType: mime:APPLICATION_JSON,
+                code,
+                contentType,
                 payload: check response.getJsonPayload()
             };
         }
         mime:APPLICATION_XML => {
             return {
-                code: response.statusCode,
-                contentType: mime:APPLICATION_XML,
+                code,
+                contentType,
                 payload: check response.getXmlPayload()
             };
         }
         mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
             return {
-                code: response.statusCode,
-                contentType: mime:TEXT_PLAIN,
+                code,
+                contentType,
                 payload: check response.getTextPayload()
             };
         }
         mime:IMAGE_PNG|mime:IMAGE_JPEG|mime:IMAGE_GIF => {
             return {
-                code: response.statusCode,
-                contentType: mime:IMAGE_PNG,
+                code,
+                contentType,
                 payload: check response.getBinaryPayload()
             };
         }
         _ => {
             return {
-                code: response.statusCode,
-                contentType: mime:IMAGE_PNG,
+                code,
+                contentType,
                 payload: check response.getTextPayload()
             };
-
         }
-
     }
 }
