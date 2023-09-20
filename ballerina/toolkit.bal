@@ -18,6 +18,9 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/regex;
 import ballerina/mime;
+import ballerina/lang.'int as langint;
+
+public type HttpResponseParsingError distinct error;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -79,10 +82,15 @@ type HttpInput record {|
 public type HttpOutput record {|
     # HTTP status code of the response
     int code;
-    # Content type
-    string contentType;
-    # Content of the response
-    json|xml payload?;
+    # Response headers 
+    record {|
+        # Content type of the response
+        string contentType?;
+        # Content length of the response
+        int contentLength;
+    |} headers;
+    # Response payload
+    json|xml body?;
 |};
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
@@ -322,50 +330,54 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
     };
 }
 
-isolated function extractResponsePayload(http:Response response) returns HttpOutput|error {
+isolated function extractResponsePayload(http:Response response) returns HttpOutput|HttpResponseParsingError {
+    int contentLength;
+    string contentType;
     int code = response.statusCode;
-    string contentType = response.getContentType().trim().toLowerAscii();
-    match contentType {
-        "" => {
+    do {
+        contentLength = check getContentLength(response);
+        if contentLength <= 0 {
             return {
                 code,
-                contentType: "None"
+                headers: {contentLength: 0}
             };
         }
-        mime:APPLICATION_JSON => {
-            return {
-                code,
-                contentType,
-                payload: check response.getJsonPayload()
-            };
-        }
-        mime:APPLICATION_XML => {
-            return {
-                code,
-                contentType,
-                payload: check response.getXmlPayload()
-            };
-        }
-        mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
-            return {
-                code,
-                contentType,
-                payload: check response.getTextPayload()
-            };
-        }
-        mime:IMAGE_PNG|mime:IMAGE_JPEG|mime:IMAGE_GIF => {
-            return {
-                code,
-                contentType,
-                payload: check response.getBinaryPayload()
-            };
+        contentType = response.getContentType();
+    } on fail error e {
+        return error HttpResponseParsingError("Error occurred while extracting headers from the response.", e);
+    }
+    json|xml|error body;
+    match regex:split(contentType, ";")[0] {
+        mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
+            body = response.getTextPayload();
         }
         _ => {
-            return {
-                code,
-                contentType,
-                payload: check response.getTextPayload()
-            };
+            body = "<Unsupported Content Type>";
         }
     }
+    if body is error {
+        body = response.getTextPayload();
+    }
+    if body is error {
+        return error HttpResponseParsingError("Error occurred while parsing the response payload.", body, contentType = contentType);
+    }
+    return {
+        code,
+        headers: {contentType, contentLength},
+        body
+    };
 }
+
+public isolated function getContentLength(http:Response response) returns int|error {
+    string contentLength = "";
+    var length = response.getHeader(mime:CONTENT_LENGTH);
+    if (length is string) {
+        contentLength = length;
+    }
+    if (contentLength == "") {
+        return -1;
+    } else {
+        return langint:fromString(contentLength);
+    }
+}
+
