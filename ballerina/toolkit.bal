@@ -18,6 +18,7 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/regex;
 import ballerina/mime;
+import ballerina/lang.'int as langint;
 
 public type HttpResponseParsingError distinct error;
 
@@ -330,35 +331,32 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
 }
 
 isolated function extractResponsePayload(http:Response response) returns HttpOutput|HttpResponseParsingError {
-    mime:Entity entity;
     int contentLength;
-    mime:MediaType mediaType;
+    string contentType;
     int code = response.statusCode;
     do {
-        entity = check response.getEntity();
-        contentLength = check entity.getContentLength();
+        contentLength = check getContentLength(response);
         if contentLength <= 0 {
             return {
                 code,
                 responseHeader: {contentLength: 0}
             };
         }
-        mediaType = check mime:getMediaType(entity.getContentType());
+        contentType = response.getContentType();
     } on fail error e {
-        return error HttpResponseParsingError("Error occurred while parsing the response payload.", e);
+        return error HttpResponseParsingError("Error occurred while extracting headers from the response.", e);
     }
 
-    string contentType = mediaType.getBaseType();
     json|xml|error responseBody;
     match contentType {
         mime:APPLICATION_JSON => {
-            responseBody = entity.getJson();
+            responseBody = response.getJsonPayload();
         }
         mime:APPLICATION_XML => {
-            responseBody = entity.getXml();
+            responseBody = response.getXmlPayload();
         }
         mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
-            responseBody = entity.getText();
+            responseBody = response.getTextPayload();
         }
         _ => {
             responseBody = "<Unsupported Content Type>";
@@ -373,3 +371,17 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
         responseBody
     };
 }
+
+public isolated function getContentLength(http:Response response) returns int|error {
+    string contentLength = "";
+    var length = response.getHeader(mime:CONTENT_LENGTH);
+    if (length is string) {
+        contentLength = length;
+    }
+    if (contentLength == "") {
+        return -1;
+    } else {
+        return langint:fromString(contentLength);
+    }
+}
+
