@@ -88,9 +88,9 @@ public type HttpOutput record {|
         string contentType?;
         # Content length of the response
         int contentLength;
-    |} responseHeader;
+    |} headers;
     # Response payload
-    json|xml responseBody?;
+    json|xml body?;
 |};
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
@@ -339,36 +339,32 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
         if contentLength <= 0 {
             return {
                 code,
-                responseHeader: {contentLength: 0}
+                headers: {contentLength: 0}
             };
         }
         contentType = response.getContentType();
     } on fail error e {
         return error HttpResponseParsingError("Error occurred while extracting headers from the response.", e);
     }
-
-    json|xml|error responseBody;
-    match contentType {
-        mime:APPLICATION_JSON => {
-            responseBody = response.getJsonPayload();
-        }
-        mime:APPLICATION_XML => {
-            responseBody = response.getXmlPayload();
-        }
-        mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
-            responseBody = response.getTextPayload();
+    json|xml|error body;
+    match regex:split(contentType, ";")[0] {
+        mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
+            body = response.getTextPayload();
         }
         _ => {
-            responseBody = "<Unsupported Content Type>";
+            body = "<Unsupported Content Type>";
         }
     }
-    if responseBody is error {
-        return error HttpResponseParsingError("Error occurred while parsing the response payload.", responseBody, contentType = contentType);
+    if body is error {
+        body = response.getTextPayload();
+    }
+    if body is error {
+        return error HttpResponseParsingError("Error occurred while parsing the response payload.", body, contentType = contentType);
     }
     return {
         code,
-        responseHeader: {contentType, contentLength},
-        responseBody
+        headers: {contentType, contentLength},
+        body
     };
 }
 
