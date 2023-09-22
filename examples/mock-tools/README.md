@@ -10,7 +10,7 @@ This example demonstrates how to use combinations of tool types with the Agent.
 
 
 ## Setup Example
-This example requires connecting to a WiFi service. We have added a mock WiFi in the [service](/examples/setup/) directory. You can run this service and provide the URL to the mock WiFi service and the authentication credentials (if applicable) via Config.toml to try out the example. 
+This example requires connecting to a WiFi service. We have added a mock WiFi in the [service](/examples/setup/) directory. You can run this service and provide the URL to the mock WiFi service and the authentication credentials (if applicable) via `Config.toml` to try out the example. 
 
 ## Prerequisites
 
