@@ -10,7 +10,7 @@ This example demonstrates how to use combinations of tool types with the Agent.
 
 
 ## Setup Example
-This example requires connecting to a WiFi service. We have added a mock WiFi in the [service](/examples/setup/) directory. You can run this service and provide the URL to the mock WiFi service and the authentication credentials (if applicable) via Config.toml to try out the example. 
+This example requires connecting to a WiFi service. We have added a mock WiFi in the [service](/examples/setup/) directory. You can run this service and provide the URL to the mock WiFi service and the authentication credentials (if applicable) via `Config.toml` to try out the example. 
 
 ## Prerequisites
 
@@ -42,30 +42,3 @@ Run the example with the natural language command.
 ```
 bal run -- <NL_COMMAND>
 ```
-
-
-
-
-## Overview
-
-This example demonstrates the basic usage of the agent using mock tools.
-
-## Setup Example
-This example requires connecting to a WiFi service. We have added a mock WiFi in the [service](/examples/setup/) directory. You can run this service and provide the URL to the mock WiFi service and the authentication credentials (if applicable) via Config.toml to try out the example. 
-
-## Prerequisites
-
-- Create an [OpenAI account](https://beta.openai.com/signup/).
-- Obtain an API key by following [these instructions](https://platform.openai.com/docs/api-reference/authentication).
-
-### 3. Setting the configuration variables
-
-In the `Config.toml`  file, set the configuration variables to correspond to the WiFi service deployed and the OpenAI API token. 
-- `openAIToken`: OpenAI API token to connect to GPT3/ChatGPT APIs.
-
-## Run the example
-
-Run the example with the natural language command. 
-
-```
-bal run -- <NL_COMMAND>
