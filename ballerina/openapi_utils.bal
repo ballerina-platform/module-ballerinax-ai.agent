@@ -74,6 +74,10 @@ isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
                 _ = openAPISpec.remove(key);
                 continue;
             }
+            if key == "xml" && value is map<json> && !value.hasKey("type") {
+                _ = openAPISpec.remove(key);
+                continue;
+            }
             if value is map<json>|json[] {
                 _ = cleanXTagsFromJsonSpec(value);
             }
@@ -130,7 +134,10 @@ class OpenApiSpecVisitor {
             return {};
         }
         map<ComponentType> referenceMap = {};
-        foreach [string, map<ComponentType|Reference>] [componentType, componentMap] in components.entries() {
+        foreach [string, anydata] [componentType, componentMap] in components.entries() {
+            if componentMap !is map<ComponentType|Reference> {
+                continue;
+            }
             foreach [string, ComponentType|Reference] [componentName, component] in componentMap.entries() {
                 string ref = string `#/${OPENAPI_COMPONENTS_KEY}/${componentType}/${componentName}`;
                 referenceMap[ref] = component;
@@ -143,8 +150,10 @@ class OpenApiSpecVisitor {
         foreach [string, PathItem|Reference] [pathUrl, pathItem] in paths.entries() {
             if pathItem is Reference {
                 check self.visitPathItem(check self.resolveReference(pathItem).ensureType(), pathUrl);
-            } else {
+            } else if pathItem is PathItem {
                 check self.visitPathItem(pathItem, pathUrl);
+            } else {
+                return error("Unsupported path item type.", 'type = typeof pathItem);
             }
         }
     }
@@ -177,9 +186,6 @@ class OpenApiSpecVisitor {
     }
 
     private isolated function visitOperation(Operation operation, string path, HttpMethod method) returns error? {
-        if operation.servers !is () {
-            return error("Path-wise service URLs are not supported. Please use global server URL.");
-        }
         string? description = operation.summary ?: operation.description;
         if description is () {
             return error(string `Summary or description is mandotory for paths. It is missing for ${path} and method ${method}`);
@@ -197,7 +203,7 @@ class OpenApiSpecVisitor {
             {pathParameters, queryParameters} = check self.visitParameters(parameters);
         }
 
-        JsonInputSchema? requestBody = ();
+        RequestBodySchema? requestBody = ();
         RequestBody|Reference? requestBodySchema = operation.requestBody;
         if requestBodySchema is Reference {
             RequestBody resolvedRequestBody = check self.resolveReference(requestBodySchema).ensureType();
@@ -217,14 +223,19 @@ class OpenApiSpecVisitor {
         });
     }
 
-    private isolated function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
-        map<MediaType> content = requestBody.content;
-
+    private isolated function visitContent(map<MediaType> content) returns Schema|error {
         // check for json content
-        if !content.hasKey(OPENAPI_JSON_CONTENT_KEY) {
-            return error("Only json content is supported.");
+        foreach [string, MediaType] [key, value] in content.entries() {
+            if key.trim().matches(re `(application/.*json|text/.*plain|\*/\*)`) {
+                return value.schema;
+            }
         }
-        Schema schema = content.get(OPENAPI_JSON_CONTENT_KEY).schema;
+        return error("Only json content is supported.", availableContentTypes = content.keys());
+    }
+
+    private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
+        map<MediaType> content = requestBody.content;
+        Schema schema = check self.visitContent(content);
         return self.visitSchema(schema).ensureType();
     }
 
@@ -260,11 +271,21 @@ class OpenApiSpecVisitor {
             Parameter resolvedParameter;
             if param is Reference {
                 resolvedParameter = check self.resolveReference(param).ensureType();
-            } else {
+            } else if param is Parameter {
                 resolvedParameter = param;
+            } else {
+                continue;
             }
 
-            Schema? schema = resolvedParameter.schema;
+            Schema? schema;
+            map<MediaType>? content = resolvedParameter.content;
+            if content is () {
+                schema = resolvedParameter.schema;
+            }
+            else {
+                schema = check self.visitContent(content);
+            }
+
             if schema is () {
                 continue;
             }
@@ -319,31 +340,30 @@ class OpenApiSpecVisitor {
     }
 
     private isolated function visitSchema(Schema schema) returns JsonSubSchema|error {
-
         if schema is ObjectSchema {
-            return self.visitObjectSchema(schema);
+            return trap self.visitObjectSchema(schema);
         }
         if schema is ArraySchema {
-            return self.visitArraySchema(schema);
+            return trap self.visitArraySchema(schema);
         }
         if schema is PrimitiveTypeSchema {
-            return self.visitPrimitiveTypeSchema(schema);
+            return trap self.visitPrimitiveTypeSchema(schema);
         }
         if schema is AnyOfSchema {
-            return self.visitAnyOfSchema(schema);
+            return trap self.visitAnyOfSchema(schema);
         }
         if schema is OneOfSchema {
-            return self.visitOneOfSchema(schema);
+            return trap self.visitOneOfSchema(schema);
         }
         if schema is AllOfSchema {
-            return self.visitAllOfSchema(schema);
+            return trap self.visitAllOfSchema(schema);
         }
         if schema is NotSchema {
-            return self.visitNotSchema(schema);
+            return trap self.visitNotSchema(schema);
         }
 
         Schema resolvedSchema = check self.resolveReference(<Reference>schema).ensureType();
-        return check self.visitSchema(resolvedSchema);
+        return check trap self.visitSchema(resolvedSchema);
     }
 
     private isolated function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {

@@ -20,8 +20,6 @@ import ballerina/regex;
 import ballerina/mime;
 import ballerina/lang.'int as langint;
 
-public type HttpResponseParsingError distinct error;
-
 # Supported HTTP methods.
 public enum HttpMethod {
     GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -62,8 +60,10 @@ public type HttpTool record {|
     # Path parameter definitions of the Http resource
     ParameterSchema pathParameters?;
     # Request body definition of the Http resource
-    JsonInputSchema requestBody?;
+    RequestBodySchema requestBody?;
 |};
+
+public type RequestBodySchema ConstantValueSchema|PrimitiveInputSchema|JsonInputSchema;
 
 // input record definitions ----------------------------
 # Defines an HTTP input record.
@@ -124,7 +124,7 @@ public isolated class HttpServiceToolKit {
         foreach HttpTool httpTool in httpTools {
             ParameterSchema? queryParameters = httpTool?.queryParameters;
             ParameterSchema? pathParameters = extractPathParams(httpTool.path, httpTool?.pathParameters);
-            JsonInputSchema? requestBody = httpTool?.requestBody;
+            RequestBodySchema? requestBody = httpTool?.requestBody;
 
             map<JsonSubSchema> properties = {path: {'const: httpTool.path}};
 
