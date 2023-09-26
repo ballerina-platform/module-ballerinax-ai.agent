@@ -61,16 +61,24 @@ HttpApiSpecification & readonly|error {
 # + return - A record with the list of extracted tools and the service URL (if available)
 public isolated function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
 HttpApiSpecification & readonly|error {
-    cleanXTagsFromJsonSpec(openApiSpec);
-    OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
+    OpenApiSpec spec = check parseOpenApiSpec(openApiSpec);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(cleanedSpec).cloneReadOnly();
+    return check visitor.visit(spec).cloneReadOnly();
+}
+
+# Parses the given OpenAPI specification as a JSON to a OpenApiSpec object.
+#
+# + openApiSpec - A valid OpenAPI specification in JSON format
+# + return - A OpenApiSpec object
+public isolated function parseOpenApiSpec(map<json> openApiSpec) returns OpenApiSpec|error {
+    cleanXTagsFromJsonSpec(openApiSpec);
+    return check openApiSpec.cloneWithType();
 }
 
 isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
     if openAPISpec is map<json> {
         foreach [string, json] [key, value] in openAPISpec.entries() {
-            if key.startsWith("x-") {
+            if key.toLowerAscii().startsWith("x-") {
                 _ = openAPISpec.remove(key);
                 continue;
             }

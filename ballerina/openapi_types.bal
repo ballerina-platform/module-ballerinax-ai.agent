@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-enum ParameterLocation {
+public enum ParameterLocation {
     QUERY = "query", HEADER = "header", PATH = "path", COOKIE = "cookie"
 }
 
-enum ParameterStyle {
+public enum ParameterStyle {
     FORM = "form",
     SIMPLE = "simple",
     MATRIX = "matrix",
@@ -28,14 +28,14 @@ enum ParameterStyle {
     DEEP_OBJECT = "deepObject"
 }
 
-enum HeaderStyle {
+public enum HeaderStyle {
     SIMPLE = "simple"
 }
 
 type ComponentType Schema|Response|Parameter|RequestBody|Header|PathItem;
 
 # Map of component objects
-type Components record {
+public type Components record {
     # A map of reusable schemas for different data types.
     map<Schema|Reference> schemas?;
     # A map of reusable response objects 
@@ -51,7 +51,7 @@ type Components record {
 };
 
 # Server information object
-type Server record {
+public type Server record {
     # A URL to the target host.
     string url;
     # An optional string describing the host designated by the URL.
@@ -59,12 +59,12 @@ type Server record {
 };
 
 # Map of pathItem objects
-type Paths record {|
+public type Paths record {|
     PathItem|Reference...;
 |};
 
 # Describes a single path item.
-type PathItem record {|
+public type PathItem record {|
     # Description of the path item
     string description?;
     # Summary of the path item
@@ -94,7 +94,7 @@ type PathItem record {|
 |};
 
 # Describes HTTP headers 
-type Header record {
+public type Header record {
     # Whether this header parameter is mandatory.
     boolean required = true;
     # A brief description of the header parameter.
@@ -114,7 +114,7 @@ type Header record {
 };
 
 # Describes a encoding definition applied to a schema property.
-type Encoding record {
+public type Encoding record {
     # The Content-Type for encoding a specific property.
     string contentType?;
     # A map allowing additional information to be provided as headers.
@@ -126,7 +126,7 @@ type Encoding record {
 };
 
 # Defines media type of a parameter, response body or header
-type MediaType record {
+public type MediaType record {
     # Schema of the content
     Schema schema;
     # Encoding of the content
@@ -134,7 +134,7 @@ type MediaType record {
 };
 
 # Base schema object
-type BaseSchema record {
+public type BaseSchema record {
     # Description of the schema
     string description?;
     # Default value of the schema
@@ -146,7 +146,7 @@ type BaseSchema record {
 };
 
 # Base type schema object
-type BaseTypeSchema record {
+public type BaseTypeSchema record {
     *BaseSchema;
     # Type of the schema
     string 'type;
@@ -161,14 +161,14 @@ type BaseTypeSchema record {
 
 };
 
-type BasePrimitiveTypeSchema record {
+public type BasePrimitiveTypeSchema record {
     *BaseTypeSchema;
     never properties?;
     never items?;
 };
 
 # Integer schema object
-type IntegerSchema record {
+public type IntegerSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the integer schema
     INTEGER 'type;
@@ -187,7 +187,7 @@ type IntegerSchema record {
 };
 
 # Number schema object
-type NumberSchema record {
+public type NumberSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the number schema
     NUMBER|FLOAT 'type;
@@ -206,7 +206,7 @@ type NumberSchema record {
 };
 
 # String schema object
-type StringSchema record {|
+public type StringSchema record {|
     *BasePrimitiveTypeSchema;
     # Type of the string schema
     STRING 'type = STRING;
@@ -223,17 +223,17 @@ type StringSchema record {|
 |};
 
 # Boolean schema object
-type BooleanSchema record {
+public type BooleanSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the boolean schema
     BOOLEAN 'type;
 };
 
 # Primitive type schema object
-type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
+public type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
 
 # Array schema object
-type ArraySchema record {
+public type ArraySchema record {
     *BaseTypeSchema;
     # Type of the array schema
     ARRAY 'type = ARRAY;
@@ -250,7 +250,7 @@ type ArraySchema record {
 };
 
 # Discriminator object
-type Discriminator record {
+public type Discriminator record {
     # Name of the property that specifies the type
     string propertyName;
     # Mapping of the property values to schema names
@@ -258,7 +258,7 @@ type Discriminator record {
 };
 
 # One of schema object
-type OneOfSchema record {
+public type OneOfSchema record {
     *BaseSchema;
     # List of schemas that should match
     Schema[] oneOf;
@@ -267,14 +267,14 @@ type OneOfSchema record {
 };
 
 # All of schema object
-type AllOfSchema record {
+public type AllOfSchema record {
     *BaseSchema;
     # List of schemas that should match
     Schema[] allOf;
 };
 
 # Any of schema object
-type AnyOfSchema record {
+public type AnyOfSchema record {
     *BaseSchema;
     # List of schemas that should match
     Schema[] anyOf;
@@ -283,14 +283,14 @@ type AnyOfSchema record {
 };
 
 # Not schema object
-type NotSchema record {
+public type NotSchema record {
     *BaseSchema;
     # Schema that should not match
     Schema not;
 };
 
 # Object schema, where type should be specified and properties are optional
-type ObjectSchemaType1 record {
+public type ObjectSchemaType1 record {
     *BaseTypeSchema;
     # Type of the object schema
     OBJECT 'type;
@@ -311,7 +311,7 @@ type ObjectSchemaType1 record {
 };
 
 # Object schema, where type is not specified, but properties are specified
-type ObjectSchemaType2 record {
+public type ObjectSchemaType2 record {
     *ObjectSchemaType1;
     # To match when type is not specified, but properties are specified
     never 'type?;
@@ -320,10 +320,10 @@ type ObjectSchemaType2 record {
 };
 
 # Object schema
-type ObjectSchema ObjectSchemaType1|ObjectSchemaType2;
+public type ObjectSchema ObjectSchemaType1|ObjectSchemaType2;
 
 # Reference object
-type Reference record {
+public type Reference record {
     # Reference to a component
     string \$ref;
     # Short description of the target component
@@ -333,10 +333,10 @@ type Reference record {
 };
 
 # Defines a OpenAPI schema
-type Schema PrimitiveTypeSchema|ArraySchema|ObjectSchema|OneOfSchema|AllOfSchema|AnyOfSchema|NotSchema|Reference;
+public type Schema PrimitiveTypeSchema|ArraySchema|ObjectSchema|OneOfSchema|AllOfSchema|AnyOfSchema|NotSchema|Reference;
 
 # Describes a single request body.
-type RequestBody record {
+public type RequestBody record {
     # A brief description of the request body. This could contain examples of use.
     string description?;
     # The content of the request body. 
@@ -346,7 +346,7 @@ type RequestBody record {
 };
 
 # Describes a single API operation on a path.
-type Operation record {
+public type Operation record {
     # A list of tags for API documentation control.
     string[] tags?;
     # A short summary of what the operation does.
@@ -364,14 +364,14 @@ type Operation record {
 };
 
 # Describes the responses from an API Operation.
-type Responses record {|
+public type Responses record {|
     # Default response for the API Operation.
     Response|Reference default?;
     Response|Reference...;
 |};
 
 # Describes a single response from an API Operation.
-type Response record {
+public type Response record {
     # A short description of the response.
     string description?;
     # A map containing schema of the response headers.
@@ -383,7 +383,7 @@ type Response record {
 };
 
 # Describes a single operation parameter.
-type Parameter record {
+public type Parameter record {
     # Name of the parameter
     string name;
     # The location of the parameter
@@ -405,7 +405,7 @@ type Parameter record {
 };
 
 # OpenAPI Specification 3.1.0
-type OpenApiSpec readonly & record {
+public type OpenApiSpec record {
     # OpenAPI version
     string openapi;
     # Server information
