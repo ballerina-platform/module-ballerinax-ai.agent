@@ -70,33 +70,19 @@ HttpApiSpecification & readonly|error {
 #
 # + openApiSpec - A valid OpenAPI specification in JSON format
 # + return - A OpenApiSpec object
-public isolated function parseOpenApiSpec(map<json> openApiSpec) returns OpenApiSpec|error {
-    cleanXTagsFromJsonSpec(openApiSpec);
-    return check openApiSpec.cloneWithType();
-}
-
-isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
-    if openAPISpec is map<json> {
-        foreach [string, json] [key, value] in openAPISpec.entries() {
-            if key.toLowerAscii().startsWith("x-") {
-                _ = openAPISpec.remove(key);
-                continue;
-            }
-            if key == "xml" && value is map<json> && !value.hasKey("type") {
-                _ = openAPISpec.remove(key);
-                continue;
-            }
-            if value is map<json>|json[] {
-                _ = cleanXTagsFromJsonSpec(value);
-            }
-        }
-        return;
+public isolated function parseOpenApiSpec(map<json> openApiSpec) returns OpenApiSpec|UnsupportedOpenApiVersion|OpenApiParsingError {
+    if !openApiSpec.hasKey("openapi") {
+        return error UnsupportedOpenApiVersion("OpenAPI version is not specified in the specification.");
     }
-    foreach json element in openAPISpec {
-        if element is map<json>|json[] {
-            _ = cleanXTagsFromJsonSpec(element);
-        }
+    json version = openApiSpec.get("openapi");
+    if version !is string || !version.matches(re `3\.0\..`) {
+        return error UnsupportedOpenApiVersion("Unsupported OpenAPI version. Supports specifications with version 3.x.x only.");
     }
+    OpenApiSpec|error parseSpec = openApiSpec.cloneWithType();
+    if parseSpec is OpenApiSpec {
+        return parseSpec;
+    }
+    return error OpenApiParsingError("Error while parsing the OpenAPI specification.", cause = parseSpec);
 }
 
 class OpenApiSpecVisitor {

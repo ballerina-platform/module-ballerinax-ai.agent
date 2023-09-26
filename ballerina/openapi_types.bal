@@ -88,7 +88,7 @@ public type PathItem record {|
     # Server information for the path
     Server[] servers?;
     # A list of parameters that are applicable for all the operations described under this path item.
-    Parameter[]|Reference[] parameters?;
+    (Parameter|Reference)[] parameters?;
     # Not allowed $ref
     never \$ref?;
 |};
@@ -128,7 +128,7 @@ public type Encoding record {
 # Defines media type of a parameter, response body or header
 public type MediaType record {
     # Schema of the content
-    Schema schema;
+    Schema schema = {};
     # Encoding of the content
     map<Encoding> encoding?;
 };
@@ -219,7 +219,7 @@ public type StringSchema record {|
     # Regular expression pattern of the string value
     string pattern?;
     # Enum values of the string value
-    string[] 'enum?;
+    (PrimitiveType?)[] 'enum?;
 |};
 
 # Boolean schema object

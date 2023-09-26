@@ -54,7 +54,7 @@ public type PrimitiveInputSchema record {|
     # Pattern of the input. This is only applicable for `STRING` type.
     string pattern?;
     # Enum values of the input. This is only applicable for `STRING` type.
-    string[] 'enum?;
+    (PrimitiveType?)[] 'enum?;
     # Default value of the input
     PrimitiveType default?;
 |};
