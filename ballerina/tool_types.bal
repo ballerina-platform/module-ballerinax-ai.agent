@@ -62,13 +62,13 @@ public type PrimitiveInputSchema record {|
 # Defines an `anyOf` input field in the schema. Follows OpenAPI 3.x specification.
 public type AnyOfInputSchema record {|
     # List of possible input types
-    ObjectInputSchema[] anyOf;
+    JsonSubSchema[] anyOf;
 |};
 
 # Defines an `allOf` input field in the schema. Follows OpenAPI 3.x specification.
 public type AllOfInputSchema record {|
     # List of possible input types
-    ObjectInputSchema[] allOf;
+    JsonSubSchema[] allOf;
 |};
 
 # Defines an `oneOf` input field in the schema. Follows OpenAPI 3.x specification.

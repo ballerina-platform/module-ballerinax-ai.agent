@@ -1,8 +1,14 @@
 
-public type SchemaRecursiveReferenceError distinct error;
-
-public type HttpResponseParsingError distinct error;
-
-public type UnsupportedOpenApiVersion distinct error;
-
+// openapi errors 
 public type OpenApiParsingError distinct error;
+
+public type ParsingStackOverflowError distinct OpenApiParsingError;
+
+public type UnsupportedOpenApiVersion distinct OpenApiParsingError;
+
+public type InvalidReferenceError distinct OpenApiParsingError;
+
+public type IncompleteSpecificationError distinct OpenApiParsingError;
+
+// http toolkit errors
+public type HttpResponseParsingError distinct error;
