@@ -96,7 +96,7 @@ public type PathItem record {|
 # Describes HTTP headers 
 public type Header record {
     # Whether this header parameter is mandatory.
-    boolean required = true;
+    boolean required?;
     # A brief description of the header parameter.
     string description?;
     # Whether empty value is allowed.
