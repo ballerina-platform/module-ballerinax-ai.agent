@@ -10,5 +10,7 @@ public type InvalidReferenceError distinct OpenApiParsingError;
 
 public type IncompleteSpecificationError distinct OpenApiParsingError;
 
+public type UnsupportedMediaTypeError distinct OpenApiParsingError;
+
 // http toolkit errors
 public type HttpResponseParsingError distinct error;

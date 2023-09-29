@@ -213,7 +213,7 @@ class OpenApiSpecVisitor {
                 return value.schema;
             }
         }
-        return error("Only json content is supported.", availableContentTypes = content.keys());
+        return error UnsupportedMediaTypeError("Only json or text content is supported.", availableContentTypes = content.keys());
     }
 
     private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
