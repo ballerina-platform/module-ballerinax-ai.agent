@@ -1,9 +1,9 @@
-import ballerina/test;
 import ballerina/io;
+import ballerina/test;
 
 @test:Config {}
 function testExtractToolsFromWifiOpenAPISpec() returns error? {
-    string wifiSpecPath = "tests/resources/wifi-spec.json";
+    string wifiSpecPath = "tests/resources/openapi/wifi-spec.json";
     map<json> openApiSpec = check io:fileReadJson(wifiSpecPath).ensureType();
     HttpApiSpecification apiSpec = check extractToolsFromOpenApiJsonSpec(openApiSpec);
 
@@ -41,7 +41,7 @@ function testExtractToolsFromWifiOpenAPISpec() returns error? {
 
 @test:Config {}
 function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
-    string wifiSpecPath = "tests/resources/wifi-spec.yaml";
+    string wifiSpecPath = "tests/resources/openapi/wifi-spec.yaml";
     HttpApiSpecification apiSpec = check extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
     HttpTool[] tools = [
@@ -78,7 +78,7 @@ function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
 
 @test:Config {}
 function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
-    string wifiSpecPath = "tests/resources/wifi-spec.json";
+    string wifiSpecPath = "tests/resources/openapi/wifi-spec.json";
     HttpApiSpecification apiSpec = check extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
     HttpTool[] tools = [
@@ -115,7 +115,7 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
 
 @test:Config {}
 function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
-    string wifiSpecPath = "tests/resources/openai-spec.json";
+    string wifiSpecPath = "tests/resources/openapi/openai-spec.json";
     HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
     if apiSpec is error {
@@ -172,7 +172,6 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                         "model"
                     ]
                 }
-
             });
         }
         else if tool.name == "createChatCompletion" {
@@ -206,7 +205,6 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                     },
                     required: ["model", "messages"]
                 }
-
             });
         }
     }
@@ -258,5 +256,4 @@ function testParameterSchema() returns error? {
         test:assertFail("Parameter type is not verified correctly");
     }
     test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
-
 }

@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-enum ParameterLocation {
+public enum ParameterLocation {
     QUERY = "query", HEADER = "header", PATH = "path", COOKIE = "cookie"
 }
 
-enum ParameterStyle {
+public enum ParameterStyle {
     FORM = "form",
     SIMPLE = "simple",
     MATRIX = "matrix",
@@ -28,328 +28,390 @@ enum ParameterStyle {
     DEEP_OBJECT = "deepObject"
 }
 
-enum HeaderStyle {
+public enum HeaderStyle {
     SIMPLE = "simple"
 }
 
-enum SecuritySchemeType {
-    APIKEY = "apiKey", HTTP = "http", MUTUAL_TLS = "mutualTLS", OUATH2 = "oauth2", OPEN_ID_CONNECT = "openIdConnect"
-}
+type ComponentType Schema|Response|Parameter|RequestBody|Header|PathItem;
 
-enum SecuritySchemeLocation {
-    QUERY = "query", HEADER = "header", COOKIE = "cookie"
-}
-
-type Info record {
-    string title;
-    string 'version;
+# Map of component objects
+public type Components record {
+    # A map of reusable schemas for different data types.
+    map<Schema|Reference> schemas?;
+    # A map of reusable response objects 
+    map<Response|Reference> responses?;
+    # A map of reusable parameter objects
+    map<Parameter|Reference> parameters?;
+    # A map of reusable request body objects
+    map<RequestBody|Reference> requestBodies?;
+    # A map of reusable header objects
+    map<Header|Reference> headers?;
+    # A map of PathItem objects
+    map<PathItem|Reference> pathItems?;
 };
 
-type SecurityRequirement record {|
-    string[]...;
-|};
-
-type SecurityScheme record {|
-    SecuritySchemeType 'type;
-    string description?;
-    string name?;
-    SecuritySchemeLocation 'in?;
-    string scheme?;
-    string bearerFormat?;
-    OAuthFlows flows;
-    string openIdConnectUrl?;
-|};
-
-type OAuthFlows record {|
-    OAuthFlow implicit?;
-    OAuthFlow password?;
-    OAuthFlow clientCredentials?;
-    OAuthFlow authorizationCode?;
-|};
-
-type OAuthFlow record {|
-    string authorizationUrl;
-    string tokenUrl?;
-    string refreshUrl?;
-    map<string> scopes;
-|};
-
-type ComponentType Schema|Response|Parameter|Example|RequestBody|Header|SecurityScheme|Link|Callback|PathItem;
-
-type Components record {|
-    map<Schema|Reference> schemas?;
-    map<Response|Reference> responses?;
-    map<Parameter|Reference> parameters?;
-    map<Example|Reference> examples?;
-    map<RequestBody|Reference> requestBodies?;
-    map<Header|Reference> headers?;
-    map<SecurityScheme|Reference> securitySchemes?;
-    map<Link|Reference> links?;
-    map<Callback|Reference> callbacks?;
-    map<PathItem|Reference> pathItems?;
-|};
-
-type ServerVariable record {|
-    string default;
-    string[] 'enum?;
-    string description?;
-|};
-
-type Server record {|
+# Server information object
+public type Server record {
+    # A URL to the target host.
     string url;
+    # An optional string describing the host designated by the URL.
     string description?;
-    map<ServerVariable> variables?;
-|};
+};
 
-type Paths record {|
+# Map of pathItem objects
+public type Paths record {|
     PathItem|Reference...;
 |};
 
-type PathItem record {|
-    string \$ref?;
+# Describes a single path item.
+public type PathItem record {|
+    # Description of the path item
     string description?;
+    # Summary of the path item
     string summary?;
+    # GET operation
     Operation get?;
+    # POST operation
     Operation post?;
+    # PUT operation
     Operation put?;
+    # DELETE operation
     Operation delete?;
+    # OPTIONS operation
     Operation options?;
+    # HEAD operation
     Operation head?;
+    # PATCH operation
     Operation patch?;
+    # TRACE operation
     Operation trace?;
+    # Server information for the path
     Server[] servers?;
-    Parameter[]|Reference[] parameters?;
-|};
-
-type Example record {|
-    string summary?;
-    string description?;
-    json value?;
-    string externalValue?;
-|};
-
-type Header record {|
-    string required;
-    string description?;
-    string deprecated?;
-    string allowEmptyValue?;
-    HeaderStyle style?;
-    boolean explode?;
-    boolean allowReserved?;
-    Schema schema?;
-    anydata example?;
-    map<Example|Reference> examples?;
-    map<MediaType> content?;
-|};
-
-type Encoding record {|
-    string contentType?;
-    map<Header|Reference> headers?;
-    string style?;
-    boolean explode?;
-    boolean allowReserved?;
-|};
-
-type MediaType record {|
-    Schema schema;
-    anydata example?;
-    map<Example|Reference> examples?;
-    map<Encoding> encoding?;
-|};
-
-type BaseSchema record {|
-    string title?;
-    string description?;
-    json default?;
-    boolean nullable?;
-    boolean readOnly?;
-    boolean writeOnly?;
-    anydata example?;
-    map<Example|Reference> examples?;
-|};
-
-type BaseTypeSchema record {|
-    *BaseSchema;
-    string 'type;
-    string format?;
-|};
-
-type IntegerSchema record {|
-    *BaseTypeSchema;
-    INTEGER 'type = INTEGER;
-    int minimum?;
-    int maximum?;
-    boolean exclusiveMinimum?;
-    boolean exclusiveMaximum?;
-    int multipleOf?;
-|};
-
-type NumberSchema record {|
-    *BaseTypeSchema;
-    NUMBER|FLOAT 'type = NUMBER;
-    int|float minimum?;
-    int|float maximum?;
-    boolean exclusiveMinimum?;
-    boolean exclusiveMaximum?;
-    int|float multipleOf?;
-|};
-
-type StringSchema record {|
-    *BaseTypeSchema;
-    STRING 'type = STRING;
-    int minLength?;
-    int maxLength?;
-    string pattern?;
-    string[] 'enum?;
-|};
-
-type BooleanSchema record {|
-    *BaseTypeSchema;
-    BOOLEAN 'type = BOOLEAN;
-|};
-
-type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
-
-type ArraySchema record {|
-    *BaseSchema;
-    ARRAY 'type = ARRAY;
-    boolean uniqueItems?;
-    Schema items;
-    int minItems?;
-    int maxItems?;
-|};
-
-type Discriminator record {|
-    string propertyName;
-    map<string> mapping?;
-|};
-
-type OneOfSchema record {|
-    *BaseSchema;
-    Schema[] oneOf;
-    Discriminator discriminator?;
-    map<Schema> mapping?;
-|};
-
-type AllOfSchema record {|
-    *BaseSchema;
-    Schema[] allOf;
-|};
-
-type AnyOfSchema record {|
-    *BaseSchema;
-    Schema[] anyOf;
-    Discriminator discriminator?;
-|};
-
-type NotSchema record {|
-    *BaseSchema;
-    Schema not;
-|};
-
-type ObjectSchema record {|
-    *BaseSchema;
-    OBJECT 'type?;
-    int minProperties?;
-    int maxProperties?;
-    boolean|string[] required?;
-    map<Schema> properties?; // properties are optional for open-ended objects
-    boolean|Schema additionalProperties?;
-    Discriminator discriminator?;
-    boolean deprecated?;
-    boolean externalDocs?;
-|};
-
-type Reference record {|
-    string \$ref;
-    string summary?;
-    string description?;
-|};
-
-type Schema PrimitiveTypeSchema|ArraySchema|ObjectSchema|OneOfSchema|AllOfSchema|AnyOfSchema|NotSchema|Reference;
-
-type RequestBody record {|
-    string description?;
-    map<MediaType> content;
-    boolean required?;
-|};
-
-type Operation record {|
-    string[] tags?;
-    string summary?;
-    string description?;
-    ExternalDocumentation externalDocs?;
-    string operationId?;
+    # A list of parameters that are applicable for all the operations described under this path item.
     (Parameter|Reference)[] parameters?;
+    # Not allowed $ref
+    never \$ref?;
+|};
+
+# Describes HTTP headers 
+public type Header record {
+    # Whether this header parameter is mandatory.
+    boolean required?;
+    # A brief description of the header parameter.
+    string description?;
+    # Whether empty value is allowed.
+    string allowEmptyValue?;
+    # Describes how a specific property value will be serialized depending on its type.
+    HeaderStyle style?;
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    boolean explode?;
+    # Schema of the header parameter.
+    Schema schema?;
+    # Content of the header parameter.
+    map<MediaType> content?;
+    # Not allowed $ref
+    never \$ref?;
+};
+
+# Describes a encoding definition applied to a schema property.
+public type Encoding record {
+    # The Content-Type for encoding a specific property.
+    string contentType?;
+    # A map allowing additional information to be provided as headers.
+    map<Header|Reference> headers?;
+    # Describes how a specific property value will be serialized depending on its type.
+    string style?;
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    boolean explode?;
+};
+
+# Defines media type of a parameter, response body or header
+public type MediaType record {
+    # Schema of the content
+    Schema schema = {};
+    # Encoding of the content
+    map<Encoding> encoding?;
+};
+
+# Base schema object
+public type BaseSchema record {
+    # Description of the schema
+    string description?;
+    # Default value of the schema
+    json default?;
+    # Whether the value is nullable
+    boolean nullable?;
+    # Not allowed $ref property
+    never \$ref?;
+};
+
+# Base type schema object
+public type BaseTypeSchema record {
+    *BaseSchema;
+    # Type of the schema
+    string 'type;
+    # Not allowed anyOf
+    never anyOf?;
+    # Not allowed oneOf
+    never oneOf?;
+    # Not allowed allOf
+    never allOf?;
+    # Not allowed not
+    never not?;
+
+};
+
+public type BasePrimitiveTypeSchema record {
+    *BaseTypeSchema;
+    never properties?;
+    never items?;
+};
+
+# Integer schema object
+public type IntegerSchema record {
+    *BasePrimitiveTypeSchema;
+    # Type of the integer schema
+    INTEGER 'type;
+    # Format of the value
+    string format?;
+    # Minimum value of the integer value
+    int minimum?;
+    # Maximum value of the integer value
+    int maximum?;
+    # Whether the minimum value is exclusive
+    boolean exclusiveMinimum?;
+    # Whether the maximum value is exclusive
+    boolean exclusiveMaximum?;
+    # Multiplier of the integer value
+    int multipleOf?;
+};
+
+# Number schema object
+public type NumberSchema record {
+    *BasePrimitiveTypeSchema;
+    # Type of the number schema
+    NUMBER|FLOAT 'type;
+    # Format of the value
+    string format?;
+    # Minimum value of the number value
+    int|float minimum?;
+    # Maximum value of the number value
+    int|float maximum?;
+    # Whether the minimum value is exclusive
+    boolean exclusiveMinimum?;
+    # Whether the maximum value is exclusive
+    boolean exclusiveMaximum?;
+    # Multiplier of the number value
+    int|float multipleOf?;
+};
+
+# String schema object
+public type StringSchema record {|
+    *BasePrimitiveTypeSchema;
+    # Type of the string schema
+    STRING 'type = STRING;
+    # Format of the string
+    string format?;
+    # Minimum length of the string value
+    int minLength?;
+    # Maximum length of the string value
+    int maxLength?;
+    # Regular expression pattern of the string value
+    string pattern?;
+    # Enum values of the string value
+    (PrimitiveType?)[] 'enum?;
+|};
+
+# Boolean schema object
+public type BooleanSchema record {
+    *BasePrimitiveTypeSchema;
+    # Type of the boolean schema
+    BOOLEAN 'type;
+};
+
+# Primitive type schema object
+public type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
+
+# Array schema object
+public type ArraySchema record {
+    *BaseTypeSchema;
+    # Type of the array schema
+    ARRAY 'type = ARRAY;
+    # Whether the array items are unique
+    boolean uniqueItems?;
+    # Schema of the array items 
+    Schema items;
+    # Minimum number of items in the array
+    int minItems?;
+    # Maximum number of items in the array
+    int maxItems?;
+    # Not allowed properties
+    never properties?;
+};
+
+# Discriminator object
+public type Discriminator record {
+    # Name of the property that specifies the type
+    string propertyName;
+    # Mapping of the property values to schema names
+    map<string> mapping?;
+};
+
+# One of schema object
+public type OneOfSchema record {
+    *BaseSchema;
+    # List of schemas that should match
+    Schema[] oneOf;
+    # Discriminator
+    Discriminator discriminator?;
+};
+
+# All of schema object
+public type AllOfSchema record {
+    *BaseSchema;
+    # List of schemas that should match
+    Schema[] allOf;
+};
+
+# Any of schema object
+public type AnyOfSchema record {
+    *BaseSchema;
+    # List of schemas that should match
+    Schema[] anyOf;
+    # Discriminator
+    Discriminator discriminator?;
+};
+
+# Not schema object
+public type NotSchema record {
+    *BaseSchema;
+    # Schema that should not match
+    Schema not;
+};
+
+# Object schema, where type should be specified and properties are optional
+public type ObjectSchemaType1 record {
+    *BaseTypeSchema;
+    # Type of the object schema
+    OBJECT 'type;
+    # Minimum number of properties in the object
+    int minProperties?;
+    # Maximum number of properties in the object
+    int maxProperties?;
+    # List of required properties
+    boolean|string[] required?;
+    # List of properties
+    map<Schema> properties?; // properties are optional for open-ended objects
+    # Additional properties
+    boolean|Schema additionalProperties?;
+    # Discriminator
+    Discriminator discriminator?;
+    # Not allowed items. Distinction between array and object
+    never items?;
+};
+
+# Object schema, where type is not specified, but properties are specified
+public type ObjectSchemaType2 record {
+    *ObjectSchemaType1;
+    # To match when type is not specified, but properties are specified
+    never 'type?;
+    # List of properties
+    map<Schema> properties;
+};
+
+# Object schema
+public type ObjectSchema ObjectSchemaType1|ObjectSchemaType2;
+
+# Reference object
+public type Reference record {
+    # Reference to a component
+    string \$ref;
+    # Short description of the target component
+    string summary?;
+    # Detailed description of the target component
+    string description?;
+};
+
+# Defines a OpenAPI schema
+public type Schema PrimitiveTypeSchema|ArraySchema|ObjectSchema|OneOfSchema|AllOfSchema|AnyOfSchema|NotSchema|Reference;
+
+# Describes a single request body.
+public type RequestBody record {
+    # A brief description of the request body. This could contain examples of use.
+    string description?;
+    # The content of the request body. 
+    map<MediaType> content;
+    # Whether the request body is mandatory in the request.
+    boolean required?;
+};
+
+# Describes a single API operation on a path.
+public type Operation record {
+    # A list of tags for API documentation control.
+    string[] tags?;
+    # A short summary of what the operation does.
+    string summary?;
+    # A description explanation of the operation behavior.
+    string description?;
+    # Operation ID for referencing the operation.
+    string operationId?;
+    # A list of parameters that are applicable for this operation.
+    (Parameter|Reference)[] parameters?;
+    # The request body applicable for this operation.
     RequestBody|Reference requestBody?;
+    # The list of possible responses as they are returned from executing this operation.
     map<Response|Reference> responses?;
-    map<Callback|Reference> callbacks?;
-    boolean deprecated?;
-    SecurityRequirement[] security?;
-    Server[] servers?;
-|};
+};
 
-type Callback record {|
-    Paths pathItems;
-|};
-
-type Responses record {|
+# Describes the responses from an API Operation.
+public type Responses record {|
+    # Default response for the API Operation.
     Response|Reference default?;
     Response|Reference...;
 |};
 
-type Response record {|
-    string description;
+# Describes a single response from an API Operation.
+public type Response record {
+    # A short description of the response.
+    string description?;
+    # A map containing schema of the response headers.
     map<Header|Reference> headers?;
+    # A map containing the structure of the response body.
     map<MediaType> content?;
-    map<Link|Reference> links?;
-|};
+    # Not allowed $ref
+    never \$ref?;
+};
 
-type Link record {|
-    string operationRef?;
-    string operationId?;
-    map<anydata> parameters?;
-    anydata requestBody?;
-    string description?;
-    Server server?;
-|};
-
-type ExternalDocumentation record {|
-    string description?;
-    string url;
-|};
-
-type Parameter record {|
+# Describes a single operation parameter.
+public type Parameter record {
+    # Name of the parameter
     string name;
+    # The location of the parameter
     ParameterLocation 'in;
+    # Whether the parameter is mandatory
     boolean required?;
+    # A brief description of the parameter
     string description?;
-    boolean deprecated?;
+    # Whether empty value is allowed
     boolean allowEmptyValue?;
+    # Describes how a specific property value will be serialized depending on its type.
     ParameterStyle style?;
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
     boolean explode?;
-    boolean allowReserved?;
+    # Schema of the parameter
     Schema schema?;
-    anydata example?;
-    map<Example|Reference> examples?;
+    # Content of the parameter
     map<MediaType> content?;
-|};
+};
 
-type Tag record {|
-    string name;
-    string description?;
-    ExternalDocumentation externalDocs?;
-|};
-
-type OpenApiSpec readonly & record {|
+# OpenAPI Specification 3.1.0
+public type OpenApiSpec record {
+    # OpenAPI version
     string openapi;
-    Info info;
-    string jsonSchemaDialect?;
+    # Server information
     Server[] servers?;
+    # Server resource definitions
     Paths paths?;
-    map<PathItem|Reference> webhooks?;
+    # Reference objects
     Components components?;
-    SecurityRequirement[] security?;
-    Tag[] tags?;
-    ExternalDocumentation externalDocs?;
-|};
+};

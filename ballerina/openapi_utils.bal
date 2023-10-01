@@ -61,30 +61,28 @@ HttpApiSpecification & readonly|error {
 # + return - A record with the list of extracted tools and the service URL (if available)
 public isolated function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
 HttpApiSpecification & readonly|error {
-    cleanXTagsFromJsonSpec(openApiSpec);
-    OpenApiSpec cleanedSpec = check openApiSpec.cloneWithType();
+    OpenApiSpec spec = check parseOpenApiSpec(openApiSpec);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(cleanedSpec).cloneReadOnly();
+    return check visitor.visit(spec).cloneReadOnly();
 }
 
-isolated function cleanXTagsFromJsonSpec(map<json>|json[] openAPISpec) {
-    if openAPISpec is map<json> {
-        foreach [string, json] [key, value] in openAPISpec.entries() {
-            if key.startsWith("x-") {
-                _ = openAPISpec.remove(key);
-                continue;
-            }
-            if value is map<json>|json[] {
-                _ = cleanXTagsFromJsonSpec(value);
-            }
-        }
-        return;
+# Parses the given OpenAPI specification as a JSON to a OpenApiSpec object.
+#
+# + openApiSpec - A valid OpenAPI specification in JSON format
+# + return - A OpenApiSpec object
+public isolated function parseOpenApiSpec(map<json> openApiSpec) returns OpenApiSpec|UnsupportedOpenApiVersion|OpenApiParsingError {
+    if !openApiSpec.hasKey("openapi") {
+        return error UnsupportedOpenApiVersion("OpenAPI version is not specified in the specification.");
     }
-    foreach json element in openAPISpec {
-        if element is map<json>|json[] {
-            _ = cleanXTagsFromJsonSpec(element);
-        }
+    json version = openApiSpec.get("openapi");
+    if version !is string || !version.matches(re `3\.0\..`) {
+        return error UnsupportedOpenApiVersion("Unsupported OpenAPI version. Supports specifications with version 3.x.x only.");
     }
+    OpenApiSpec|error parseSpec = openApiSpec.cloneWithType();
+    if parseSpec is OpenApiSpec {
+        return parseSpec;
+    }
+    return error OpenApiParsingError("Error while parsing the OpenAPI specification.", cause = parseSpec);
 }
 
 class OpenApiSpecVisitor {
@@ -97,22 +95,24 @@ class OpenApiSpecVisitor {
     }
 
     isolated function visit(OpenApiSpec openApiSpec) returns HttpApiSpecification|error {
-        if !openApiSpec.openapi.matches(re `3\.0\..`) {
-            return error("Unsupported OpenAPI version. Supports specifications with version 3.0.x only.");
-        }
-
         string? serviceUrl = self.visitServers(openApiSpec.servers);
         self.referenceMap = self.visitComponents(openApiSpec.components);
 
         Paths? paths = openApiSpec.paths;
+        error? parsingError = ();
         if paths !is () {
-            check self.visitPaths(paths);
+            parsingError = trap check self.visitPaths(paths);
         }
-
-        return {
-            serviceUrl,
-            tools: self.tools.cloneReadOnly()
-        };
+        if parsingError is () {
+            return {
+                serviceUrl,
+                tools: self.tools.cloneReadOnly()
+            };
+        }
+        if parsingError.message().includes("{ballerina}StackOverflow") {
+            return error ParsingStackOverflowError("Parsing failed due to either a cyclic reference or the excessive length of the specification.", cause = parsingError);
+        }
+        return error OpenApiParsingError("Error while parsing the OpenAPI specification.", cause = parsingError);
     }
 
     private isolated function visitServers(Server[]? servers) returns string? {
@@ -130,7 +130,10 @@ class OpenApiSpecVisitor {
             return {};
         }
         map<ComponentType> referenceMap = {};
-        foreach [string, map<ComponentType|Reference>] [componentType, componentMap] in components.entries() {
+        foreach [string, anydata] [componentType, componentMap] in components.entries() {
+            if componentMap !is map<ComponentType|Reference> {
+                continue;
+            }
             foreach [string, ComponentType|Reference] [componentName, component] in componentMap.entries() {
                 string ref = string `#/${OPENAPI_COMPONENTS_KEY}/${componentType}/${componentName}`;
                 referenceMap[ref] = component;
@@ -142,51 +145,37 @@ class OpenApiSpecVisitor {
     private isolated function visitPaths(Paths paths) returns error? {
         foreach [string, PathItem|Reference] [pathUrl, pathItem] in paths.entries() {
             if pathItem is Reference {
-                check self.visitPathItem(check self.resolveReference(pathItem).ensureType(), pathUrl);
+                check self.visitPathItem(pathUrl, check self.visitReference(pathItem).ensureType());
+            } else if pathItem is PathItem {
+                check self.visitPathItem(pathUrl, pathItem);
             } else {
-                check self.visitPathItem(pathItem, pathUrl);
+                return error("Unsupported path item type.", 'type = typeof pathItem);
             }
         }
     }
 
-    private isolated function visitPathItem(PathItem pathItem, string pathUrl) returns error? {
-        if pathItem.get is Operation {
-            check self.visitOperation(<Operation>pathItem.get, pathUrl, GET);
-        }
-        if pathItem.post is Operation {
-            check self.visitOperation(<Operation>pathItem.post, pathUrl, POST);
-        }
-        if pathItem.put is Operation {
-            check self.visitOperation(<Operation>pathItem.put, pathUrl, PUT);
-        }
-        if pathItem.delete is Operation {
-            check self.visitOperation(<Operation>pathItem.delete, pathUrl, DELETE);
-        }
-        if pathItem.options is Operation {
-            check self.visitOperation(<Operation>pathItem.options, pathUrl, OPTIONS);
-        }
-        if pathItem.head is Operation {
-            check self.visitOperation(<Operation>pathItem.head, pathUrl, HEAD);
-        }
-        if pathItem.patch is Operation {
-            check self.visitOperation(<Operation>pathItem.patch, pathUrl, PATCH);
-        }
-        if pathItem.trace is Operation {
-            return error("Http trace method is not supported");
+    private isolated function visitPathItem(string pathUrl, PathItem pathItem) returns error? {
+        HttpMethod[] supportedMethods = [GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH];
+        foreach HttpMethod httpMethod in supportedMethods {
+            string method = httpMethod.toLowerAscii();
+            if !pathItem.hasKey(method) {
+                continue;
+            }
+            anydata operation = pathItem.get(method);
+            if operation is Operation {
+                check self.visitOperation(pathUrl, httpMethod, operation);
+            }
         }
     }
 
-    private isolated function visitOperation(Operation operation, string path, HttpMethod method) returns error? {
-        if operation.servers !is () {
-            return error("Path-wise service URLs are not supported. Please use global server URL.");
-        }
-        string? description = operation.summary ?: operation.description;
+    private isolated function visitOperation(string path, HttpMethod method, Operation operation) returns error? {
+        string? description = operation.description ?: operation.summary;
         if description is () {
-            return error(string `Summary or description is mandotory for paths. It is missing for ${path} and method ${method}`);
+            return error IncompleteSpecificationError(string `A summary or description is mandatory for API paths. But it is missing for the resource "[${method}]:${path}"`);
         }
         string? name = operation.operationId;
         if name is () {
-            return error(string `OperationId is mandotory. It is missing for ${path} and method ${method}`);
+            return error(string `OperationId is mandotory for API paths. But, tt is missing for the resource "[${method}]:${path}"`);
         }
 
         // resolve parameters
@@ -197,10 +186,10 @@ class OpenApiSpecVisitor {
             {pathParameters, queryParameters} = check self.visitParameters(parameters);
         }
 
-        JsonInputSchema? requestBody = ();
+        RequestBodySchema? requestBody = ();
         RequestBody|Reference? requestBodySchema = operation.requestBody;
         if requestBodySchema is Reference {
-            RequestBody resolvedRequestBody = check self.resolveReference(requestBodySchema).ensureType();
+            RequestBody resolvedRequestBody = check self.visitReference(requestBodySchema).ensureType();
             requestBody = check self.visitRequestBody(resolvedRequestBody);
         } else if requestBodySchema is RequestBody {
             requestBody = check self.visitRequestBody(requestBodySchema);
@@ -217,14 +206,19 @@ class OpenApiSpecVisitor {
         });
     }
 
-    private isolated function visitRequestBody(RequestBody requestBody) returns JsonInputSchema|error {
-        map<MediaType> content = requestBody.content;
-
+    private isolated function visitContent(map<MediaType> content) returns Schema|error {
         // check for json content
-        if !content.hasKey(OPENAPI_JSON_CONTENT_KEY) {
-            return error("Only json content is supported.");
+        foreach [string, MediaType] [key, value] in content.entries() {
+            if key.trim().matches(re `(application/.*json|text/.*plain|\*/\*)`) {
+                return value.schema;
+            }
         }
-        Schema schema = content.get(OPENAPI_JSON_CONTENT_KEY).schema;
+        return error UnsupportedMediaTypeError("Only json or text content is supported.", availableContentTypes = content.keys());
+    }
+
+    private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
+        map<MediaType> content = requestBody.content;
+        Schema schema = check self.visitContent(content);
         return self.visitSchema(schema).ensureType();
     }
 
@@ -259,12 +253,22 @@ class OpenApiSpecVisitor {
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
             if param is Reference {
-                resolvedParameter = check self.resolveReference(param).ensureType();
-            } else {
+                resolvedParameter = check self.visitReference(param).ensureType();
+            } else if param is Parameter {
                 resolvedParameter = param;
+            } else {
+                continue;
             }
 
-            Schema? schema = resolvedParameter.schema;
+            Schema? schema;
+            map<MediaType>? content = resolvedParameter.content;
+            if content is () {
+                schema = resolvedParameter.schema;
+            }
+            else {
+                schema = check self.visitContent(content);
+            }
+
             if schema is () {
                 continue;
             }
@@ -306,20 +310,18 @@ class OpenApiSpecVisitor {
         };
     }
 
-    private isolated function resolveReference(Reference reference) returns ComponentType|error {
+    private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
         if !self.referenceMap.hasKey(reference.\$ref) {
-            return error("No component found for the reference: " + reference.\$ref);
+            return error InvalidReferenceError("Missing component object for the given reference", reference = reference.\$ref);
         }
         ComponentType|Reference component = self.referenceMap.get(reference.\$ref);
-
         if component is Reference {
-            return self.resolveReference(component);
+            return self.visitReference(component);
         }
         return component;
     }
 
     private isolated function visitSchema(Schema schema) returns JsonSubSchema|error {
-
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema);
         }
@@ -341,8 +343,7 @@ class OpenApiSpecVisitor {
         if schema is NotSchema {
             return self.visitNotSchema(schema);
         }
-
-        Schema resolvedSchema = check self.resolveReference(<Reference>schema).ensureType();
+        Schema resolvedSchema = check self.visitReference(<Reference>schema).ensureType();
         return check self.visitSchema(resolvedSchema);
     }
 
@@ -413,7 +414,7 @@ class OpenApiSpecVisitor {
     }
 
     private isolated function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
-        ObjectInputSchema[] anyOf = from Schema element in schema.anyOf
+        JsonSubSchema[] anyOf = from Schema element in schema.anyOf
             select check self.visitSchema(element).ensureType();
         return {
             anyOf
@@ -421,7 +422,7 @@ class OpenApiSpecVisitor {
     }
 
     private isolated function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
-        ObjectInputSchema[] allOf = from Schema element in schema.allOf
+        JsonSubSchema[] allOf = from Schema element in schema.allOf
             select check self.visitSchema(element).ensureType();
         return {
             allOf

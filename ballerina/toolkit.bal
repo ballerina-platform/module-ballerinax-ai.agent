@@ -20,8 +20,6 @@ import ballerina/regex;
 import ballerina/mime;
 import ballerina/lang.'int as langint;
 
-public type HttpResponseParsingError distinct error;
-
 # Supported HTTP methods.
 public enum HttpMethod {
     GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -62,8 +60,10 @@ public type HttpTool record {|
     # Path parameter definitions of the Http resource
     ParameterSchema pathParameters?;
     # Request body definition of the Http resource
-    JsonInputSchema requestBody?;
+    RequestBodySchema requestBody?;
 |};
+
+public type RequestBodySchema ConstantValueSchema|PrimitiveInputSchema|JsonInputSchema;
 
 // input record definitions ----------------------------
 # Defines an HTTP input record.
@@ -124,7 +124,7 @@ public isolated class HttpServiceToolKit {
         foreach HttpTool httpTool in httpTools {
             ParameterSchema? queryParameters = httpTool?.queryParameters;
             ParameterSchema? pathParameters = extractPathParams(httpTool.path, httpTool?.pathParameters);
-            JsonInputSchema? requestBody = httpTool?.requestBody;
+            RequestBodySchema? requestBody = httpTool?.requestBody;
 
             map<JsonSubSchema> properties = {path: {'const: httpTool.path}};
 
@@ -331,22 +331,19 @@ isolated function extractPathParams(string path, ParameterSchema? pathParameters
 }
 
 isolated function extractResponsePayload(http:Response response) returns HttpOutput|HttpResponseParsingError {
-    int contentLength;
-    string contentType;
     int code = response.statusCode;
-    do {
-        contentLength = check getContentLength(response);
-        if contentLength <= 0 {
-            return {
-                code,
-                headers: {contentLength: 0}
-            };
-        }
-        contentType = response.getContentType();
-    } on fail error e {
-        return error HttpResponseParsingError("Error occurred while extracting headers from the response.", e);
+    int|error contentLength = getContentLength(response);
+    if contentLength is error {
+        return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
+    }
+    if contentLength <= 0 {
+        return {
+            code,
+            headers: {contentLength: 0}
+        };
     }
     json|xml|error body;
+    string contentType = response.getContentType();
     match regex:split(contentType, ";")[0] {
         mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
             body = response.getTextPayload();
@@ -354,9 +351,6 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
         _ => {
             body = "<Unsupported Content Type>";
         }
-    }
-    if body is error {
-        body = response.getTextPayload();
     }
     if body is error {
         return error HttpResponseParsingError("Error occurred while parsing the response payload.", body, contentType = contentType);
