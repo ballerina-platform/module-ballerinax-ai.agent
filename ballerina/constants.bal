@@ -35,6 +35,7 @@ const OPENAPI_QUERY_PARAM_SUPPORTED_STYLE = "form";
 const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
+const ERROR_INSTRUCTION_KEY = "instruction";
 
 //toolkit
 const QUERY_PARAM_KEY = "queryParameters";

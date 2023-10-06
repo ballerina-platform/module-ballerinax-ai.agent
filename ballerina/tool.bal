@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/log;
 import ballerina/regex;
 
 type ToolNotFoundError distinct error;
@@ -55,13 +54,13 @@ isolated class ToolStore {
     # + return - Result of the tool execution or an error if tool execution fails
     isolated function runTool(string toolName, map<json>? inputs) returns any|error {
         if !self.tools.hasKey(toolName) {
-            return error ToolNotFoundError(string `Can't find the tool '${toolName}'. Provide a valid toolName`);
+            return error ToolNotFoundError("Cannot find the tool.", toolName = toolName, instruction = string `Tool "${toolName}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
         }
 
         isolated function caller = self.tools.get(toolName).caller;
         map<json>|error inputValues = mergeInputs(inputs, self.tools.get(toolName).constants);
         if inputValues is error {
-            return error ToolInvalidInputError(string `Tool '${toolName}' is provide with invalid inputs: ${(inputs ?: {}).toString()}`);
+            return error ToolInvalidInputError("Tool is provide with invalid inputs.", inputValues, toolName = toolName, inputs = inputs ?: {}, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
         }
 
         any|error observation;
@@ -72,8 +71,7 @@ isolated class ToolStore {
             observation = trap check function:call(caller, toolParams);
         }
         if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            log:printWarn(string `Tool '${toolName}' is provide with invalid inputs: ${inputValues.toString()}`);
-            return error ToolInvalidInputError(string `Tool '${toolName}' is provide with invalid inputs: ${(inputs ?: {}).toString()}`);
+            return error ToolInvalidInputError("Tool is provide with invalid inputs.", observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
         }
         return observation;
     }
@@ -104,7 +102,7 @@ isolated class ToolStore {
 isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) returns error? {
     foreach Tool tool in tools {
         if toolMap.hasKey(tool.name) {
-            return error(string `Duplicated tools. Tool '${tool.name}' is already registered.`);
+            return error("Duplicated tools. Tool name should be unique.", toolName = tool.name);
         }
 
         JsonInputSchema? variables = check tool.parameters.cloneWithType();
