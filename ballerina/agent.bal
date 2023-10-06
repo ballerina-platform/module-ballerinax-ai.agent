@@ -15,10 +15,9 @@
 // under the License.
 
 import ballerina/io;
+import ballerina/lang.value;
 import ballerina/log;
 import ballerina/regex;
-
-type LlmInputParseError distinct error;
 
 # Parsed response from the LLM.
 type NextTool record {|
@@ -95,24 +94,22 @@ public class AgentExecutor {
     #
     # + llmResponse - String form LLM response including new tool 
     # + return - LLMResponse record or an error if the parsing failed
-    private isolated function parseLlmOutput(string llmResponse) returns NextTool|LlmInputParseError {
+    private isolated function parseLlmOutput(string llmResponse) returns NextTool|LlmActionParseError {
         if llmResponse.toLowerAscii().includes(FINAL_ANSWER_KEY) {
             return {
                 tool: "complete",
                 isCompleted: true
             };
         }
-
         string[] content = regex:split(llmResponse + "<endtoken>", "```");
         if content.length() < 3 {
-            log:printError("Unexpected LLM response is given: \n`" + llmResponse + "`");
-            return error LlmInputParseError("Error: Unable to extract the tool due to the invalid generation. Can you use the specified format?");
+            log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
+            return error LlmActionParseError("Unable to extract the tool due to invalid generation", llmResponse = llmResponse, instruction = "Tool execution failed due to invalid generation. Regenerate following the given format.");
         }
-
         NextTool|error nextTool = content[1].fromJsonStringWithType();
         if nextTool is error {
-            log:printError(string `Error while extracting actions from LLM response. ${nextTool.toString()}`);
-            return error LlmInputParseError("Error: Provide with an invalid `action` JSON blob. Can you follow the specified format?");
+            log:printWarn("Unexpected JSON schema is given as the action.", nextTool);
+            return error LlmActionParseError("Unexpected JSON schema is given as the action.", nextTool, llmResponse = llmResponse, instruction = "Generated JSON blob is incorrect. Regenerate following the given format.");
         }
         return nextTool;
     }
@@ -120,15 +117,15 @@ public class AgentExecutor {
     # Reason the next step of the agent.
     #
     # + return - Thought to be executed by the agent or an error if the reasoning failed
-    public isolated function reason() returns string|error {
+    public isolated function reason() returns string|TaskTerminationError|LlmGenerationError {
         if self.isCompleted {
-            return error("Agent has already completed the task. Can't reason anymore.");
+            return error TaskTerminationError("Task is already completed. No more reasoning is needed.");
         }
         string|error decision = self.decideNextTool();
         if decision is error {
-            return error("Error while communicating to LLM. Task is terminated due to: " + decision.toString());
+            return error LlmGenerationError("Error while communicating to LLM.", decision);
         }
-        return string `${THOUGHT_KEY} ${decision.trim()}`;
+        return string `${THOUGHT_KEY} ${normalizeLlmResponse(decision)}`;
     }
 
     # Execute the next step of the agent.
@@ -136,19 +133,19 @@ public class AgentExecutor {
     # + thought - Thought to be executed by the agent
     # + return - Observations from the tool can be any|error|null
     public isolated function act(string thought) returns any|error {
-        NextTool|LlmInputParseError nextTool = self.parseLlmOutput(thought);
-        if nextTool is LlmInputParseError {
-            return nextTool;
+        NextTool|LlmActionParseError nextTool = self.parseLlmOutput(thought);
+        if nextTool is LlmActionParseError {
+            map<value:Cloneable> detail = nextTool.detail();
+            return detail.hasKey(ERROR_INSTRUCTION_KEY) ? detail.get(ERROR_INSTRUCTION_KEY) : "Tool execution failed due to invalid generation. Regenerate following the given format.";
         }
         if nextTool.isCompleted {
             self.isCompleted = true;
             return ();
         }
         any|error observation = self.toolStore.runTool(nextTool.tool, nextTool.tool_input);
-        if observation is ToolNotFoundError { // whether tool was found
-            observation = string `Tool "${nextTool.tool}" doesn't exists. Can you use one from the list of tools specified?`;
-        } else if observation is ToolInvalidInputError { // whether tool is given correct inputs 
-            observation = string `Tool "${nextTool.tool}" failed due to invalid input. Can you use the specified format in "inputSchema"?`;
+        if observation is ToolNotFoundError || observation is ToolInvalidInputError {
+            map<value:Cloneable> detail = observation.detail();
+            observation = detail.hasKey(ERROR_INSTRUCTION_KEY) ? detail.get(ERROR_INSTRUCTION_KEY) : "Tool execution failed due to invalid generation. Regenerate following the given format.";
         } else if observation is () { // whether tool return any value or error 
             observation = string `Tool '${nextTool.tool}' didn't return any values or errors. Verify whether it was successful.`;
         }
@@ -333,4 +330,23 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
         historyPrompt += string `${step.thought}${"\n"}Observation: ${observationStr}${"\n"}`;
     }
     return historyPrompt;
+}
+
+isolated function normalizeLlmResponse(string llmResponse) returns string {
+    string thought = llmResponse.trim();
+    if !thought.includes("```") {
+        if thought.startsWith("{") && thought.endsWith("}") {
+            thought = string `${"```"}${thought}${"```"}`;
+        } else {
+            int? jsonStart = thought.indexOf("{");
+            int? jsonEnd = thought.lastIndexOf("}");
+            if jsonStart is int && jsonEnd is int {
+                thought = string `${"```"}${thought.substring(jsonStart, jsonEnd + 1)}${"```"}`;
+            }
+        }
+    }
+    thought = regex:replace(thought, "```json", "```");
+    thought = regex:replaceAll(thought, "\"\\{\\}\"", "{}");
+    thought = regex:replaceAll(thought, "\\\\\"", "\"");
+    return thought;
 }
