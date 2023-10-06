@@ -60,7 +60,7 @@ isolated class ToolStore {
         isolated function caller = self.tools.get(toolName).caller;
         map<json>|error inputValues = mergeInputs(inputs, self.tools.get(toolName).constants);
         if inputValues is error {
-            return error ToolInvalidInputError("Tool is provide with invalid inputs.", inputValues, toolName = toolName, inputs = inputs ?: {}, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = toolName, inputs = inputs ?: {}, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
         }
 
         any|error observation;
@@ -71,7 +71,7 @@ isolated class ToolStore {
             observation = trap check function:call(caller, toolParams);
         }
         if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            return error ToolInvalidInputError("Tool is provide with invalid inputs.", observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
         }
         return observation;
     }
