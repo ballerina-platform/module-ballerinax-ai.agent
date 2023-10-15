@@ -185,8 +185,11 @@ public class AgentExecutor {
         return {value: {thought, observation}};
     }
 
-    isolated function getPromptConstruct() returns PromptConstruct {
-        return self.prompt;
+    # Allow retrieving the execution history during previous steps.
+    # 
+    # + return - Execution history of the agent (A list of ExecutionStep)
+    public isolated function getExecutionHistory() returns ExecutionStep[] {
+        return self.prompt.history;
     }
 }
 
