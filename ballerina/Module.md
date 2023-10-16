@@ -72,6 +72,7 @@ You can automatically extract tools from a valid [OpenAPI specification](https:/
 ```ballerina
 string openApiPath = "<PATH TO THE JSON/YAML FILE>";
 agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpecFile(openApiPath);
+string? serviceUrl = apiSpecification.serviceUrl; // service url extracted from the spec
 agent:HttpTool[] tools = apiSpecification.tools;
 ```
 
