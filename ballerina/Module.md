@@ -278,7 +278,7 @@ isolated function sendEmail(gmail:MessageRequest messageRequest) returns string|
 }
 ```
 
-Now that we have the `sendEmail` function defined, we can proceed with creating the tool that utilizes this function. To define the `inputSchema` for the tool, we inspect the structure of the `gmail:MessageRequest` record and include only the necessary fields required for our task. Since the rest of the fields are not mandatory for the tool's execution, we can safely ignore them.
+Now that we have the `sendEmail` function defined, we can proceed with creating the tool that utilizes this function. To define the `parameters` for the tool, we inspect the structure of the `gmail:MessageRequest` record and include only the necessary fields required for our task. Since the rest of the fields are not mandatory for the tool's execution, we can safely ignore them.
 
 ```ballerina
 agent:Tool sendEmailTool = {
