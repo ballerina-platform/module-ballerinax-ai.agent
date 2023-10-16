@@ -36,7 +36,7 @@ To define a tool using the above function, you can use the following syntax:
 agent:Tool exampleTool = {
     name: "exampleTool", // used as an identifier 
     description: "defines the purpose of the function", // provides information about the behavior
-    inputSchema: {
+    parameters: {
         // a JSON schema that defines the inputs to the function (if applicable)
     },
     caller: functionName // a pointer to the function
@@ -55,10 +55,10 @@ agent:HttpTool httpResourceTool = {
     method: "get" // the HTTP request method (e.g., GET, POST, DELETE, PUT, etc.)
     queryParameters: {
         // a JSON schema defining the query parameters of the HTTP resource
-    }
+    },
     pathParameters: {
         // a JSON schema defining path parameters of the HTTP resource
-    }
+    },
     requestBody: {
         // a JSON schema defining the request body of the HTTP resource
     }
@@ -70,8 +70,9 @@ agent:HttpTool httpResourceTool = {
 You can automatically extract tools from a valid [OpenAPI specification](https://swagger.io/specification/) (3.x) file using the `extractToolsFromOpenApiSpecFile` function, as demonstrated below:
 
 ```ballerina
-string openApiPath = "<PATH TO THE JSON FILE>"
-agent:HttpTool[] tools = extractToolsFromOpenApiSpecFile(openApiPath)
+string openApiPath = "<PATH TO THE JSON/YAML FILE>";
+agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpecFile(openApiPath);
+agent:HttpTool[] tools = apiSpecification.tools;
 ```
 
 The file containing the OpenAPI specification should be in either JSON or YAML format. To load them using a `map<json>` field, use `extractToolsFromOpenApiJsonSpec` instead of the above. 
@@ -94,7 +95,7 @@ type SendEmailInput record {|
 
 JSON input schema: 
 ```ballerina
- agent:InputSchema schema = {
+ agent:ObjectInputSchema schema = {
         'type: agent:OBJECT,
         properties: {
             recipient: {
@@ -106,7 +107,7 @@ JSON input schema:
             messageBody: {'type: agent:STRING},
             contentType: {'const: "text/plain"} // a constant value 
         }
-}
+};
 ```
 
 
@@ -184,10 +185,10 @@ To create an agent, you need an LLM model and a set of Tool (or ToolKit) definit
 
 
 ```ballerina
-(agent.Tool|agent.BaseToolKit)[] tools = [
+(agent:Tool|agent:BaseToolKit)[] tools = [
     //tools and toolkits
-]
-agent.Agent agent = check new (model, ...tools);
+];
+agent:Agent agent = check new (model, ...tools);
 ```
 
 There are multiple ways to utilize the agent.
@@ -220,7 +221,7 @@ Additionally, this approach empowers users to manipulate the execution trace of 
 
 ```ballerina
 string QUERY = "<NL COMMAND>";
-agent.AgentExecutor agentExecutor = agent.getExecutor(QUERY);
+agent:AgentExecutor agentExecutor = agent.getExecutor(QUERY);
 while(agentExecutor.hasNext()){
     string|error thought = agentExecutor.reason(); // reasoning step
     if thought is error {
@@ -235,7 +236,7 @@ while(agentExecutor.hasNext()){
         // handle the error using another tool if needed tool
         
         // <OPTIONAL> restart the execution after manipulating the trace
-        agent.ExecutionStep[] trace = agentExecutor.getPromptConstruct().history;
+        agent:ExecutionStep[] trace = agentExecutor.getExecutionHistory().history;
         // manipulate the traces if required (e.g. remove unnecessary steps, add manual steps)
         agentExecutor = agent.getExecutor(QUERY, trace); // restarts the execution from the last step
         break;
@@ -282,7 +283,7 @@ Now that we have the `sendEmail` function defined, we can proceed with creating 
 agent:Tool sendEmailTool = {
     name: "Send mail",
     description: "useful to send emails to a given recipient",
-    inputSchema: {
+    parameters: {
         properties: {
             recipient: {'type: agent:STRING},
             subject: {'type: agent:STRING},
