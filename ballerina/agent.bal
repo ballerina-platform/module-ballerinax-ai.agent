@@ -59,8 +59,9 @@ public class AgentIterator {
 public class AgentExecutor {
     private LlmModel model;
     private ToolStore toolStore;
-    private PromptConstruct prompt;
     private boolean isCompleted;
+    PromptConstruct prompt;
+
 
     isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();

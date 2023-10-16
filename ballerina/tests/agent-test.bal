@@ -68,7 +68,7 @@ function testInitializedPrompt() returns error? {
         "Final Answer: [Provide the final answer to the original input question]\n\n" +
         "Let's get started!";
 
-    test:assertEquals(agentExecutor.getPromptConstruct().instruction, instruction);
+    test:assertEquals(agentExecutor.prompt.instruction, instruction);
 }
 
 @test:Config {}
