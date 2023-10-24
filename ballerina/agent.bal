@@ -59,8 +59,9 @@ public class AgentIterator {
 public class AgentExecutor {
     private LlmModel model;
     private ToolStore toolStore;
-    private PromptConstruct prompt;
     private boolean isCompleted;
+    PromptConstruct prompt;
+
 
     isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();
@@ -185,8 +186,11 @@ public class AgentExecutor {
         return {value: {thought, observation}};
     }
 
-    isolated function getPromptConstruct() returns PromptConstruct {
-        return self.prompt;
+    # Allow retrieving the execution history during previous steps.
+    # 
+    # + return - Execution history of the agent (A list of ExecutionStep)
+    public isolated function getExecutionHistory() returns ExecutionStep[] {
+        return self.prompt.history;
     }
 }
 
