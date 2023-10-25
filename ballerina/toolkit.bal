@@ -95,9 +95,9 @@ public type HttpOutput record {|
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
 public type BaseToolKit distinct object {
-   # Return the Tools extracted from the given httpTools.
-   # + return - A Tool record or an error if tools creation fails.
-   public isolated function getTools() returns Tool[]|error;
+    # Useful to retrieve the Tools extracted from the Toolkit.
+    # + return - A Tool record or an error if tools creation fails.
+    public isolated function getTools() returns Tool[]|error;
 };
 
 # Provide definition to an HTTP header
@@ -187,6 +187,8 @@ public isolated class HttpServiceToolKit {
         }
     }
 
+    # Useful to retrieve the Tools extracted from the HttpTools.
+    # + return - A Tool record or an error if tools creation fails.
     public isolated function getTools() returns Tool[]|error => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {

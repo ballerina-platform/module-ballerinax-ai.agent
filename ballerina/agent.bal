@@ -62,7 +62,6 @@ public class AgentExecutor {
     private boolean isCompleted;
     PromptConstruct prompt;
 
-
     isolated function init(Agent agent, string query, ExecutionStep[] previousSteps = [], string|map<json> context = {}) {
         string instruction = agent.getInstructionPrompt();
         if context != {} {
@@ -187,7 +186,7 @@ public class AgentExecutor {
     }
 
     # Allow retrieving the execution history during previous steps.
-    # 
+    #
     # + return - Execution history of the agent (A list of ExecutionStep)
     public isolated function getExecutionHistory() returns ExecutionStep[] {
         return self.prompt.history;
