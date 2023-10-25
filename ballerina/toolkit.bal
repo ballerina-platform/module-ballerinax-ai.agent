@@ -95,14 +95,16 @@ public type HttpOutput record {|
 
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
 public type BaseToolKit distinct object {
-    isolated function getTools() returns Tool[]|error;
+    # Useful to retrieve the Tools extracted from the Toolkit.
+    # + return - A Tool record or an error if tools creation fails.
+    public isolated function getTools() returns Tool[]|error;
 };
 
 # Provide definition to an HTTP header
 public type HttpHeader readonly & record {|string|string[]...;|};
 
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
-# Require to initialize the toolkit with the service url and http tools that are belongs to a singel API. 
+# Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
     private final Tool[] & readonly tools;
@@ -185,7 +187,9 @@ public isolated class HttpServiceToolKit {
         }
     }
 
-    isolated function getTools() returns Tool[]|error => self.tools;
+    # Useful to retrieve the Tools extracted from the HttpTools.
+    # + return - A Tool record or an error if tools creation fails.
+    public isolated function getTools() returns Tool[]|error => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
