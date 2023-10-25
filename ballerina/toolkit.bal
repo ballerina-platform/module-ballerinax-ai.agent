@@ -104,7 +104,7 @@ public type BaseToolKit distinct object {
 public type HttpHeader readonly & record {|string|string[]...;|};
 
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
-# Require to initialize the toolkit with the service url and http tools that are belongs to a singel API. 
+# Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
     private final Tool[] & readonly tools;
