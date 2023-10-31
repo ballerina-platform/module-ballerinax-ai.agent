@@ -343,9 +343,12 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
 
     json|xml|error body;
     string contentType = response.getContentType();
-    match regex:split(contentType, ";")[0] {
+    match regex:split(contentType, ";")[0].trim() {
         mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
             body = response.getTextPayload();
+        }
+        "" => {
+            body = ();
         }
         _ => {
             body = "<Unsupported Content Type>";
