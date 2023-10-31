@@ -236,12 +236,12 @@ public isolated class AzureChatGptModel {
     # + stop - Stop sequence to stop the completion
     # + return - Completed message or error if the completion fails
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error {
-        azure_chat:Inline_response_200 response = check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
+        azure_chat:CreateChatCompletionResponse response = check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
             ...self.modelConfig,
             stop,
             messages
         });
-        azure_chat:Inline_response_200_message? message = response.choices[0].message;
+        azure_chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         return content ?: error("Empty response from the model");
     }
