@@ -212,7 +212,7 @@ public isolated class Agent {
         Tool[] toolList = [];
         foreach BaseToolKit|Tool tool in tools {
             if tool is BaseToolKit {
-                Tool[] toolsFromToolKit = check tool.getTools(); // needed this due to nullpointer exception in ballerina
+                Tool[] toolsFromToolKit = tool.getTools(); // needed this due to nullpointer exception in ballerina
                 toolList.push(...toolsFromToolKit);
             } else {
                 toolList.push(tool);
