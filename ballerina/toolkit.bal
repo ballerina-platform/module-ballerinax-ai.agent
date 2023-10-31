@@ -340,12 +340,7 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     if contentLength is error {
         return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
     }
-    if contentLength <= 0 {
-        return {
-            code,
-            headers: {contentLength: 0}
-        };
-    }
+
     json|xml|error body;
     string contentType = response.getContentType();
     match regex:split(contentType, ";")[0] {
@@ -361,7 +356,7 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     }
     return {
         code,
-        headers: {contentType, contentLength},
+        headers: {contentType, contentLength: contentLength <= 0 ? 0 : contentLength},
         body
     };
 }
