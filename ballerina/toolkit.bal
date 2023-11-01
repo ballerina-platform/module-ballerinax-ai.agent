@@ -87,7 +87,7 @@ public type HttpOutput record {|
         # Content type of the response
         string contentType?;
         # Content length of the response
-        int contentLength;
+        int contentLength?;
     |} headers;
     # Response payload
     json|xml body?;
@@ -96,8 +96,8 @@ public type HttpOutput record {|
 # Allows implmenting custom toolkits by extending this type. Toolkits can help to define new types of tools so that agent can understand them.
 public type BaseToolKit distinct object {
     # Useful to retrieve the Tools extracted from the Toolkit.
-    # + return - A Tool record or an error if tools creation fails.
-    public isolated function getTools() returns Tool[]|error;
+    # + return - An array of Tools
+    public isolated function getTools() returns Tool[];
 };
 
 # Provide definition to an HTTP header
@@ -188,8 +188,8 @@ public isolated class HttpServiceToolKit {
     }
 
     # Useful to retrieve the Tools extracted from the HttpTools.
-    # + return - A Tool record or an error if tools creation fails.
-    public isolated function getTools() returns Tool[]|error => self.tools;
+    # + return - An array of Tools corresponding to the HttpTools
+    public isolated function getTools() returns Tool[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
         string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
@@ -340,17 +340,21 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     if contentLength is error {
         return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
     }
-    if contentLength <= 0 {
+    if contentLength == 0 {
         return {
             code,
-            headers: {contentLength: 0}
+            headers: {contentLength}
         };
     }
+
     json|xml|error body;
     string contentType = response.getContentType();
-    match regex:split(contentType, ";")[0] {
+    match regex:split(contentType, ";")[0].trim() {
         mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
             body = response.getTextPayload();
+        }
+        "" => {
+            body = ();
         }
         _ => {
             body = "<Unsupported Content Type>";
@@ -361,7 +365,7 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     }
     return {
         code,
-        headers: {contentType, contentLength},
+        headers: {contentLength: contentLength > 0 ? contentLength : (), contentType},
         body
     };
 }
