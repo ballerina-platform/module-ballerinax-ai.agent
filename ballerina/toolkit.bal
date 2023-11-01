@@ -87,7 +87,7 @@ public type HttpOutput record {|
         # Content type of the response
         string contentType?;
         # Content length of the response
-        int contentLength;
+        int contentLength?;
     |} headers;
     # Response payload
     json|xml body?;
@@ -340,6 +340,12 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     if contentLength is error {
         return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
     }
+    if contentLength == 0 {
+        return {
+            code,
+            headers: {contentLength}
+        };
+    }
 
     json|xml|error body;
     string contentType = response.getContentType();
@@ -359,7 +365,7 @@ isolated function extractResponsePayload(http:Response response) returns HttpOut
     }
     return {
         code,
-        headers: {contentType, contentLength: contentLength <= 0 ? 0 : contentLength},
+        headers: {contentLength: contentLength > 0 ? contentLength : (), contentType},
         body
     };
 }
