@@ -5,7 +5,15 @@ HttpTool[] httpTools = [
         name: "httpGet",
         path: "/example-get/{pathParam}",
         method: GET,
-        description: "test HTTP GET tool"
+        description: "test HTTP GET tool",
+        parameters: {
+            pathParam: {
+                location: PATH,
+                schema: {
+                    'type: STRING
+                }
+            }
+        }
     },
     {
         name: "httpPostWithSimpleSchema",
@@ -105,10 +113,10 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[0].name, "httpGet");
     test:assertEquals(tools[0].description, "test HTTP GET tool");
     test:assertEquals(tools[0].parameters, {
-        'type: "object",
+        'type: OBJECT,
         properties: {
             tool: {'const: httpTools[0]},
-            pathParameters: {
+            parameters: {
                 'type: OBJECT,
                 required: ["pathParam"],
                 properties: {pathParam: {'type: STRING}}

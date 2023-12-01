@@ -22,8 +22,6 @@ const DEFAULT_MAX_TOKEN_COUNT = 512;
 const DEFAULT_TEMPERATURE = 0.7d;
 
 // openapi
-const OPENAPI_QUERY_PARAM_LOC_KEY = "query";
-const OPENAPI_PATH_PARAM_LOC_KEY = "path";
 const OPENAPI_COMPONENTS_KEY = "components";
 const OPENAPI_PATTERN_DATE = "yyyy-MM-dd";
 const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
@@ -33,4 +31,3 @@ const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 const ERROR_INSTRUCTION_KEY = "instruction";
-

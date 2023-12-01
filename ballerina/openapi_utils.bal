@@ -179,12 +179,7 @@ class OpenApiSpecVisitor {
         }
 
         // resolve parameters
-        Parameters? queryParameters = ();
-        Parameters? pathParameters = ();
-        (Parameter|Reference)[]? parameters = operation.parameters;
-        if parameters !is () {
-            {pathParameters, queryParameters} = check self.visitParameters(parameters);
-        }
+        map<ParameterSchema>? parameters = check self.visitParameters(operation.parameters);
 
         RequestBodySchema? requestBody = ();
         RequestBody|Reference? requestBodySchema = operation.requestBody;
@@ -200,8 +195,7 @@ class OpenApiSpecVisitor {
             description,
             path,
             method,
-            queryParameters,
-            pathParameters,
+            parameters,
             requestBody
         });
     }
@@ -227,11 +221,11 @@ class OpenApiSpecVisitor {
         return {mediaType, schema: check self.visitSchema(schema)};
     }
 
-    private isolated function visitParameters((Parameter|Reference)[] parameters) returns record {|Parameters? pathParameters = (); Parameters? queryParameters = ();|}|error {
-        map<ParameterSchema> pathParams = {};
-        map<ParameterSchema> queryParams = {};
-        string[] pathRequired = [];
-        string[] queryRequired = [];
+    private isolated function visitParameters((Parameter|Reference)[]? parameters) returns map<ParameterSchema>?|error {
+        if parameters is () || parameters.length() == 0 {
+            return ();
+        }
+        map<ParameterSchema> parameterSchemas = {};
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -241,6 +235,18 @@ class OpenApiSpecVisitor {
                 resolvedParameter = param;
             } else {
                 continue;
+            }
+
+            ParameterLocation location = resolvedParameter.'in;
+            if location !is PATH|QUERY {
+                continue;
+            }
+
+            string name = resolvedParameter.name;
+            EncodingStyle? style = resolvedParameter.style;
+            boolean? explode = resolvedParameter.explode;
+            if location is PATH && (style is LABEL|MATRIX || explode == true) {
+                return error UnsupportedSerializationError("Only simple style parameters are supported for path parameters at this time.", 'parameter = name);
             }
 
             Schema? schema;
@@ -253,48 +259,22 @@ class OpenApiSpecVisitor {
                 {mediaType, schema} = check self.visitContent(content);
             }
             if schema is () {
-                return error InvalidParameterDefinition("Resource paramters should have either a schema or a content.", 'parameter = resolvedParameter.name);
+                return error InvalidParameterDefinition("Resource paramters should have either a schema or a content.", 'parameter = name);
             }
 
-            EncodingStyle? style = resolvedParameter.style;
-            boolean? explode = resolvedParameter.explode;
-            string name = resolvedParameter.name;
-            ParameterSchema 'parameter = {
+            parameterSchemas[name] = {
+                location,
                 mediaType,
                 schema: check self.visitSchema(schema),
                 style,
                 explode,
+                required: resolvedParameter.required,
                 description: resolvedParameter.description,
                 allowEmptyValue: resolvedParameter.allowEmptyValue,
                 nullable: resolvedParameter.nullable
             };
-
-            if resolvedParameter.'in == OPENAPI_QUERY_PARAM_LOC_KEY {
-                if resolvedParameter.required == true {
-                    queryRequired.push(name);
-                }
-                queryParams[name] = 'parameter;
-            } else if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
-                if 'parameter.style != SIMPLE && 'parameter.explode == true {
-                    return error UnsupportedSerializationError("Only simple style parameters are supported for path parameters at this time.", 'parameter = name);
-                }
-                pathRequired.push(name); // all path parameters are mandatory
-                pathParams[name] = 'parameter;
-            }
         }
-
-        Parameters? pathParameters = pathParams.length() > 0 ? {
-                required: pathRequired.length() > 0 ? pathRequired : (),
-                schemas: pathParams
-            } : ();
-        Parameters? queryParameters = queryParams.length() > 0 ? {
-                required: queryRequired.length() > 0 ? queryRequired : (),
-                schemas: queryParams
-            } : ();
-        return {
-            pathParameters,
-            queryParameters
-        };
+        return parameterSchemas;
     }
 
     private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
@@ -430,4 +410,3 @@ class OpenApiSpecVisitor {
         };
     }
 }
-

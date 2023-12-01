@@ -221,37 +221,32 @@ isolated function getSimpleStyleParams(string key, json parameterValue) returns 
     return error UnsupportedSerializationError(string `Unsupported value for path paremeter serialization.`, pathParam = key, value = parameterValue);
 }
 
-isolated function getParamEncodedPath(HttpTool tool, map<json>? pathParameters, map<json>? queryParameters) returns string|MissingHttpParameterError|UnsupportedSerializationError {
+isolated function getParamEncodedPath(HttpTool tool, map<json>? parameters) returns string|MissingHttpParameterError|UnsupportedSerializationError {
     // TODO handle special charactors :/?#[]@!$&'()*+,;=
     string pathWithParams = tool.path;
-    map<ParameterSchema>? pathParameterSchemas = tool.pathParameters?.schemas;
-    map<ParameterSchema>? queryParameterSchemas = tool.queryParameters?.schemas;
-
-    if pathParameters !is () && pathParameterSchemas !is () {
-        foreach string pathParam in pathParameterSchemas.keys() {
-            if !pathParameters.hasKey(pathParam) {
-                return error MissingHttpParameterError(string `Missing path paremter value in the generated set.`, path = tool.path, pathParam = pathParam);
-            }
-            json parameterValue = pathParameters.get(pathParam);
-            string value = check getSimpleStyleParams(pathParam, parameterValue);
-            pathWithParams = regex:replaceAll(pathWithParams, string `\{${pathParam}\}`, value);
-        }
-    }
-
-    if queryParameterSchemas !is () && queryParameters !is () {
+    map<ParameterSchema>? parameterSchemas = tool.parameters;
+    if parameters !is () && parameterSchemas !is () {
         map<QueryParamEncoding> queryParamEncoding = {};
-        foreach string queryParam in queryParameters.keys() {
-            if queryParameterSchemas.hasKey(queryParam) {
-                ParameterSchema schema = queryParameterSchemas.get(queryParam);
-                queryParamEncoding[queryParam] = {
-                    style: schema.style ?: FORM,
-                    explode: schema.explode ?: true
-                };
+        map<json> queryParams = {};
+        foreach [string, ParameterSchema] [paramName, paramSchema] in parameterSchemas.entries() {
+            if paramSchema.location == PATH {
+                if !parameters.hasKey(paramName) {
+                    return error MissingHttpParameterError(string `Missing path paremter value in the generated set.`, path = tool.path, pathParam = paramName);
+                }
+                json parameterValue = parameters.get(paramName);
+                string value = check getSimpleStyleParams(paramName, parameterValue);
+                pathWithParams = regex:replaceAll(pathWithParams, string `\{${paramName}\}`, value);
             } else {
-                queryParamEncoding[queryParam] = {};
+                if parameters.hasKey(paramName) {
+                    queryParams[paramName] = parameters.get(paramName);
+                    queryParamEncoding[paramName] = {
+                        style: paramSchema.style ?: FORM,
+                        explode: paramSchema.explode ?: true
+                    };
+                }
             }
         }
-        pathWithParams += getPathForQueryParam(queryParameters, queryParamEncoding);
+        pathWithParams += getPathForQueryParam(queryParams, queryParamEncoding);
     }
     return pathWithParams;
 }

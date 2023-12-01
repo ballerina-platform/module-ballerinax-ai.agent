@@ -16,37 +16,41 @@
 
 import ballerina/http;
 import ballerina/log;
-import ballerina/regex;
 
 # Supported HTTP methods.
 public enum HttpMethod {
     GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 }
 
+# Defines a HTTP parameter schema (can be query parameter or path parameters).
 public type ParameterSchema record {|
+    # Whether the parameter is a path or query parameter
+    PATH|QUERY location;
     # A brief description of the parameter
     string description?;
-    # Whether empty value is allowed
-    boolean allowEmptyValue?;
+    # Whether the parameter is mandatory
+    boolean required?;
     # Describes how a specific property value will be serialized depending on its type.
     EncodingStyle style?;
     # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
     boolean explode?;
     # Null value is allowed
     boolean nullable?;
+    # Whether empty value is allowed
+    boolean allowEmptyValue?;
     # Content type of the schema
     string mediaType?;
     # Parameter schema
     JsonSubSchema schema;
 |};
 
-# Defines a HTTP parameter schema (can be query parameter or path parameters).
-public type Parameters record {|
-    # A list of mandatory parameters
-    string[] required?;
-    # A map of parameter names and their types
-    map<ParameterSchema> schemas;
-|};
+// # Defines a HTTP parameter schema (can be query parameter or path parameters).
+// public type Parameters record {|
+//     # A list of mandatory parameters
+//     string[] required?;
+//     # A map of parameter names and their types
+//     map<ParameterSchema> schemas;
+// |};
 
 # Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
 public type HttpTool record {|
@@ -58,10 +62,8 @@ public type HttpTool record {|
     HttpMethod method;
     # Path of the Http resource
     string path;
-    # Query parameters definitions of the Http resource
-    Parameters queryParameters?;
-    # Path parameter definitions of the Http resource
-    Parameters pathParameters?;
+    # path and query parameters definitions of the Http resource
+    map<ParameterSchema> parameters?;
     # Request body definition of the Http resource
     RequestBodySchema requestBody?;
 |};
@@ -79,8 +81,7 @@ type HttpToolJsonSchema record {|
     *ObjectInputSchema;
     record {|
         ConstantValueSchema tool;
-        JsonSubSchema queryParameters?;
-        JsonSubSchema pathParameters?;
+        ObjectInputSchema parameters?;
         JsonSubSchema requestBody?;
     |} properties;
 |};
@@ -90,10 +91,8 @@ type HttpToolJsonSchema record {|
 type HttpInput record {|
     # Http tool record
     HttpTool tool;
-    # Query parameters of the Http resource
-    map<json> queryParameters?;
-    # Path parameters of the Http resource
-    map<json> pathParameters?;
+    # Path and query parameters for the Http resource
+    map<json> parameters?;
     # Request body of the Http resource
     map<json> requestBody?;
 |};
@@ -146,23 +145,29 @@ public isolated class HttpServiceToolKit {
         foreach HttpTool httpTool in httpTools {
             self.httpTools[httpTool.name] = httpTool;
 
-            Parameters? queryParameters = httpTool?.queryParameters;
-            Parameters? pathParameters = extractPathParams(httpTool.path, httpTool?.pathParameters);
+            map<ParameterSchema>? params = httpTool?.parameters;
             RequestBodySchema? requestBody = httpTool?.requestBody;
+
+            ObjectInputSchema? httpParameters = ();
+            if params !is () && params.length() > 0 {
+                string[] required = [];
+                map<JsonSubSchema> properties = {};
+                foreach [string, ParameterSchema] [name, 'parameter] in params.entries() {
+                    if 'parameter.location == PATH || 'parameter.required == true {
+                        required.push(name);
+                    }
+                    properties[name] = 'parameter.schema;
+                }
+                httpParameters = {
+                    required,
+                    properties
+                };
+            }
 
             HttpToolJsonSchema parameters = {
                 properties: {
                     tool: {'const: httpTool},
-                    queryParameters: queryParameters is () ? () : {
-                            required: queryParameters.required,
-                            properties: map from [string, ParameterSchema] [name, 'parameter] in queryParameters.schemas.entries()
-                                select [name, 'parameter.schema]
-                        },
-                    pathParameters: pathParameters is () ? () : {
-                            required: pathParameters.required,
-                            properties: map from [string, ParameterSchema] [name, 'parameter] in pathParameters.schemas.entries()
-                                select [name, 'parameter.schema]
-                        },
+                    parameters: httpParameters,
                     requestBody: requestBody is () ? () : requestBody.schema
                 }
             };
@@ -209,71 +214,52 @@ public isolated class HttpServiceToolKit {
     public isolated function getTools() returns Tool[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
         return extractResponsePayload(path, getResult);
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, postResult);
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, deleteResult);
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, putResult);
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, patchResult);
     }
 
     private isolated function head(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
         return extractResponsePayload(path, headResult);
     }
 
     private isolated function options(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
         log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
         return extractResponsePayload(path, optionsResult);
     }
 }
 
-isolated function extractPathParams(string path, Parameters? parameters = ()) returns Parameters? {
-    regex:Match[] pathParams = regex:searchAll(path, "\\{(\\w*?)\\}");
-    if pathParams.length() == 0 {
-        return parameters;
-    }
-    map<ParameterSchema> extractedParams = map from regex:Match 'parameter in pathParams
-        let var name = 'parameter.matched
-        select [name.substring(1, name.length() - 1), {schema: {'type: STRING}}]; // mandotory parameters by default
-
-    if parameters !is () {
-        foreach [string, ParameterSchema] [name, 'parameter] in parameters.schemas.entries() {
-            extractedParams[name] = 'parameter;
-        }
-    }
-    return {
-        required: extractedParams.keys(),
-        schemas: extractedParams
-    };
-}

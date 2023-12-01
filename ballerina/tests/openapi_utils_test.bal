@@ -29,23 +29,24 @@ function testExtractToolsFromWifiOpenAPISpec() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {
-
-                required: ["ownerEmail", "username"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    },
-                    username: {
-                        description: "Username of the guest WiFi account to be deleted",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
+
             }
         },
         {
@@ -53,16 +54,16 @@ function testExtractToolsFromWifiOpenAPISpec() returns error? {
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {
-                required: ["ownerEmail"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
+
             }
         }
     ];
@@ -98,22 +99,22 @@ function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {
-
-                required: ["ownerEmail", "username"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    },
-                    username: {
-                        description: "Username of the guest WiFi account to be deleted",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
             }
         },
@@ -122,15 +123,14 @@ function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {
-                required: ["ownerEmail"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
             }
         }
@@ -166,22 +166,22 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {
-
-                required: ["ownerEmail", "username"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    },
-                    username: {
-                        description: "Username of the guest WiFi account to be deleted",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
             }
         },
@@ -190,15 +190,14 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {
-                required: ["ownerEmail"],
-                schemas: {
-                    ownerEmail: {
-                        description: "Email address of the owner of the guest WiFi accounts",
-                        style: "simple",
-                        explode: false,
-                        schema: {'type: "string"}
-                    }
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
                 }
             }
         }

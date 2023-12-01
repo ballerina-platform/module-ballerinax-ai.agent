@@ -56,9 +56,10 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             path: "/guest-wifi-accounts/{ownerEmail}",
             method: agent:GET,
             description: "useful to list the guest wifi accounts.",
-            pathParameters: {
-                properties: {
-                    ownerEmail: {'type: agent:STRING}
+            parameters: {
+                ownerEmail: {
+                    location: agent:PATH,
+                    schema: {'type: agent:STRING}
                 }
             }
         },
@@ -68,11 +69,13 @@ public function main(string query = DEFAULT_QUERY) returns error? {
             method: agent:POST,
             description: "useful to create a guest wifi account.",
             requestBody: {
-                'type: agent:OBJECT,
-                properties: {
-                    email: {'type: agent:STRING},
-                    username: {'type: agent:STRING},
-                    password: {'type: agent:STRING}
+                schema: {
+                    'type: agent:OBJECT,
+                    properties: {
+                        email: {'type: agent:STRING},
+                        username: {'type: agent:STRING},
+                        password: {'type: agent:STRING}
+                    }
                 }
             }
         }
