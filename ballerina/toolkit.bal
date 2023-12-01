@@ -128,7 +128,6 @@ public isolated class HttpServiceToolKit {
     private final Tool[] & readonly tools;
     private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
-    private final map<HttpTool> httpTools = {};
 
     # Initializes the toolkit with the given service url and http tools.
     #
@@ -143,8 +142,6 @@ public isolated class HttpServiceToolKit {
 
         Tool[] tools = [];
         foreach HttpTool httpTool in httpTools {
-            self.httpTools[httpTool.name] = httpTool;
-
             map<ParameterSchema>? params = httpTool?.parameters;
             RequestBodySchema? requestBody = httpTool?.requestBody;
 
