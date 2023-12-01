@@ -48,3 +48,5 @@ ballerina/Dependencies.toml
 ballerina/Config.toml
 ballerina/target
 ballerina/sample*
+ballerina/openapi*
+ballerina/schem*

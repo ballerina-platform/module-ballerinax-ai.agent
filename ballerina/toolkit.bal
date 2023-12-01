@@ -17,32 +17,35 @@
 import ballerina/http;
 import ballerina/log;
 import ballerina/regex;
-import ballerina/mime;
-import ballerina/lang.'int as langint;
 
 # Supported HTTP methods.
 public enum HttpMethod {
     GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
 }
 
-# Define parameter types for HTTP parameters.
-public type ParameterType ConstantValueSchema|PrimitiveInputSchema|ArrayTypeParameterSchema;
-
-# Defines a HTTP parameter schema for Array type parameters.
-public type ArrayTypeParameterSchema record {|
-    *ArrayInputSchema;
-    # Array item type
-    PrimitiveInputSchema|ConstantValueSchema items;
-    # Default value of the parameter
-    PrimitiveType[] default?;
+public type ParameterSchema record {|
+    # A brief description of the parameter
+    string description?;
+    # Whether empty value is allowed
+    boolean allowEmptyValue?;
+    # Describes how a specific property value will be serialized depending on its type.
+    EncodingStyle style?;
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    boolean explode?;
+    # Null value is allowed
+    boolean nullable?;
+    # Content type of the schema
+    string mediaType?;
+    # Parameter schema
+    JsonSubSchema schema;
 |};
 
 # Defines a HTTP parameter schema (can be query parameter or path parameters).
-public type ParameterSchema record {|
+public type Parameters record {|
     # A list of mandatory parameters
     string[] required?;
     # A map of parameter names and their types
-    map<ParameterType> properties;
+    map<ParameterSchema> schemas;
 |};
 
 # Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
@@ -56,20 +59,37 @@ public type HttpTool record {|
     # Path of the Http resource
     string path;
     # Query parameters definitions of the Http resource
-    ParameterSchema queryParameters?;
+    Parameters queryParameters?;
     # Path parameter definitions of the Http resource
-    ParameterSchema pathParameters?;
+    Parameters pathParameters?;
     # Request body definition of the Http resource
     RequestBodySchema requestBody?;
 |};
 
-public type RequestBodySchema ConstantValueSchema|PrimitiveInputSchema|JsonInputSchema;
+public type RequestBodySchema record {|
+    # A brief description of the request body
+    string description?;
+    # Content type of the request body
+    string mediaType?;
+    # Request body schema
+    JsonSubSchema schema;
+|};
+
+type HttpToolJsonSchema record {|
+    *ObjectInputSchema;
+    record {|
+        ConstantValueSchema tool;
+        JsonSubSchema queryParameters?;
+        JsonSubSchema pathParameters?;
+        JsonSubSchema requestBody?;
+    |} properties;
+|};
 
 // input record definitions ----------------------------
 # Defines an HTTP input record.
 type HttpInput record {|
-    # Path of the Http resource
-    string path;
+    # Http tool record
+    HttpTool tool;
     # Query parameters of the Http resource
     map<json> queryParameters?;
     # Path parameters of the Http resource
@@ -82,6 +102,8 @@ type HttpInput record {|
 public type HttpOutput record {|
     # HTTP status code of the response
     int code;
+    # HTTP path url with encoded paramteres
+    string path;
     # Response headers 
     record {|
         # Content type of the response
@@ -100,16 +122,14 @@ public type BaseToolKit distinct object {
     public isolated function getTools() returns Tool[];
 };
 
-# Provide definition to an HTTP header
-public type HttpHeader readonly & record {|string|string[]...;|};
-
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
 # Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
     private final Tool[] & readonly tools;
-    private final HttpHeader headers;
+    private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
+    private final map<HttpTool> httpTools = {};
 
     # Initializes the toolkit with the given service url and http tools.
     #
@@ -118,36 +138,33 @@ public isolated class HttpServiceToolKit {
     # + clientConfig - The http client configuration associated to the tools
     # + headers - The http headers to be used in the requests
     # + returns - error if the initialization fails
-    public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, HttpHeader headers = {}) returns error? {
+    public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, map<string|string[]> headers = {}) returns error? {
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
 
         Tool[] tools = [];
         foreach HttpTool httpTool in httpTools {
-            ParameterSchema? queryParameters = httpTool?.queryParameters;
-            ParameterSchema? pathParameters = extractPathParams(httpTool.path, httpTool?.pathParameters);
+            self.httpTools[httpTool.name] = httpTool;
+
+            Parameters? queryParameters = httpTool?.queryParameters;
+            Parameters? pathParameters = extractPathParams(httpTool.path, httpTool?.pathParameters);
             RequestBodySchema? requestBody = httpTool?.requestBody;
 
-            map<JsonSubSchema> properties = {path: {'const: httpTool.path}};
-
-            if queryParameters !is () {
-                properties[QUERY_PARAM_KEY] = {
-                    ...queryParameters
-                };
-            }
-
-            if pathParameters !is () {
-                properties[PATH_PARAM_KEY] = {
-                    ...pathParameters
-                };
-            }
-
-            if requestBody !is () {
-                properties[REQUEST_BODY_KEY] = requestBody;
-            }
-
-            JsonInputSchema parameters = {
-                properties
+            HttpToolJsonSchema parameters = {
+                properties: {
+                    tool: {'const: httpTool},
+                    queryParameters: queryParameters is () ? () : {
+                            required: queryParameters.required,
+                            properties: map from [string, ParameterSchema] [name, 'parameter] in queryParameters.schemas.entries()
+                                select [name, 'parameter.schema]
+                        },
+                    pathParameters: pathParameters is () ? () : {
+                            required: pathParameters.required,
+                            properties: map from [string, ParameterSchema] [name, 'parameter] in pathParameters.schemas.entries()
+                                select [name, 'parameter.schema]
+                        },
+                    requestBody: requestBody is () ? () : requestBody.schema
+                }
             };
 
             isolated function caller = self.get;
@@ -192,194 +209,71 @@ public isolated class HttpServiceToolKit {
     public isolated function getTools() returns Tool[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
-        return extractResponsePayload(getResult);
+        return extractResponsePayload(path, getResult);
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(postResult);
+        return extractResponsePayload(path, postResult);
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(deleteResult);
+        return extractResponsePayload(path, deleteResult);
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(putResult);
+        return extractResponsePayload(path, putResult);
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(patchResult);
+        return extractResponsePayload(path, patchResult);
     }
 
     private isolated function head(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
-        return extractResponsePayload(headResult);
+        return extractResponsePayload(path, headResult);
     }
 
     private isolated function options(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getPathWithParams(httpInput.path, httpInput?.pathParameters, httpInput?.queryParameters);
+        string path = check getParamEncodedPath(httpInput.tool, httpInput?.pathParameters, httpInput?.queryParameters);
         log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
-        return extractResponsePayload(optionsResult);
+        return extractResponsePayload(path, optionsResult);
     }
 }
 
-isolated function pathParameterSerialization(PrimitiveType|PrimitiveType[] value) returns string {
-    // implements only the default serialization (style:simple and explode:false)
-    if value is PrimitiveType {
-        return value.toString();
-    }
-    string result = value.toString();
-    return result.substring(1, result.length() - 1);
-}
-
-isolated function queryParameterSerialization(string key, PrimitiveType|PrimitiveType[] value) returns string {
-    // implements only the default serialization (style=form and explode=false)
-    if value is PrimitiveType {
-        return string `${key}=${value}`;
-    }
-    string result = <string>from PrimitiveType element in value
-        select string `${key}=${element}&`;
-    return result.substring(0, result.length() - 1);
-
-}
-
-isolated function extractParamValue(string key, json parameterValue) returns PrimitiveType|PrimitiveType[]|error {
-    if parameterValue is PrimitiveType {
-        return parameterValue;
-    }
-    if parameterValue !is json[] {
-        return error(string `Unsupported HTTP parameter value. Expected primitive type or array type, but found '${parameterValue.toString()}' for key '${key}'`);
-    }
-    PrimitiveType[] arrayValues = [];
-    foreach json element in parameterValue {
-        if element is PrimitiveType {
-            arrayValues.push(element);
-        } else {
-            return error(string `Unsupported value for array type HTTP parameter. Expected primitive type, but found '${element.toString()}' for key '${key}'`);
-        }
-    }
-    return arrayValues;
-}
-
-isolated function getPathWithParams(string path, map<json>? pathParameters, map<json>? queryParameters) returns string|error {
-    string pathWithParams = path;
-
-    if pathParameters !is () {
-        foreach [string, json] [parameterKey, parameterValue] in pathParameters.entries() {
-            string key = parameterKey; // TODO: remove later. temp added due to null pointer issue
-            PrimitiveType|PrimitiveType[] value = check extractParamValue(key, parameterValue);
-            if pathWithParams.includes(string `{${key}}`) { // this is a path parameter
-                pathWithParams = regex:replaceAll(pathWithParams, string `\{${key}\}`, pathParameterSerialization(value));
-            } else {
-                return error(string `Unexpected path parameter ${key} for the path ${path}`);
-            }
-        }
-    }
-    if queryParameters is () {
-        return pathWithParams;
-    }
-    string query = "?";
-    foreach [string, json] [parameterKey, parameterValue] in queryParameters.entries() {
-        string key = parameterKey; // TODO: remove later. temp added due to null pointer issue
-        PrimitiveType|PrimitiveType[] value = check extractParamValue(key, parameterValue);
-        query += string `${queryParameterSerialization(key, value)}&`;
-    }
-    pathWithParams = pathWithParams + query.substring(0, query.length() - 1);
-    return pathWithParams;
-}
-
-isolated function extractPathParams(string path, ParameterSchema? pathParameters = ()) returns ParameterSchema? {
+isolated function extractPathParams(string path, Parameters? parameters = ()) returns Parameters? {
     regex:Match[] pathParams = regex:searchAll(path, "\\{(\\w*?)\\}");
     if pathParams.length() == 0 {
-        if pathParameters is () {
-            return ();
-        }
-        map<ParameterType> properties = pathParameters.properties;
-        return {
-            required: properties.keys(),
-            properties: properties
-        };
+        return parameters;
     }
+    map<ParameterSchema> extractedParams = map from regex:Match 'parameter in pathParams
+        let var name = 'parameter.matched
+        select [name.substring(1, name.length() - 1), {schema: {'type: STRING}}]; // mandotory parameters by default
 
-    map<ParameterType> extractedParameters = map from regex:Match param in pathParams
-        let var matched = param.matched
-        select [matched.substring(1, matched.length() - 1), {'type: STRING}]; // mandotory parameters by default
-
-    if pathParameters !is () {
-        foreach [string, ParameterType] param in pathParameters.properties.entries() {
-            extractedParameters[param[0]] = param[1];
+    if parameters !is () {
+        foreach [string, ParameterSchema] [name, 'parameter] in parameters.schemas.entries() {
+            extractedParams[name] = 'parameter;
         }
     }
     return {
-        required: extractedParameters.keys(),
-        properties: extractedParameters
+        required: extractedParams.keys(),
+        schemas: extractedParams
     };
 }
-
-isolated function extractResponsePayload(http:Response response) returns HttpOutput|HttpResponseParsingError {
-    int code = response.statusCode;
-    int|error contentLength = getContentLength(response);
-    if contentLength is error {
-        return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
-    }
-    if contentLength == 0 {
-        return {
-            code,
-            headers: {contentLength}
-        };
-    }
-
-    json|xml|error body;
-    string contentType = response.getContentType();
-    match regex:split(contentType, ";")[0].trim() {
-        mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
-            body = response.getTextPayload();
-        }
-        "" => {
-            body = ();
-        }
-        _ => {
-            body = "<Unsupported Content Type>";
-        }
-    }
-    if body is error {
-        return error HttpResponseParsingError("Error occurred while parsing the response payload.", body, contentType = contentType);
-    }
-    return {
-        code,
-        headers: {contentLength: contentLength > 0 ? contentLength : (), contentType},
-        body
-    };
-}
-
-public isolated function getContentLength(http:Response response) returns int|error {
-    string contentLength = "";
-    var length = response.getHeader(mime:CONTENT_LENGTH);
-    if (length is string) {
-        contentLength = length;
-    }
-    if (contentLength == "") {
-        return -1;
-    } else {
-        return langint:fromString(contentLength);
-    }
-}
-

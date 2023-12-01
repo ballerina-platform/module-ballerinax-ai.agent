@@ -18,14 +18,14 @@ public enum ParameterLocation {
     QUERY = "query", HEADER = "header", PATH = "path", COOKIE = "cookie"
 }
 
-public enum ParameterStyle {
+public enum EncodingStyle {
     FORM = "form",
     SIMPLE = "simple",
     MATRIX = "matrix",
     LABEL = "label",
-    SPACE_DELIMITED = "spaceDelimited",
-    PIPE_DELIMITED = "pipeDelimited",
-    DEEP_OBJECT = "deepObject"
+    SPACEDELIMITED = "spaceDelimited",
+    PIPEDELIMITED = "pipeDelimited",
+    DEEPOBJECT = "deepObject"
 }
 
 public enum HeaderStyle {
@@ -115,14 +115,14 @@ public type Header record {
 
 # Describes a encoding definition applied to a schema property.
 public type Encoding record {
-    # The Content-Type for encoding a specific property.
-    string contentType?;
-    # A map allowing additional information to be provided as headers.
-    map<Header|Reference> headers?;
     # Describes how a specific property value will be serialized depending on its type.
     string style?;
     # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
     boolean explode?;
+    # The Content-Type for encoding a specific property.
+    string contentType?;
+    # A map allowing additional information to be provided as headers.
+    map<Header|Reference> headers?;
 };
 
 # Defines media type of a parameter, response body or header
@@ -395,13 +395,15 @@ public type Parameter record {
     # Whether empty value is allowed
     boolean allowEmptyValue?;
     # Describes how a specific property value will be serialized depending on its type.
-    ParameterStyle style?;
+    EncodingStyle style?;
     # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
     boolean explode?;
     # Schema of the parameter
     Schema schema?;
     # Content of the parameter
     map<MediaType> content?;
+    # Null value is allowed
+    boolean nullable?;
 };
 
 # OpenAPI Specification 3.1.0

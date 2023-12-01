@@ -1,6 +1,6 @@
 import ballerina/test;
 
-HttpTool[] tools = [
+HttpTool[] httpTools = [
     {
         name: "httpGet",
         path: "/example-get/{pathParam}",
@@ -13,10 +13,12 @@ HttpTool[] tools = [
         method: POST,
         description: "test HTTP POST tool with simple schema",
         requestBody: {
-            properties: {
-                attribute1: {'type: STRING},
-                attribute2: {'type: INTEGER},
-                attribute3: {'type: "array", items: {'type: STRING}}
+            schema: {
+                properties: {
+                    attribute1: {'type: STRING},
+                    attribute2: {'type: INTEGER},
+                    attribute3: {'type: "array", items: {'type: STRING}}
+                }
             }
         }
     },
@@ -26,25 +28,28 @@ HttpTool[] tools = [
         method: DELETE,
         description: "test HTTP DELETE tool with complex schema",
         requestBody: {
-            'type: "object",
-            properties:
+            schema:
                 {
-                model: {'type: "string", default: "davinci"},
-                prompt: {
-                    oneOf: [
-                        {'type: "string", default: "test"},
-                        {'type: "array", items: {'type: "string"}},
-                        {'type: "array", items: {'type: "integer"}},
-                        {
-                            'type: "array",
-                            items: {
+                'type: "object",
+                properties:
+                {
+                    model: {'type: "string", default: "davinci"},
+                    prompt: {
+                        oneOf: [
+                            {'type: "string", default: "test"},
+                            {'type: "array", items: {'type: "string"}},
+                            {'type: "array", items: {'type: "integer"}},
+                            {
                                 'type: "array",
-                                items: {'type: "integer"}
+                                items: {
+                                    'type: "array",
+                                    items: {'type: "integer"}
+                                }
                             }
-                        }
-                    ]
-                },
-                suffix: {'type: "string"}
+                        ]
+                    },
+                    suffix: {'type: "string"}
+                }
             }
         }
     },
@@ -54,25 +59,27 @@ HttpTool[] tools = [
         method: DELETE,
         description: "test HTTP DELETE tool with complex schema",
         requestBody: {
-            'type: "object",
-            properties:
+            schema: {
+                'type: "object",
+                properties:
                 {
-                model: {'type: "string"},
-                prompt: {
-                    oneOf: [
-                        {'type: "string", default: ()},
-                        {'type: "array", items: {'type: "string"}},
-                        {'type: "array", items: {'type: "integer"}},
-                        {
-                            'type: "array",
-                            items: {
+                    model: {'type: "string"},
+                    prompt: {
+                        oneOf: [
+                            {'type: "string", default: ()},
+                            {'type: "array", items: {'type: "string"}},
+                            {'type: "array", items: {'type: "integer"}},
+                            {
                                 'type: "array",
-                                items: {'type: "integer", default: ()}
+                                items: {
+                                    'type: "array",
+                                    items: {'type: "integer", default: ()}
+                                }
                             }
-                        }
-                    ]
-                },
-                suffix: {'type: "string"}
+                        ]
+                    },
+                    suffix: {'type: "string"}
+                }
             }
         }
     }
@@ -85,7 +92,7 @@ isolated function getMock(HttpInput input) returns string|error {
 @test:Config {}
 function testHttpToolKitInitialization() {
     string serviceURL = "http://test-wifi-url.com";
-    HttpServiceToolKit|error httpToolKit = new (serviceURL, tools, {auth: {token: "<API-TOKEN>"}}, {"timeout": "10000"});
+    HttpServiceToolKit|error httpToolKit = new (serviceURL, httpTools, {auth: {token: "<API-TOKEN>"}}, {"timeout": "10000"});
     if httpToolKit is error {
         test:assertFail("HttpToolKit is not initialized due to an error");
     }
@@ -100,10 +107,12 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[0].parameters, {
         'type: "object",
         properties: {
-            path: {
-                'const: "/example-get/{pathParam}"
-            },
-            pathParameters: {'type: OBJECT, required: ["pathParam"], properties: {pathParam: {'type: STRING}}}
+            tool: {'const: httpTools[0]},
+            pathParameters: {
+                'type: OBJECT,
+                required: ["pathParam"],
+                properties: {pathParam: {'type: STRING}}
+            }
         }
     });
 
@@ -112,9 +121,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[1].parameters, {
         'type: "object",
         properties: {
-            path: {
-                'const: "/example-post"
-            },
+            tool: {'const: httpTools[1]},
             requestBody: {
                 'type: "object",
                 properties: {
@@ -131,9 +138,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[2].parameters, {
         'type: "object",
         properties: {
-            path: {
-                'const: "/example-delete"
-            },
+            tool: {'const: httpTools[2]},
             requestBody: {
                 'type: "object",
                 properties:
@@ -164,9 +169,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[3].parameters, {
         'type: "object",
         properties: {
-            path: {
-                'const: "/example-delete"
-            },
+            tool: {'const: httpTools[3]},
             requestBody: {
                 'type: "object",
                 properties:

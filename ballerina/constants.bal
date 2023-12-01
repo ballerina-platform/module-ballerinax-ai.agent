@@ -22,24 +22,15 @@ const DEFAULT_MAX_TOKEN_COUNT = 512;
 const DEFAULT_TEMPERATURE = 0.7d;
 
 // openapi
-const OPENAPI_JSON_CONTENT_KEY = "application/json";
 const OPENAPI_QUERY_PARAM_LOC_KEY = "query";
 const OPENAPI_PATH_PARAM_LOC_KEY = "path";
 const OPENAPI_COMPONENTS_KEY = "components";
-const OPENAPI_PATTER_DATE = "yyyy-MM-dd";
-const OPENAPI_PATTER_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
-const OPENAPI_PATH_PARAM_SUPPORTED_STYLE = "simple";
-const OPENAPI_QUERY_PARAM_SUPPORTED_STYLE = "form";
+const OPENAPI_PATTERN_DATE = "yyyy-MM-dd";
+const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 
 //agent
 const FINAL_ANSWER_KEY = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 const ERROR_INSTRUCTION_KEY = "instruction";
-
-//toolkit
-const QUERY_PARAM_KEY = "queryParameters";
-const PATH_PARAM_KEY = "pathParameters";
-const REQUEST_BODY_KEY = "requestBody";
-const PATH_KEY = "path";
 
