@@ -19,6 +19,7 @@ public type IncompleteSpecificationError distinct OpenApiParsingError;
 # Errors due to unsupported media type.
 public type UnsupportedMediaTypeError distinct OpenApiParsingError;
 
+# Error through due to invalid parameter definition that does not include either schema or content.
 public type InvalidParameterDefinition distinct OpenApiParsingError;
 
 # Any error occurred during LLM generation is classified under this error type.
