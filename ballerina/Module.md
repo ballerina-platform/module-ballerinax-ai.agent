@@ -23,7 +23,7 @@ A tool refers to a single action used to retrieve, process, or manipulate data. 
 When using a Ballerina function as a tool, the function should adhere to the following template:
 
 ```ballerina
-isolated function functionName(record parameters) returns anydata|error {
+isolated function functionName(record{} parameters) returns anydata|error {
     // function body 
 }
 ```
@@ -51,18 +51,19 @@ To use an API resource as a tool, an HTTP tool definition can be created as foll
 agent:HttpTool httpResourceTool = {
     name: "exampleTool", // used as an identifier 
     description: "defines the purpose of the API resource", // provides information about the behavior
-    path: "/path/resourceA/" // path to the resource
-    method: "get" // the HTTP request method (e.g., GET, POST, DELETE, PUT, etc.)
-    queryParameters: {
-        // a JSON schema defining the query parameters of the HTTP resource
-    },
-    pathParameters: {
-        // a JSON schema defining path parameters of the HTTP resource
+    path: "/path/resourceA/", // path to the resource
+    method: agent:GET, // the HTTP request method (e.g., GET, POST, DELETE, PUT, etc.)
+    parameters: {
+        // map of query and path parameter definitions
     },
     requestBody: {
-        // a JSON schema defining the request body of the HTTP resource
+        mediaType: "application/json", // the media type of the request body (optional)
+        schema: {
+            properties: {}
+            // a JSON schema defining the request body of the HTTP resource
+        }
     }
-}
+};
 ```
 
 ### Tools from Interface Definition Languages (IDLs)
@@ -312,14 +313,16 @@ agent:HttpTool createWifiHttpTool = {
     method: agent:POST,
     description: "useful to create a guest wifi account.",
     requestBody: {
-        'type: agent:OBJECT,
-        properties: {
-            email: {'type: agent:STRING},
-            username: {'type: agent:STRING},
-            password: {'type: agent:STRING}
+        schema: {
+            'type: agent:OBJECT,
+            properties: {
+                email: {'type: agent:STRING},
+                username: {'type: agent:STRING},
+                password: {'type: agent:STRING}
+            }
         }
     }
-};   
+};
 
 agent:HttpServiceToolKit wifiServiceToolKit = check new (wifiServiceUrl, [listWifiHttpTool, createWifiHttpTool], {
     auth: {
