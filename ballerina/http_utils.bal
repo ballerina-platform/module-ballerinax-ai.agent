@@ -41,7 +41,7 @@ isolated function getDeepObjectStyleRequest(string parent, record {} anyRecord) 
             string nextParent = parent + "[" + key + "]";
             recordArray.push(getDeepObjectStyleRequest(nextParent, value));
         } else if value is record {}[] {
-            string nextParent = string`${parent}[${key}]`;
+            string nextParent = string `${parent}[${key}]`;
             recordArray.push(getSerializedRecordArray(nextParent, value, DEEPOBJECT));
         }
         recordArray.push("&");
@@ -62,9 +62,9 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
         foreach [string, anydata] [key, value] in anyRecord.entries() {
             if value is PrimitiveType {
                 recordArray.push(key, "=", getEncodedUri(value.toString()));
-            } else if (value is PrimitiveType[]) {
+            } else if value is PrimitiveType[] {
                 recordArray.push(getSerializedArray(key, value, explode = explode));
-            } else if (value is record {}) {
+            } else if value is record {} {
                 recordArray.push(getFormStyleRequest(parent, value, explode));
             }
             recordArray.push("&");
@@ -74,9 +74,9 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
         foreach [string, anydata] [key, value] in anyRecord.entries() {
             if (value is PrimitiveType) {
                 recordArray.push(key, ",", getEncodedUri(value.toString()));
-            } else if (value is PrimitiveType[]) {
+            } else if value is PrimitiveType[] {
                 recordArray.push(getSerializedArray(key, value, explode = false));
-            } else if (value is record {}) {
+            } else if value is record {} {
                 recordArray.push(getFormStyleRequest(parent, value, explode));
             }
             recordArray.push(",");
@@ -96,23 +96,23 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
 isolated function getSerializedArray(string arrayName, anydata[] anyArray, string style = "form", boolean explode = true) returns string {
     string key = arrayName;
     string[] arrayValues = [];
-    if (anyArray.length() > 0) {
-        if (style == FORM && !explode) {
+    if anyArray.length() > 0 {
+        if style == FORM && !explode {
             arrayValues.push(key, "=");
             foreach anydata i in anyArray {
                 arrayValues.push(getEncodedUri(i.toString()), ",");
             }
-        } else if (style == SPACEDELIMITED && !explode) {
+        } else if style == SPACEDELIMITED && !explode {
             arrayValues.push(key, "=");
             foreach anydata i in anyArray {
                 arrayValues.push(getEncodedUri(i.toString()), "%20");
             }
-        } else if (style == PIPEDELIMITED && !explode) {
+        } else if style == PIPEDELIMITED && !explode {
             arrayValues.push(key, "=");
             foreach anydata i in anyArray {
                 arrayValues.push(getEncodedUri(i.toString()), "|");
             }
-        } else if (style == DEEPOBJECT) {
+        } else if style == DEEPOBJECT {
             foreach anydata i in anyArray {
                 arrayValues.push(key, "[]", "=", getEncodedUri(i.toString()), "&");
             }
@@ -142,7 +142,7 @@ isolated function getSerializedRecordArray(string parent, record {}[] value, str
             arayIndex = arayIndex + 1;
         }
     } else {
-        if (!explode) {
+        if !explode {
             serializedArray.push(parent, "=");
         }
         foreach var recordItem in value {
@@ -159,12 +159,10 @@ isolated function getSerializedRecordArray(string parent, record {}[] value, str
 # + return - Encoded string
 isolated function getEncodedUri(anydata value) returns string {
     string|error encoded = url:encode(value.toString(), "UTF8");
-    if (encoded is string) {
+    if encoded is string {
         return encoded;
     }
     return value.toString();
-        return value.toString();
-    }
 }
 
 # Generate query path with query parameter.
@@ -174,7 +172,7 @@ isolated function getEncodedUri(anydata value) returns string {
 # + return - Returns generated Path or error at failure of client initialization
 isolated function getPathForQueryParam(map<anydata> queryParam, map<QueryParamEncoding> encodingMap = {}) returns string {
     string[] param = [];
-    if (queryParam.length() > 0) {
+    if queryParam.length() > 0 {
         param.push("?");
         foreach var [key, value] in queryParam.entries() {
             if value is () {
@@ -182,12 +180,12 @@ isolated function getPathForQueryParam(map<anydata> queryParam, map<QueryParamEn
                 continue;
             }
             QueryParamEncoding encodingData = encodingMap.hasKey(key) ? encodingMap.get(key) : {};
-            if (value is PrimitiveType) {
+            if value is PrimitiveType {
                 param.push(key, "=", getEncodedUri(value.toString()));
-            } else if (value is PrimitiveType[]) {
+            } else if value is PrimitiveType[] {
                 param.push(getSerializedArray(key, value, encodingData.style, encodingData.explode));
-            } else if (value is record {}) {
-                if (encodingData.style == DEEPOBJECT) {
+            } else if value is record {} {
+                if encodingData.style == DEEPOBJECT {
                     param.push(getDeepObjectStyleRequest(key, value));
                 } else {
                     param.push(getFormStyleRequest(key, value, encodingData.explode));
@@ -293,7 +291,7 @@ isolated function extractResponsePayload(string path, http:Response response) re
 public isolated function getContentLength(http:Response response) returns int|error {
     string contentLength = "";
     var length = response.getHeader(mime:CONTENT_LENGTH);
-    if (length is string) {
+    if length is string {
         contentLength = length;
     }
     if contentLength == "" {
