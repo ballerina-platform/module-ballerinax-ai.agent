@@ -41,7 +41,7 @@ isolated function getDeepObjectStyleRequest(string parent, record {} anyRecord) 
             string nextParent = parent + "[" + key + "]";
             recordArray.push(getDeepObjectStyleRequest(nextParent, value));
         } else if value is record {}[] {
-            string nextParent = parent + "[" + key + "]";
+            string nextParent = string`${parent}[${key}]`;
             recordArray.push(getSerializedRecordArray(nextParent, value, DEEPOBJECT));
         }
         recordArray.push("&");
@@ -60,7 +60,7 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
     string[] recordArray = [];
     if explode {
         foreach [string, anydata] [key, value] in anyRecord.entries() {
-            if (value is PrimitiveType) {
+            if value is PrimitiveType {
                 recordArray.push(key, "=", getEncodedUri(value.toString()));
             } else if (value is PrimitiveType[]) {
                 recordArray.push(getSerializedArray(key, value, explode = explode));
@@ -161,7 +161,8 @@ isolated function getEncodedUri(anydata value) returns string {
     string|error encoded = url:encode(value.toString(), "UTF8");
     if (encoded is string) {
         return encoded;
-    } else {
+    }
+    return value.toString();
         return value.toString();
     }
 }
@@ -295,7 +296,7 @@ public isolated function getContentLength(http:Response response) returns int|er
     if (length is string) {
         contentLength = length;
     }
-    if (contentLength == "") {
+    if contentLength == "" {
         return -1;
     } else {
         return langint:fromString(contentLength);
