@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/regex;
+import ballerina/lang.regexp;
 
 type AgentTool record {|
     string name;
@@ -110,7 +110,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
 
         AgentTool agentTool = {
             name: tool.name,
-            description: regex:replaceAll(tool.description, "\n", " "),
+            description: regexp:replaceAll(re `\n`, tool.description, ". "),
             variables: variables,
             constants: constants,
             caller: tool.caller

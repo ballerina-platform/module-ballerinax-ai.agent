@@ -44,14 +44,6 @@ public type ParameterSchema record {|
     JsonSubSchema schema;
 |};
 
-// # Defines a HTTP parameter schema (can be query parameter or path parameters).
-// public type Parameters record {|
-//     # A list of mandatory parameters
-//     string[] required?;
-//     # A map of parameter names and their types
-//     map<ParameterSchema> schemas;
-// |};
-
 # Defines an HTTP tool. This is a special type of tool that can be used to invoke HTTP resources.
 public type HttpTool record {|
     # Name of the Http resource tool
@@ -259,4 +251,3 @@ public isolated class HttpServiceToolKit {
         return extractResponsePayload(path, optionsResult);
     }
 }
-
