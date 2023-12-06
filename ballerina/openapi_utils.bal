@@ -179,12 +179,7 @@ class OpenApiSpecVisitor {
         }
 
         // resolve parameters
-        ParameterSchema? queryParameters = ();
-        ParameterSchema? pathParameters = ();
-        (Parameter|Reference)[]? parameters = operation.parameters;
-        if parameters !is () {
-            {pathParameters, queryParameters} = check self.visitParameters(parameters);
-        }
+        map<ParameterSchema>? parameters = check self.visitParameters(operation.parameters);
 
         RequestBodySchema? requestBody = ();
         RequestBody|Reference? requestBodySchema = operation.requestBody;
@@ -200,17 +195,19 @@ class OpenApiSpecVisitor {
             description,
             path,
             method,
-            queryParameters,
-            pathParameters,
+            parameters,
             requestBody
         });
     }
 
-    private isolated function visitContent(map<MediaType> content) returns Schema|error {
+    private isolated function visitContent(map<MediaType> content) returns record {|string mediaType; Schema schema;|}|error {
         // check for json content
         foreach [string, MediaType] [key, value] in content.entries() {
             if key.trim().matches(re `(application/.*json|text/.*plain|\*/\*)`) {
-                return value.schema;
+                return {
+                    mediaType: key,
+                    schema: value.schema
+                };
             }
         }
         return error UnsupportedMediaTypeError("Only json or text content is supported.", availableContentTypes = content.keys());
@@ -218,37 +215,17 @@ class OpenApiSpecVisitor {
 
     private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
         map<MediaType> content = requestBody.content;
-        Schema schema = check self.visitContent(content);
-        return self.visitSchema(schema).ensureType();
+        string mediaType;
+        Schema schema;
+        {mediaType, schema} = check self.visitContent(content);
+        return {mediaType, schema: check self.visitSchema(schema)};
     }
 
-    isolated function verifyParameterType(JsonSubSchema parameterSchema) returns ParameterType|error {
-        if parameterSchema is PrimitiveInputSchema {
-            return parameterSchema;
+    private isolated function visitParameters((Parameter|Reference)[]? parameters) returns map<ParameterSchema>?|error {
+        if parameters is () || parameters.length() == 0 {
+            return ();
         }
-        if parameterSchema !is ArrayInputSchema {
-            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` or array type, but found: " + (typeof parameterSchema).toString());
-        }
-        JsonSubSchema items = parameterSchema.items;
-        if items !is PrimitiveInputSchema {
-            return error("Unsupported HTTP parameter type.", cause = "Expected only `PrimitiveType` values for array type parameters, but found: " + (typeof items).toString());
-        }
-        json[]? default = parameterSchema.default;
-        if default !is PrimitiveType? {
-            return error("Unsupported default value for array type parameter.", cause = "Expected a `PrimitiveType` items in the array, but found: " + (typeof default).toString());
-        }
-        return {
-            items,
-            default,
-            description: parameterSchema?.description
-        };
-    }
-
-    private isolated function visitParameters((Parameter|Reference)[] parameters) returns record {|ParameterSchema? pathParameters = (); ParameterSchema? queryParameters = ();|}|error {
-        map<ParameterType> pathParams = {};
-        map<ParameterType> queryParams = {};
-        string[] pathRequired = [];
-        string[] queryRequired = [];
+        map<ParameterSchema> parameterSchemas = {};
 
         foreach Parameter|Reference param in parameters {
             Parameter resolvedParameter;
@@ -260,54 +237,44 @@ class OpenApiSpecVisitor {
                 continue;
             }
 
+            ParameterLocation location = resolvedParameter.'in;
+            if location !is PATH|QUERY {
+                continue;
+            }
+
+            string name = resolvedParameter.name;
+            EncodingStyle? style = resolvedParameter.style;
+            boolean? explode = resolvedParameter.explode;
+            if location is PATH && (style is LABEL|MATRIX || explode == true) {
+                return error UnsupportedSerializationError("Only simple style parameters are supported for path parameters at this time.", 'parameter = name);
+            }
+
             Schema? schema;
+            string? mediaType = ();
             map<MediaType>? content = resolvedParameter.content;
             if content is () {
                 schema = resolvedParameter.schema;
             }
             else {
-                schema = check self.visitContent(content);
+                {mediaType, schema} = check self.visitContent(content);
+            }
+            if schema is () {
+                return error InvalidParameterDefinition("Resource paramters should have either a schema or a content.", 'parameter = name);
             }
 
-            if schema is () {
-                continue;
-            }
-            string? style = resolvedParameter.style;
-            boolean? explode = resolvedParameter.explode;
-            if resolvedParameter.'in == OPENAPI_QUERY_PARAM_LOC_KEY {
-                if style !is () && style != OPENAPI_QUERY_PARAM_SUPPORTED_STYLE {
-                    return error("Supported only the query parameters with style=" + OPENAPI_QUERY_PARAM_SUPPORTED_STYLE);
-                }
-                if explode !is () && !explode {
-                    return error("Supported only the query parmaters with explode=true");
-                }
-                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
-                string name = resolvedParameter.name;
-                if resolvedParameter.required == true {
-                    queryRequired.push(name);
-                }
-                queryParams[name] = parameterType;
-            } else if resolvedParameter.'in == OPENAPI_PATH_PARAM_LOC_KEY {
-                if style !is () && style != OPENAPI_PATH_PARAM_SUPPORTED_STYLE {
-                    return error("Supported only the path parameters with style=" + OPENAPI_PATH_PARAM_SUPPORTED_STYLE);
-                }
-                if explode !is () && explode {
-                    return error("Supported only the path parmaters with explode=false");
-                }
-                ParameterType parameterType = check self.verifyParameterType(check self.visitSchema(schema));
-                string name = resolvedParameter.name;
-                if resolvedParameter.required == true {
-                    pathRequired.push(name);
-                }
-                pathParams[name] = parameterType;
-            }
+            parameterSchemas[name] = {
+                location,
+                mediaType,
+                schema: check self.visitSchema(schema),
+                style,
+                explode,
+                required: resolvedParameter.required,
+                description: resolvedParameter.description,
+                allowEmptyValue: resolvedParameter.allowEmptyValue,
+                nullable: resolvedParameter.nullable
+            };
         }
-        ParameterSchema pathParameters = {properties: pathParams, required: pathRequired.length() > 0 ? pathRequired : ()};
-        ParameterSchema queryParameters = {properties: queryParams, required: queryRequired.length() > 0 ? queryRequired : ()};
-        return {
-            pathParameters: pathParams.length() > 0 ? pathParameters : (),
-            queryParameters: queryParams.length() > 0 ? queryParameters : ()
-        };
+        return parameterSchemas;
     }
 
     private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
@@ -394,12 +361,12 @@ class OpenApiSpecVisitor {
         if schema is StringSchema {
             string? pattern = schema.pattern;
             string? format = schema.format;
-            if format is string && pattern is () {
+            if pattern is () && format is string {
                 if format == "date" {
-                    pattern = OPENAPI_PATTER_DATE;
+                    pattern = OPENAPI_PATTERN_DATE;
                 }
                 else if format == "date-time" {
-                    pattern = OPENAPI_PATTER_DATE_TIME;
+                    pattern = OPENAPI_PATTERN_DATE_TIME;
                 }
             }
 
@@ -443,4 +410,3 @@ class OpenApiSpecVisitor {
         };
     }
 }
-

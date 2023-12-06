@@ -14,10 +14,14 @@ function testExtractToolsFromWifiOpenAPISpec() returns error? {
             method: "POST",
             path: "/guest-wifi-accounts",
             requestBody: {
-                allOf: [
-                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
-                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
-                ]
+                mediaType: "application/json",
+                schema:
+                    {
+                    allOf: [
+                        {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                        {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
+                    ]
+                }
             }
         },
         {
@@ -25,18 +29,47 @@ function testExtractToolsFromWifiOpenAPISpec() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+
+            }
         },
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+
+            }
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
     test:assertEquals(apiSpec.serviceUrl, "http://test-wifi-url.com");
+
 }
 
 @test:Config {}
@@ -51,10 +84,14 @@ function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
             method: "POST",
             path: "/guest-wifi-accounts",
             requestBody: {
-                allOf: [
-                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
-                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
-                ]
+                mediaType: "application/json",
+                schema:
+                    {
+                    allOf: [
+                        {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                        {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
+                    ]
+                }
             }
         },
         {
@@ -62,14 +99,40 @@ function testExtractToolsFromWifiOpenAPISpecYAMLFile() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+            }
         },
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+            }
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
@@ -88,10 +151,14 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
             method: "POST",
             path: "/guest-wifi-accounts",
             requestBody: {
-                allOf: [
-                    {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
-                    {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
-                ]
+                mediaType: "application/json",
+                schema:
+                    {
+                    allOf: [
+                        {'type: "object", required: ["email", "username"], properties: {email: {'type: "string"}, username: {'type: "string"}}},
+                        {'type: "object", required: ["password"], properties: {password: {'type: "string"}}}
+                    ]
+                }
             }
         },
         {
@@ -99,14 +166,40 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
             description: "Delete a guest WiFi account",
             method: "DELETE",
             path: "/guest-wifi-accounts/{ownerEmail}/{username}",
-            pathParameters: {required: ["ownerEmail", "username"], properties: {ownerEmail: {'type: "string"}, username: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                },
+                username: {
+                    location: PATH,
+                    required: true,
+                    description: "Username of the guest WiFi account to be deleted",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+            }
         },
         {
             name: "getGuestWifiAccountsOwneremail",
             description: "Get list of guest WiFi accounts of a given owner email address",
             method: GET,
             path: "/guest-wifi-accounts/{ownerEmail}",
-            pathParameters: {required: ["ownerEmail"], properties: {ownerEmail: {'type: "string"}}}
+            parameters: {
+                ownerEmail: {
+                    location: PATH,
+                    required: true,
+                    description: "Email address of the owner of the guest WiFi accounts",
+                    style: "simple",
+                    explode: false,
+                    schema: {'type: "string"}
+                }
+            }
         }
     ];
     test:assertEquals(apiSpec.tools, tools);
@@ -135,42 +228,45 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                 method: POST,
                 path: "/completions",
                 requestBody: {
-                    'type: "object",
-                    properties:
-                    {
-                        model: {'type: "string"},
-                        prompt: {
-                            oneOf: [
-                                {'type: "string"},
-                                {'type: "array", items: {'type: "string"}},
-                                {'type: "array", items: {'type: "integer"}},
-                                {
-                                    'type: "array",
-                                    items: {
+                    mediaType: "application/json",
+                    schema: {
+                        'type: "object",
+                        properties:
+                        {
+                            model: {'type: "string"},
+                            prompt: {
+                                oneOf: [
+                                    {'type: "string"},
+                                    {'type: "array", items: {'type: "string"}},
+                                    {'type: "array", items: {'type: "integer"}},
+                                    {
                                         'type: "array",
-                                        items: {'type: "integer"}
+                                        items: {
+                                            'type: "array",
+                                            items: {'type: "integer"}
+                                        }
                                     }
-                                }
-                            ]
+                                ]
+                            },
+                            suffix: {'type: "string"},
+                            max_tokens: {'type: "integer"},
+                            temperature: {'type: "float"},
+                            top_p: {'type: "float"},
+                            n: {'type: "integer"},
+                            'stream: {'type: "boolean"},
+                            logprobs: {'type: "integer"},
+                            echo: {'type: "boolean"},
+                            stop: {oneOf: [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
+                            presence_penalty: {'type: "float"},
+                            frequency_penalty: {'type: "float"},
+                            best_of: {'type: "integer"},
+                            logit_bias: {'type: "object", properties: {}},
+                            user: {'type: "string"}
                         },
-                        suffix: {'type: "string"},
-                        max_tokens: {'type: "integer"},
-                        temperature: {'type: "float"},
-                        top_p: {'type: "float"},
-                        n: {'type: "integer"},
-                        'stream: {'type: "boolean"},
-                        logprobs: {'type: "integer"},
-                        echo: {'type: "boolean"},
-                        stop: {oneOf: [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
-                        presence_penalty: {'type: "float"},
-                        frequency_penalty: {'type: "float"},
-                        best_of: {'type: "integer"},
-                        logit_bias: {'type: "object", properties: {}},
-                        user: {'type: "string"}
-                    },
-                    required: [
-                        "model"
-                    ]
+                        required: [
+                            "model"
+                        ]
+                    }
                 }
             });
         }
@@ -181,79 +277,34 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                 method: POST,
                 path: "/chat/completions",
                 requestBody: {
-                    'type: "object",
-                    properties: {
-                        model: {'type: "string"},
-                        messages: {
-                            'type: "array",
-                            items: {
-                                'type: "object",
-                                required: ["role", "content"],
-                                properties: {role: {'type: "string", 'enum: ["system", "user", "assistant"]}, content: {'type: "string"}, name: {'type: "string"}}
-                            }
+                    mediaType: "application/json",
+                    schema: {
+                        'type: "object",
+                        properties: {
+                            model: {'type: "string"},
+                            messages: {
+                                'type: "array",
+                                items: {
+                                    'type: "object",
+                                    required: ["role", "content"],
+                                    properties: {role: {'type: "string", 'enum: ["system", "user", "assistant"]}, content: {'type: "string"}, name: {'type: "string"}}
+                                }
+                            },
+                            temperature: {'type: "float"},
+                            top_p: {'type: "float"},
+                            n: {'type: "integer"},
+                            'stream: {'type: "boolean"},
+                            stop: {"oneOf": [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
+                            max_tokens: {'type: "integer"},
+                            presence_penalty: {'type: "float"},
+                            frequency_penalty: {'type: "float"},
+                            logit_bias: {'type: "object", properties: {}},
+                            user: {'type: "string"}
                         },
-                        temperature: {'type: "float"},
-                        top_p: {'type: "float"},
-                        n: {'type: "integer"},
-                        'stream: {'type: "boolean"},
-                        stop: {"oneOf": [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
-                        max_tokens: {'type: "integer"},
-                        presence_penalty: {'type: "float"},
-                        frequency_penalty: {'type: "float"},
-                        logit_bias: {'type: "object", properties: {}},
-                        user: {'type: "string"}
-                    },
-                    required: ["model", "messages"]
+                        required: ["model", "messages"]
+                    }
                 }
             });
         }
     }
-}
-
-@test:Config {}
-function testParameterSchema() returns error? {
-    OpenApiSpecVisitor visitor = new;
-
-    JsonSubSchema stringParameterSchema = {'type: "string", description: "Name of the person"};
-    JsonSubSchema integerParameterSchema = {'type: "integer", description: "Age of the person"};
-
-    JsonSubSchema arrayParameterSchema = {
-        items: stringParameterSchema
-    };
-
-    JsonSubSchema objectParameterSchema = {
-        properties:
-        {
-            name: stringParameterSchema,
-            age: integerParameterSchema
-        }
-    };
-
-    JsonSubSchema arrayParameterSchemaWithObjItems = {
-        items: objectParameterSchema
-    };
-
-    ParameterType|error verifiedParameterType = visitor.verifyParameterType(stringParameterSchema);
-    if verifiedParameterType !is PrimitiveInputSchema {
-        test:assertFail("Parameter type is not verified correctly");
-    }
-    test:assertEquals(verifiedParameterType, stringParameterSchema);
-
-    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchema);
-    if verifiedParameterType !is ArrayTypeParameterSchema {
-        test:assertFail("Parameter type is not verified correctly");
-    }
-    test:assertEquals(verifiedParameterType, arrayParameterSchema);
-
-    verifiedParameterType = visitor.verifyParameterType(objectParameterSchema);
-    if verifiedParameterType !is error {
-        test:assertFail("Parameter type is not verified correctly");
-    }
-    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` or array type, but found: typedesc ai.agent:ObjectInputSchema"});
-
-    verifiedParameterType = visitor.verifyParameterType(arrayParameterSchemaWithObjItems);
-    if verifiedParameterType !is error {
-        test:assertFail("Parameter type is not verified correctly");
-    }
-    test:assertEquals(verifiedParameterType.detail(), {cause: "Expected only `PrimitiveType` values for array type parameters, but found: typedesc ai.agent:ObjectInputSchema"});
 }

@@ -16,10 +16,6 @@
 
 import ballerina/regex;
 
-type ToolNotFoundError distinct error;
-
-type ToolInvalidInputError distinct error;
-
 type AgentTool record {|
     string name;
     string description;
@@ -124,6 +120,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
 }
 
 isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
+    // TODO fix when all values are removed as constant, to use null schema
     if schema is ObjectInputSchema {
         map<json> values = {};
         foreach [string, JsonSubSchema] [key, subSchema] in schema.properties.entries() {
@@ -135,7 +132,7 @@ isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
                 returnedValue = subSchema?.default;
             }
             else if subSchema is ConstantValueSchema {
-                string tempKey = key; // temporary reference to fix java null pointer issue
+                string tempKey = key; // TODO temporary reference to fix java null pointer issue
                 returnedValue = subSchema.'const;
                 _ = schema.properties.remove(tempKey);
                 string[]? required = schema.required;

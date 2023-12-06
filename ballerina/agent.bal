@@ -269,7 +269,7 @@ public isolated class Agent {
                 any|error observation = step?.observation;
                 if observation is error {
                     io:println("Observation (Error): " + observation.toString());
-                } else {
+                } else if observation !is () {
                     io:println("Observation: " + observation.toString());
                 }
             }

@@ -32,10 +32,10 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         path: "/guest-wifi-accounts/{ownerEmail}",
         method: agent:GET,
         description: "useful to list the guest wifi accounts.",
-        pathParameters: {
-            properties:
-            {
-                ownerEmail: {
+        parameters: {
+            ownerEmail: {
+                location: agent:PATH,
+                schema: {
                     'type: "string"
                 }
             }
@@ -48,15 +48,17 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         method: agent:POST,
         description: "useful to create a guest wifi account.",
         requestBody: {
-            properties: {
-                email: {
-                    'type: "string"
-                },
-                username: {
-                    'type: "string"
-                },
-                password: {
-                    'type: "string"
+            schema: {
+                properties: {
+                    email: {
+                        'type: "string"
+                    },
+                    username: {
+                        'type: "string"
+                    },
+                    password: {
+                        'type: "string"
+                    }
                 }
             }
         }
