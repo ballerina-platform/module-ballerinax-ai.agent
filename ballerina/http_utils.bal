@@ -15,7 +15,6 @@
 // under the License.
 
 import ballerina/http;
-import ballerina/lang.'int as langint;
 import ballerina/mime;
 import ballerina/regex;
 import ballerina/url;
@@ -252,7 +251,7 @@ isolated function getParamEncodedPath(HttpTool tool, map<json>? parameters) retu
 
 isolated function extractResponsePayload(string path, http:Response response) returns HttpOutput|HttpResponseParsingError {
     int code = response.statusCode;
-    int|error contentLength = getContentLength(response);
+    int|error? contentLength = getContentLength(response);
     if contentLength is error {
         return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
     }
@@ -288,15 +287,11 @@ isolated function extractResponsePayload(string path, http:Response response) re
     };
 }
 
-public isolated function getContentLength(http:Response response) returns int|error {
-    string contentLength = "";
-    var length = response.getHeader(mime:CONTENT_LENGTH);
-    if length is string {
-        contentLength = length;
+public isolated function getContentLength(http:Response response) returns int|error? {
+    string|error contentLengthHeader = response.getHeader(mime:CONTENT_LENGTH);
+    if contentLengthHeader is error || contentLengthHeader == "" {
+        return;
     }
-    if contentLength == "" {
-        return -1;
-    } else {
-        return langint:fromString(contentLength);
-    }
+    return int:fromString(contentLengthHeader);
 }
+
