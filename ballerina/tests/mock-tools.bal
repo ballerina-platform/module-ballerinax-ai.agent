@@ -1,4 +1,4 @@
-import ballerina/regex;
+import ballerina/lang.regexp;
 
 type SearchParams record {|
     string query;
@@ -11,10 +11,10 @@ type CalculatorParams record {|
 // create two mock tools 
 isolated function searchToolMock(*SearchParams params) returns string {
     string query = params.query.trim().toLowerAscii();
-    if regex:matches(query, ".*girlfriend.*") {
+    if regexp:isFullMatch(re `.*girlfriend.*`, query) {
         return "Camila Morrone";
 
-    } else if regex:matches(query, ".*age.*") {
+    } else if regexp:isFullMatch(re `.*age.*`, query) {
         return "25 years";
     }
     else {

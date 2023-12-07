@@ -16,8 +16,8 @@
 
 import ballerina/io;
 import ballerina/lang.value;
+import ballerina/lang.regexp;
 import ballerina/log;
-import ballerina/regex;
 
 # Parsed response from the LLM.
 type NextTool record {|
@@ -53,7 +53,6 @@ public class AgentIterator {
     } {
         return self.executor;
     }
-
 }
 
 public class AgentExecutor {
@@ -101,7 +100,7 @@ public class AgentExecutor {
                 isCompleted: true
             };
         }
-        string[] content = regex:split(llmResponse + "<endtoken>", "```");
+        string[] content = regexp:split(re `${"```"}`, llmResponse + "<endtoken>");
         if content.length() < 3 {
             log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
             return error LlmActionParseError("Unable to extract the tool due to invalid generation", llmResponse = llmResponse, instruction = "Tool execution failed due to invalid generation. Regenerate following the given format.");
@@ -348,8 +347,8 @@ isolated function normalizeLlmResponse(string llmResponse) returns string {
             }
         }
     }
-    thought = regex:replace(thought, "```json", "```");
-    thought = regex:replaceAll(thought, "\"\\{\\}\"", "{}");
-    thought = regex:replaceAll(thought, "\\\\\"", "\"");
+    thought = regexp:replace(re `${"```"}json`, thought, "```"); // replace ```json  
+    thought = regexp:replaceAll(re `"\{\}"`, thought, "{}"); // replace "{}"
+    thought = regexp:replaceAll(re `\\"`, thought, "\""); // replace \"
     return thought;
 }

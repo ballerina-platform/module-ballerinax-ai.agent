@@ -15,8 +15,8 @@
 // under the License.
 
 import ballerina/http;
+import ballerina/lang.regexp;
 import ballerina/mime;
-import ballerina/regex;
 import ballerina/url;
 
 type QueryParamEncoding record {
@@ -233,7 +233,7 @@ isolated function getParamEncodedPath(HttpTool tool, map<json>? parameters) retu
                 }
                 json parameterValue = parameters.get(paramName);
                 string value = check getSimpleStyleParams(paramName, parameterValue);
-                pathWithParams = regex:replaceAll(pathWithParams, string `\{${paramName}\}`, value);
+                pathWithParams = regexp:replaceAll(re `\{${paramName}\}`, pathWithParams, value);
             } else {
                 if parameters.hasKey(paramName) {
                     queryParams[paramName] = parameters.get(paramName);
@@ -265,7 +265,7 @@ isolated function extractResponsePayload(string path, http:Response response) re
 
     json|xml|error body;
     string contentType = response.getContentType();
-    match regex:split(contentType, ";")[0].trim() {
+    match regexp:split(re `;`, contentType)[0].trim() {
         mime:APPLICATION_JSON|mime:APPLICATION_XML|mime:TEXT_PLAIN|mime:TEXT_HTML|mime:TEXT_XML => {
             body = response.getTextPayload();
         }
