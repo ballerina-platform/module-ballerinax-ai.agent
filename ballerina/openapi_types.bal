@@ -64,7 +64,7 @@ public type Paths record {|
 |};
 
 # Describes a single path item.
-public type PathItem record {|
+public type PathItem record {
     # Description of the path item
     string description?;
     # Summary of the path item
@@ -91,7 +91,7 @@ public type PathItem record {|
     (Parameter|Reference)[] parameters?;
     # Not allowed $ref
     never \$ref?;
-|};
+};
 
 # Describes HTTP headers 
 public type Header record {
