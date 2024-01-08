@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/lang.regexp;
+
 // model default parameters 
 const GPT3_MODEL_NAME = "text-davinci-003";
 const GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
@@ -27,7 +29,9 @@ const OPENAPI_PATTERN_DATE = "yyyy-MM-dd";
 const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 
 //agent
-const FINAL_ANSWER_KEY = "final answer";
+// const FINAL_ANSWER = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICK = "`";
 const ERROR_INSTRUCTION_KEY = "instruction";
+
+final regexp:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;

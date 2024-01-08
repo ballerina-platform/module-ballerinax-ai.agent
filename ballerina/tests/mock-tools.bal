@@ -33,7 +33,7 @@ isolated function calculatorToolMock(*CalculatorParams params) returns string {
 
 public client class MockLLM {
 
-    isolated function generate(PromptConstruct prompt) returns string|error {
+    isolated function generate(QueryProgress prompt) returns string|error {
         if prompt.query == "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?" {
             if prompt.history.length() == 0 {
                 return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
@@ -70,10 +70,7 @@ public client class MockLLM {
                 "}" +
                 "```";
             }
-
         }
-
         return error("Unexpected prompt to MockLLM");
-
     }
 }
