@@ -56,7 +56,7 @@ public type ToolOutput record {|
     anydata|error value;
 |};
 
-type BaseAgent distinct isolated object {
+public type BaseAgent distinct isolated object {
     LlmModel model;
     ToolStore toolStore;
 
@@ -192,7 +192,7 @@ public class AgentExecutor {
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-isolated function run(BaseAgent agent, string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|ExecutionStep[] steps; string answer?;|} {
+public isolated function run(BaseAgent agent, string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|ExecutionStep[] steps; string answer?;|} {
     ExecutionStep[] steps = [];
     string? content = ();
     AgentIterator iterator = new (agent, query, context = context);
