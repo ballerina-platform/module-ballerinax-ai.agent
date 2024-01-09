@@ -239,7 +239,7 @@ ${"```"}`);
 ${"```"}
 {
     message: ${tool.message()},
-    cause: ${(cause is error ? cause.message() : "Unspecified")}${thought is string ? string `,${"\n"}    thought: ${thought}` : ""}
+    cause: ${(cause is error ? cause.message() : "Unspecified")}${string `,${"\n"}    thought: ${thought}`}
 }
 ${"```"}`);
             }

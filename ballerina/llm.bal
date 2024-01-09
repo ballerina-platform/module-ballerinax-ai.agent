@@ -198,33 +198,32 @@ public isolated class ChatGptModel {
     # + stop - Stop sequence to stop the completion
     # + return - Next tool to be used or error if the function call fails
     public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
+ 
         chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(
             {
-                ...self.modelConfig,
-                stop,
-                messages,
-                functions: from AgentTool tool in tools
-                    select {
-                        name: tool.name,
-                        description: tool.description,
-                        parameters: tool.variables
-                    }
-            }
-        );
+            ...self.modelConfig,
+            stop,
+            messages,
+            functions: from AgentTool tool in tools
+                select {
+                    name: tool.name,
+                    description: tool.description,
+                    parameters: tool.variables
+                }
+        });
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {
             return content;
         }
         chat:ChatCompletionRequestMessage_function_call? 'function = message?.function_call;
-        if 'function is azure_chat:ChatCompletionRequestMessage_function_call {
+        if 'function is chat:ChatCompletionRequestMessage_function_call {
             return {
                 ...'function
             };
         }
         return error LlmInvalidGenerationError("Empty response from the model when using function call API");
     }
-
 }
 
 public isolated class AzureChatGptModel {

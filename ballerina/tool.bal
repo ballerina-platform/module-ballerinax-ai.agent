@@ -99,7 +99,7 @@ isolated class ToolStore {
 
         map<AgentTool> tools = self.tools;
         foreach AgentTool tool in tools {
-            toolNameList.push(string `"${tool.name}"`);
+            toolNameList.push(string `${tool.name}`);
             record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
                 description: tool.description,
                 inputSchema: tool.variables
