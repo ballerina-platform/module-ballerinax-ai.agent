@@ -209,13 +209,13 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
         if step is ChatResponse {
             content = step.content;
             if verbose {
-                io:println(string `${"\n\n"}Final Answer - ${step.content}${"\n\n"}`);
+                io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
             }
             break;
         }
         iter += 1;
         if verbose {
-            io:println(string `${"\n\n"}Agent Iteration - ${iter.toString()}`);
+            io:println(string `${"\n\n"}Agent Iteration ${iter.toString()}`);
             NextTool|LlmInvalidGenerationError tool = step.action.tool;
             if tool is NextTool {
 

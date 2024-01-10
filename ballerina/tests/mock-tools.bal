@@ -1,4 +1,5 @@
 import ballerina/lang.regexp;
+import ballerina/io;
 
 type SearchParams record {|
     string query;
@@ -32,43 +33,51 @@ isolated function calculatorToolMock(*CalculatorParams params) returns string {
 }
 
 public client class MockLLM {
-
-    isolated function generate(QueryProgress prompt) returns string|error {
-        if prompt.query == "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?" {
-            if prompt.history.length() == 0 {
-                return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
+    CompletionModelConfig modelConfig = {};
+    public isolated function complete(string prompt, string? stop = ()) returns string|error {
+        if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {
+            int queryLevel = regexp:findAll(re `observation`, prompt.toLowerAscii()).length();
+            io:println(queryLevel, prompt);
+            match queryLevel {
+                3 => {
+                    return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
                 "Action:" +
                 "```" +
                 "{" +
-                    "\"tool\": \"Search\"," +
-                    "\"tool_input\": {" +
+                    "\"action\": \"Search\"," +
+                    "\"action_input\": {" +
                         "\"query\": \"Leo DiCaprio girlfriend\"" +
                     "}" +
                 "}" +
                 "```";
-            } else if prompt.history.length() == 1 {
-                return " I need to find out Camila Morrone's age" +
+                }
+                4 => {
+                    return " I need to find out Camila Morrone's age" +
                 "Action:" +
                 "```" +
                 "{" +
-                    "\"tool\": \"Search\"," +
-                    "\"tool_input\": {" +
+                    "\"action\": \"Search\"," +
+                    "\"action_input\": {" +
                         "\"query\": \"Camila Morrone age\"" +
                     "}" +
                 "}" +
                 "```";
 
-            } else if prompt.history.length() == 2 {
-                return " I now need to calculate the age raised to the 0.43 power" +
+                }
+                5 => {
+                    {
+                        return " I now need to calculate the age raised to the 0.43 power" +
                 "Action:" +
                 "```" +
                 "{" +
-                    "\"tool\": \"Calculator\"," +
-                    "\"tool_input\": {" +
+                    "\"action\": \"Calculator\"," +
+                    "\"action_input\": {" +
                         "\"expression\": \"25 ^ 0.43\"" +
                     "}" +
                 "}" +
                 "```";
+                    }
+                }
             }
         }
         return error("Unexpected prompt to MockLLM");

@@ -198,19 +198,20 @@ public isolated class ChatGptModel {
     # + stop - Stop sequence to stop the completion
     # + return - Next tool to be used or error if the function call fails
     public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
- 
+
         chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(
             {
-            ...self.modelConfig,
-            stop,
-            messages,
-            functions: from AgentTool tool in tools
-                select {
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.variables
-                }
-        });
+                ...self.modelConfig,
+                stop,
+                messages,
+                functions: from AgentTool tool in tools
+                    select {
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: tool.variables
+                    }
+            }
+        );
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {
