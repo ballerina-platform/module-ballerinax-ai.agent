@@ -13,10 +13,8 @@
 import ballerinax/ai.agent;
 import ballerinax/googleapis.gmail;
 
-configurable string apiKey = ?;
-configurable string deploymentId = ?;
-configurable string apiVersion = ?;
-configurable string serviceUrl = ?;
+configurable string openAIToken = ?;
+
 configurable string wifiAPIUrl = ?;
 configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
@@ -93,7 +91,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     });
 
-    agent:AzureChatGptModel model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
+    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
 
     agent:FunctionCallAgent agent = check new (model, wifiApiToolKit, sendEmailTool);
 
