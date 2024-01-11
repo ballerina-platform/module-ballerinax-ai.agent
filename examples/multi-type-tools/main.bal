@@ -1,23 +1,22 @@
 // Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
-
 // WSO2 Inc. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
-
 // http://www.apache.org/licenses/LICENSE-2.0
-
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
-import ballerinax/googleapis.gmail;
 import ballerinax/ai.agent;
+import ballerinax/googleapis.gmail;
 
-configurable string openAIToken = ?;
+configurable string apiKey = ?;
+configurable string deploymentId = ?;
+configurable string apiVersion = ?;
+configurable string serviceUrl = ?;
 configurable string wifiAPIUrl = ?;
 configurable string wifiTokenUrl = ?;
 configurable string wifiClientId = ?;
@@ -41,10 +40,14 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         description: "useful to send emails to a given recipient",
         parameters: {
             properties: {
-                recipient: {'type: agent:STRING},
+                to: {
+                    items: {'type: agent:STRING}
+                },
                 subject: {'type: agent:STRING},
-                messageBody: {'type: agent:STRING},
-                contentType: {'const: "text/plain"}
+                bodyInHtml: {
+                    'type: agent:STRING,
+                    format: "text/html"
+                }
             }
         },
         caller: sendMail
@@ -90,9 +93,10 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     });
 
-    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
-    agent:Agent agent = check new (model, wifiApiToolKit, sendEmailTool);
+    agent:AzureChatGptModel model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
+
+    agent:FunctionCallAgent agent = check new (model, wifiApiToolKit, sendEmailTool);
 
     // Execute the query using agent iterator
-    _ = agent.run(query, context = {"userEmail": "johnny@wso2.com"});
+    _ = agent:run(agent, query, context = {"userEmail": "johnny@wso2.com"});
 }

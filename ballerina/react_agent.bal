@@ -1,6 +1,21 @@
-import ballerina/log;
-import ballerina/regex;
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+//
+// WSO2 Inc. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+import ballerina/lang.regexp;
 import ballerina/lang.value;
+import ballerina/log;
 
 public isolated class ReActAgent {
     *BaseAgent;
@@ -119,14 +134,14 @@ isolated function normalizeLlmResponse(string llmResponse) returns string {
             }
         }
     }
-    normalizedResponse = regex:replace(normalizedResponse, "```json", "```");
-    normalizedResponse = regex:replaceAll(normalizedResponse, "\"\\{\\}\"", "{}");
-    normalizedResponse = regex:replaceAll(normalizedResponse, "\\\\\"", "\"");
+    normalizedResponse = regexp:replace(re `${"```"}json`, normalizedResponse, "```"); // replace ```json  
+    normalizedResponse = regexp:replaceAll(re `"\{\}"`, normalizedResponse, "{}"); // replace "{}"
+    normalizedResponse = regexp:replaceAll(re `\\"`, normalizedResponse, "\""); // replace \"
     return normalizedResponse;
 }
 
 isolated function parseLlmReponse(string llmResponse) returns NextTool|ChatResponse|LlmInvalidGenerationError {
-    string[] content = regex:split(llmResponse + "<endtoken>", "```");
+    string[] content = regexp:split(re `${"```"}`, llmResponse + "<endtoken>");
     if content.length() < 3 {
         log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");

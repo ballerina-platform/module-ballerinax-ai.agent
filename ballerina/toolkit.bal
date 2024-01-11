@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/http;
 import ballerina/log;
 
@@ -72,7 +71,7 @@ public type RequestBodySchema record {|
 type HttpToolJsonSchema record {|
     *ObjectInputSchema;
     record {|
-        ConstantValueSchema tool;
+        ConstantValueSchema path;
         ObjectInputSchema parameters?;
         JsonSubSchema requestBody?;
     |} properties;
@@ -82,7 +81,7 @@ type HttpToolJsonSchema record {|
 # Defines an HTTP input record.
 type HttpInput record {|
     # Http tool record
-    HttpTool tool;
+    string path;
     # Path and query parameters for the Http resource
     map<json> parameters?;
     # Request body of the Http resource
@@ -117,6 +116,7 @@ public type BaseToolKit distinct object {
 # Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
+    private final map<HttpTool> & readonly httpTools;
     private final Tool[] & readonly tools;
     private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
@@ -131,6 +131,8 @@ public isolated class HttpServiceToolKit {
     public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, map<string|string[]> headers = {}) returns error? {
         self.headers = headers.cloneReadOnly();
         self.httpClient = check new (serviceUrl, clientConfig);
+        self.httpTools = map from HttpTool tool in httpTools
+            select [string `${tool.path}:${tool.method}`, tool.cloneReadOnly()];
 
         Tool[] tools = [];
         foreach HttpTool httpTool in httpTools {
@@ -155,7 +157,7 @@ public isolated class HttpServiceToolKit {
 
             HttpToolJsonSchema parameters = {
                 properties: {
-                    tool: {'const: httpTool},
+                    path: {'const: httpTool.path},
                     parameters: httpParameters,
                     requestBody: requestBody is () ? () : requestBody.schema
                 }
@@ -193,7 +195,6 @@ public isolated class HttpServiceToolKit {
                 parameters,
                 caller
             });
-
             self.tools = tools.cloneReadOnly();
         }
     }
@@ -203,49 +204,49 @@ public isolated class HttpServiceToolKit {
     public isolated function getTools() returns Tool[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${GET}`), httpInput?.parameters);
         log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
         http:Response getResult = check self.httpClient->get(path, headers = self.headers);
         return extractResponsePayload(path, getResult);
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${POST}`), httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, postResult);
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`), httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, deleteResult);
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`), httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, putResult);
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`), httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
         return extractResponsePayload(path, patchResult);
     }
 
     private isolated function head(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${HEAD}`), httpInput?.parameters);
         log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
         http:Response headResult = check self.httpClient->head(path, headers = self.headers);
         return extractResponsePayload(path, headResult);
     }
 
     private isolated function options(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(httpInput.tool, httpInput?.parameters);
+        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${OPTIONS}`), httpInput?.parameters);
         log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
         http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
         return extractResponsePayload(path, optionsResult);

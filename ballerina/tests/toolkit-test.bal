@@ -115,7 +115,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[0].parameters, {
         'type: OBJECT,
         properties: {
-            tool: {'const: httpTools[0]},
+            path: {'const: httpTools[0].path},
             parameters: {
                 'type: OBJECT,
                 required: ["pathParam"],
@@ -129,7 +129,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[1].parameters, {
         'type: "object",
         properties: {
-            tool: {'const: httpTools[1]},
+            path: {'const: httpTools[1].path},
             requestBody: {
                 'type: "object",
                 properties: {
@@ -146,7 +146,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[2].parameters, {
         'type: "object",
         properties: {
-            tool: {'const: httpTools[2]},
+            path: {'const: httpTools[2].path},
             requestBody: {
                 'type: "object",
                 properties:
@@ -177,7 +177,7 @@ function testHttpToolKitInitialization() {
     test:assertEquals(tools[3].parameters, {
         'type: "object",
         properties: {
-            tool: {'const: httpTools[3]},
+            path: {'const: httpTools[3].path},
             requestBody: {
                 'type: "object",
                 properties:
