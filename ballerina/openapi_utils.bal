@@ -17,6 +17,7 @@
 import ballerina/io;
 import ballerina/log;
 import ballerina/yaml;
+import ballerina/regex;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
 public type HttpApiSpecification record {|
@@ -203,14 +204,14 @@ class OpenApiSpecVisitor {
     private isolated function visitContent(map<MediaType> content) returns record {|string mediaType; Schema schema;|}|error {
         // check for json content
         foreach [string, MediaType] [key, value] in content.entries() {
-            if key.trim().matches(re `(application/.*json|text/.*plain|\*/\*)`) {
+            if key.trim().matches(re `(application/.*json|application/.*xml|text/.*plain|\*/\*)`) {
                 return {
                     mediaType: key,
                     schema: value.schema
                 };
             }
         }
-        return error UnsupportedMediaTypeError("Only json or text content is supported.", availableContentTypes = content.keys());
+        return error UnsupportedMediaTypeError("Only json or xml or text content  is supported.", availableContentTypes = content.keys());
     }
 
     private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
@@ -218,7 +219,7 @@ class OpenApiSpecVisitor {
         string mediaType;
         Schema schema;
         {mediaType, schema} = check self.visitContent(content);
-        return {mediaType, schema: check self.visitSchema(schema)};
+        return {mediaType, schema: check self.visitSchema(schema, "")};
     }
 
     private isolated function visitParameters((Parameter|Reference)[]? parameters) returns map<ParameterSchema>?|error {
@@ -265,7 +266,7 @@ class OpenApiSpecVisitor {
             parameterSchemas[name] = {
                 location,
                 mediaType,
-                schema: check self.visitSchema(schema),
+                schema: check self.visitSchema(schema, ""),
                 style,
                 explode,
                 required: resolvedParameter.required,
@@ -277,47 +278,53 @@ class OpenApiSpecVisitor {
         return parameterSchemas;
     }
 
-    private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
+    private isolated function visitReference(Reference reference) returns [ComponentType, string]|InvalidReferenceError {
         if !self.referenceMap.hasKey(reference.\$ref) {
             return error InvalidReferenceError("Missing component object for the given reference", reference = reference.\$ref);
         }
         ComponentType|Reference component = self.referenceMap.get(reference.\$ref);
+
+        string[] refList = regex:split(reference.\$ref, "/");
+        string refName = refList[refList.length() - 1];
         if component is Reference {
             return self.visitReference(component);
         }
-        return component;
+        return [component, refName];
     }
 
-    private isolated function visitSchema(Schema schema) returns JsonSubSchema|error {
+    private isolated function visitSchema(Schema schema, string refName) returns JsonSubSchema|error {
         if schema is ObjectSchema {
-            return self.visitObjectSchema(schema);
+            return self.visitObjectSchema(schema, refName);
         }
         if schema is ArraySchema {
-            return self.visitArraySchema(schema);
+            return self.visitArraySchema(schema, refName);
         }
         if schema is PrimitiveTypeSchema {
-            return self.visitPrimitiveTypeSchema(schema);
+            return self.visitPrimitiveTypeSchema(schema, refName);
         }
         if schema is AnyOfSchema {
-            return self.visitAnyOfSchema(schema);
+            return self.visitAnyOfSchema(schema, refName);
         }
         if schema is OneOfSchema {
-            return self.visitOneOfSchema(schema);
+            return self.visitOneOfSchema(schema, refName);
         }
         if schema is AllOfSchema {
-            return self.visitAllOfSchema(schema);
+            return self.visitAllOfSchema(schema, refName);
         }
         if schema is NotSchema {
-            return self.visitNotSchema(schema);
+            return self.visitNotSchema(schema, refName);
         }
-        Schema resolvedSchema = check self.visitReference(<Reference>schema).ensureType();
-        return check self.visitSchema(resolvedSchema);
+        [ComponentType, string] [resolvedSchema, resolvedRefName] = check self.visitReference(<Reference>schema);
+        Schema ensuredResolvedSchema = check resolvedSchema.ensureType();
+        return check self.visitSchema(ensuredResolvedSchema, resolvedRefName);
     }
 
-    private isolated function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
+    private isolated function visitObjectSchema(ObjectSchema schema, string refName) returns ObjectInputSchema|error {
         ObjectInputSchema objectSchema = {
             'type: OBJECT,
-            properties: {}
+            properties: {},
+            refName: refName,
+            'xml: schema.'xml
         };
 
         if schema?.properties == () {
@@ -330,25 +337,32 @@ class OpenApiSpecVisitor {
         }
 
         foreach [string, Schema] [propertyName, property] in properties.entries() {
-            objectSchema.properties[propertyName] = check self.visitSchema(property);
+            objectSchema.properties[propertyName] = check self.visitSchema(property, "");
         }
         boolean|string[]? required = schema?.required;
         if required is string[] {
             objectSchema.required = required;
         }
+        if schema?.'xml?.name is string {
+            objectSchema.'xml.name = schema?.'xml?.name;
+        }
         return objectSchema;
     }
 
-    private isolated function visitArraySchema(ArraySchema schema) returns ArrayInputSchema|error {
+    private isolated function visitArraySchema(ArraySchema schema, string refName) returns ArrayInputSchema|error {
         return {
             'type: ARRAY,
-            items: check self.visitSchema(schema.items)
+            items: check self.visitSchema(schema.items, ""),
+            refName: refName,
+            'xml: schema.'xml
         };
     }
 
-    private isolated function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema) returns PrimitiveInputSchema|error {
+    private isolated function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema, string refName) returns PrimitiveInputSchema|error {
         PrimitiveInputSchema inputSchmea = {
-            'type: schema.'type
+            'type: schema.'type,
+            'xml: schema.'xml,
+            refName: refName
         };
 
         if self.additionalInfoFlags.extractDescription {
@@ -380,33 +394,33 @@ class OpenApiSpecVisitor {
         return inputSchmea;
     }
 
-    private isolated function visitAnyOfSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
+    private isolated function visitAnyOfSchema(AnyOfSchema schema, string refName) returns AnyOfInputSchema|error {
         JsonSubSchema[] anyOf = from Schema element in schema.anyOf
-            select check self.visitSchema(element).ensureType();
+            select check self.visitSchema(element, "").ensureType();
         return {
             anyOf
         };
     }
 
-    private isolated function visitAllOfSchema(AllOfSchema schema) returns AllOfInputSchema|error {
+    private isolated function visitAllOfSchema(AllOfSchema schema, string refName) returns AllOfInputSchema|error {
         JsonSubSchema[] allOf = from Schema element in schema.allOf
-            select check self.visitSchema(element).ensureType();
+            select check self.visitSchema(element, "").ensureType();
         return {
             allOf
         };
     }
 
-    private isolated function visitOneOfSchema(OneOfSchema schema) returns OneOfInputSchema|error {
+    private isolated function visitOneOfSchema(OneOfSchema schema, string refName) returns OneOfInputSchema|error {
         JsonSubSchema[] oneOf = from Schema element in schema.oneOf
-            select check self.visitSchema(element);
+            select check self.visitSchema(element, "");
         return {
             oneOf
         };
     }
 
-    private isolated function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
+    private isolated function visitNotSchema(NotSchema schema, string refName) returns NotInputSchema|error {
         return {
-            not: check self.visitSchema(schema.not)
+            not: check self.visitSchema(schema.not, "")
         };
     }
 }

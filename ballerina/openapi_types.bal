@@ -165,6 +165,8 @@ public type BasePrimitiveTypeSchema record {
     *BaseTypeSchema;
     never properties?;
     never items?;
+    # Xml schema
+    XmlSchema 'xml?;
 };
 
 # Integer schema object
@@ -245,6 +247,8 @@ public type ArraySchema record {
     int minItems?;
     # Maximum number of items in the array
     int maxItems?;
+    # Xml schema
+    XmlSchema 'xml?;
     # Not allowed properties
     never properties?;
 };
@@ -306,6 +310,8 @@ public type ObjectSchemaType1 record {
     boolean|Schema additionalProperties?;
     # Discriminator
     Discriminator discriminator?;
+    # Xml schema
+    XmlSchema 'xml?;
     # Not allowed items. Distinction between array and object
     never items?;
 };
@@ -321,6 +327,19 @@ public type ObjectSchemaType2 record {
 
 # Object schema
 public type ObjectSchema ObjectSchemaType1|ObjectSchemaType2;
+
+public type XmlSchema record {
+    # Replaces the name of the element/attribute used for the described schema property.
+    string name?;
+    # The URI of the namespace definition.
+    string namespace?;
+    # The prefix to be used for the name.
+    string prefix?;
+    # Declares whether the property definition translates to an attribute instead of an element.
+    boolean attribute?;
+    # MAY be used only for an array definition.
+    boolean wrapped?;
+};
 
 # Reference object
 public type Reference record {

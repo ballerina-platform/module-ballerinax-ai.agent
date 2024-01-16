@@ -32,6 +32,8 @@ public type PrimitiveType int|string|boolean|float|decimal;
 public type ConstantValueSchema record {|
     # The constant value.
     json 'const;
+    # Xml schema
+    XmlSchema 'xml?;
 |};
 
 # Defines a base input type schema.
@@ -49,12 +51,16 @@ public type PrimitiveInputSchema record {|
     *BaseInputTypeSchema;
     # Input data type. Should be one of `STRING`, `INTEGER`, `NUMBER`, `FLOAT`, or `BOOLEAN`.
     STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
+    # Reference name
+    string refName?;
     # Format of the input. This is not applicable for `BOOLEAN` type.
     string format?;
     # Pattern of the input. This is only applicable for `STRING` type.
     string pattern?;
     # Enum values of the input. This is only applicable for `STRING` type.
     (PrimitiveType?)[] 'enum?;
+    # Xml schema
+    XmlSchema 'xml?;
     # Default value of the input
     PrimitiveType default?;
 |};
@@ -63,24 +69,32 @@ public type PrimitiveInputSchema record {|
 public type AnyOfInputSchema record {|
     # List of possible input types
     JsonSubSchema[] anyOf;
+    # Xml schema
+    XmlSchema 'xml?;
 |};
 
 # Defines an `allOf` input field in the schema. Follows OpenAPI 3.x specification.
 public type AllOfInputSchema record {|
     # List of possible input types
     JsonSubSchema[] allOf;
+    # Xml schema
+    XmlSchema 'xml?;
 |};
 
 # Defines an `oneOf` input field in the schema. Follows OpenAPI 3.x specification.
 public type OneOfInputSchema record {|
     # List of possible input types
     JsonSubSchema[] oneOf;
+    # Xml schema
+    XmlSchema 'xml?;
 |};
 
 # Defines a `not` input field in the schema. Follows OpenAPI 3.x specification.
 public type NotInputSchema record {|
     # Schema that is not accepted as an input
     JsonSubSchema not;
+    # Xml schema
+    XmlSchema 'xml?;
 |};
 
 # Defines an array input field in the schema.
@@ -88,8 +102,12 @@ public type ArrayInputSchema record {|
     *BaseInputTypeSchema;
     # Input data type. Should be `ARRAY`.
     ARRAY 'type = ARRAY;
+    # Reference name
+    string refName?;
     # Schema of the array items
     JsonSubSchema items;
+    # Xml schema
+    XmlSchema 'xml?;
     # Default value for the array
     json[] default?;
 |};
@@ -99,6 +117,10 @@ public type ObjectInputSchema record {|
     *BaseInputTypeSchema;
     # Input data type. Should be `OBJECT`.
     OBJECT 'type = OBJECT;
+    # Reference name
+    string refName?;
+    # Name of the tag 
+    XmlSchema 'xml?;
     # List of required properties
     string[] required?;
     # Schema of the object properties
