@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;

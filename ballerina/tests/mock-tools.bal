@@ -1,5 +1,5 @@
-import ballerina/lang.regexp;
 import ballerina/io;
+import ballerina/lang.regexp;
 
 type SearchParams record {|
     string query;
@@ -7,6 +7,12 @@ type SearchParams record {|
 
 type CalculatorParams record {|
     string expression;
+|};
+
+type MessageRequest record {|
+    string[] to;
+    string subject;
+    string body;
 |};
 
 // create two mock tools 
@@ -29,6 +35,14 @@ isolated function calculatorToolMock(*CalculatorParams params) returns string {
         return "Answer: 3.991298452658078";
     } else {
         return "Can't compute. Some information is missing";
+    }
+}
+
+isolated function sendMail(record {|string senderEmail; MessageRequest messageRequest;|} 'input) returns string|error {
+    if 'input.senderEmail == "test@email.com" {
+        return error("Invalid sender email");
+    } else {
+        return "Mail sent successfully";
     }
 }
 

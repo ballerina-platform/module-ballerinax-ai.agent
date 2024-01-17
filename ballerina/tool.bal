@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/lang.regexp;
 import ballerina/log;
 
@@ -58,36 +57,39 @@ isolated class ToolStore {
 
     # execute the tool decided by the LLM.
     #
-    # + tool - NextTool object that contains the tool name and inputs
-    # + return - ToolOutput containing the results of the tool execution or an error if tool execution fails
-    isolated function runTool(NextTool tool) returns ToolOutput|error {
-        string toolName = tool.name;
-        map<json>? inputs = tool.arguments;
+    # + action - Action object that contains the tool name and inputs
+    # + return - ActionResult containing the results of the tool execution or an error if tool execution fails
+    isolated function execute(SelectedTool action) returns ToolOutput|error {
+        string name = action.name;
+        map<json>? inputs = action.arguments;
 
-        if !self.tools.hasKey(toolName) {
-            return error ToolNotFoundError("Cannot find the tool.", toolName = toolName, instruction = string `Tool "${toolName}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
+        if !self.tools.hasKey(name) {
+            return error ToolNotFoundError("Cannot find the tool.", toolName = name, instruction = string `Tool "${name}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
         }
 
-        map<json>|error inputValues = mergeInputs(inputs, self.tools.get(toolName).constants);
+        map<json>|error inputValues = mergeInputs(inputs, self.tools.get(name).constants);
         if inputValues is error {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = toolName, inputs = inputs ?: (), instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = name, inputs = inputs ?: (), instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
         }
-
-        isolated function caller = self.tools.get(toolName).caller;
+        isolated function caller = self.tools.get(name).caller;
         any|error observation;
-        if inputValues.length() == 0 {
-            observation = trap check function:call(caller);
-        } else {
-            map<json> & readonly toolParams = inputValues.cloneReadOnly();
-            observation = trap check function:call(caller, toolParams);
+        do {
+            if inputValues.length() == 0 {
+                observation = trap check function:call(caller);
+            } else {
+                map<json> & readonly toolParams = inputValues.cloneReadOnly();
+                observation = trap check function:call(caller, toolParams);
+            }
+        } on fail error e {
+            return {value: e};
         }
         if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
         }
         if observation is anydata|error {
             return {value: observation};
         }
-        return error ToolInvaludOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues);
+        return error ToolInvaludOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
     }
 
     # Generate descriptions for the tools registered.

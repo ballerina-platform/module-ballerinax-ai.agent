@@ -93,11 +93,11 @@ function testAgentExecutorRun() returns error? {
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     AgentExecutor agentExecutor = new (agent, query);
     // _ = run(agent, query);
-    record {|ExecutionStep|ChatResponse|error value;|}? result = agentExecutor.next();
+    record {|ExecutionStep|LlmChatResponse|error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
-    ExecutionStep|ChatResponse|error output = result.value;
+    ExecutionStep|LlmChatResponse|error output = result.value;
     if output is error {
         test:assertFail("AgentExecutor.next returns an error during first iteration");
     }
@@ -128,7 +128,7 @@ function testAgentExecutorRun() returns error? {
 function testConstructHistoryPrompt() {
     ExecutionStep[] history = [
         {
-            action: {
+            toolResponse: {
                 tool: {
                     name: "Create wifi",
                     arguments: {
@@ -140,7 +140,7 @@ function testConstructHistoryPrompt() {
                         }
                     }
                 },
-                generated: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
+                llmResponse: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
 Action:
 {
   "tool": "Create wifi",
@@ -158,14 +158,14 @@ Action:
             observation: "Successfully added the wifi account"
         },
         {
-            action: {
+            toolResponse: {
                 tool: {
                     name: "List wifi",
                     arguments: {
                         "path": "//guest-wifi-accounts/johnny@wso2.com"
                     }
                 },
-                generated: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
+                llmResponse: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
 Action:
 {
   "tool": "List wifi",
@@ -177,7 +177,7 @@ Action:
             observation: ["freeWifi.guestOf.johnny", "newGuest.guestOf.johnny"]
         },
         {
-            action: {
+            toolResponse: {
                 tool: {
                     name: "Send mail",
                     arguments: {
@@ -186,7 +186,7 @@ Action:
                         "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
                     }
                 },
-                generated: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
+                llmResponse: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
 Action:
 {
   "tool": "Send mail",
@@ -251,10 +251,40 @@ ${"```"}
 }
 ${"```"}`;
 
-    NextTool|ChatResponse parsedResult = check parseLlmReponse(llmResponse);
-    if parsedResult is NextTool {
+    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
+    if parsedResult is SelectedTool {
         test:assertFail("Parsed result should be a ChatResponse");
     }
     test:assertEquals(parsedResult.content, "The guest wifi account guestJohn with password abc123 has been successfully created. There are currently no other available wifi accounts.");
+}
+
+@test:Config {}
+function testParseLlmReponse2() returns error? {
+    string llmResponse = string `The pets available for adoption are:
+1. Lion 1 (ID: 7)
+2. Lion 2 (ID: 8)
+3. Lion 3 (ID: 9)
+4. Собака (ID: 11)
+5. O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG"e#H#${"`"}wwC1;| (ID: -1414197701106907177)
+6. 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\6vx^6*'FFHaKp+Gvq-i":bB=;5qG:QK8!!uV/]xYJ&nk~b"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390)
+7. My Pet (ID: 0)
+8. Winter (ID: 1122)
+9. New name for my pet 1212 (ID: 108333023)
+10. doggie (ID: -34)
+11. Dog 224 (ID: 224)
+12. New name for my pet 1212 (ID: 1016156941)
+
+Action:
+${"```"}
+{
+  "action": "Final Answer",
+  "action_input": "The pets available for adoption are: Lion 1 (ID: 7), Lion 2 (ID: 8), Lion 3 (ID: 9), Собака (ID: 11), O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG"e#H#${"`"}wwC1;| (ID: -1414197701106907177), 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\\6vx^6*'FFHaKp+Gvq-i":bB=;5qG:QK8!!uV/]xYJ&nk~b"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390), My Pet (ID: 0), Winter (ID: 1122), New name for my pet 1212 (ID: 108333023), doggie (ID: -34), Dog 224 (ID: 224), and New name for my pet 1212 (ID: 1016156941)."
+}
+${"```"}`;
+
+    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
+    if parsedResult is SelectedTool {
+        test:assertFail("Parsed result should be a ChatResponse");
+    }
 }
 

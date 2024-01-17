@@ -34,7 +34,7 @@ public isolated class ReActAgent {
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
-    isolated function decideNextTool(QueryProgress progress) returns ToolResponse|ChatResponse|LlmError {
+    isolated function selectNextTool(ExecutionProgress progress) returns LlmToolResponse|LlmChatResponse|LlmError {
         map<json>|string? context = progress.context;
         string contextPrompt = context is () ? "" : string `${"\n\n"}You can use these information if needed: ${context.toString()}$`;
 
@@ -45,13 +45,13 @@ ${constructHistoryPrompt(progress.history)}
 ${THOUGHT_KEY}`;
 
         string llmResponse = check self.generate(reactPrompt);
-        NextTool|ChatResponse|LlmInvalidGenerationError parsedResponse = parseLlmReponse(normalizeLlmResponse(llmResponse));
-        if parsedResponse is ChatResponse {
+        SelectedTool|LlmChatResponse|LlmInvalidGenerationError parsedResponse = parseLlmReponse(normalizeLlmResponse(llmResponse));
+        if parsedResponse is LlmChatResponse {
             return parsedResponse;
         }
         return {
             tool: parsedResponse,
-            generated: llmResponse
+            llmResponse
         };
     }
 
@@ -140,14 +140,14 @@ isolated function normalizeLlmResponse(string llmResponse) returns string {
     return normalizedResponse;
 }
 
-isolated function parseLlmReponse(string llmResponse) returns NextTool|ChatResponse|LlmInvalidGenerationError {
+isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmChatResponse|LlmInvalidGenerationError {
     string[] content = regexp:split(re `${"```"}`, llmResponse + "<endtoken>");
     if content.length() < 3 {
         log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");
     }
 
-    map<json>|error jsonThought = content[1].fromJsonStringWithType();
+    map<json>|error jsonThought = content[1].toString().fromJsonStringWithType();
     if jsonThought is error {
         log:printWarn("Invalid JSON is given as the action.", jsonThought);
         return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonThought, thought = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
@@ -167,7 +167,7 @@ isolated function parseLlmReponse(string llmResponse) returns NextTool|ChatRespo
             content: input
         };
     }
-    NextTool|error tool = jsonAction.fromJsonWithType();
+    SelectedTool|error tool = jsonAction.fromJsonWithType();
     if tool is error {
         log:printError("Error while extracting action name and inputs from LLM response.", tool, llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, thought = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
@@ -182,7 +182,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     string historyPrompt = "";
     foreach ExecutionStep step in history {
         string observationStr = getObservationString(step.observation);
-        string thoughtStr = step.action.generated.toString();
+        string thoughtStr = step.toolResponse.llmResponse.toString();
         historyPrompt += string `${thoughtStr}${"\n"}Observation: ${observationStr}${"\n"}`;
     }
     return historyPrompt;

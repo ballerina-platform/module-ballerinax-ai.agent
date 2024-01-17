@@ -1,4 +1,3 @@
-
 // Copyright (c) 2024 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
 //
 // WSO2 Inc. licenses this file to you under the Apache License,
@@ -14,6 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
+# Function call agent. 
+# This agent uses OpenAI function call API to perform the tool selection.
 public isolated class FunctionCallAgent {
     *BaseAgent;
     final ToolStore toolStore;
@@ -28,7 +30,7 @@ public isolated class FunctionCallAgent {
         self.model = model;
     }
 
-    isolated function decideNextTool(QueryProgress progress) returns ToolResponse|ChatResponse|LlmError {
+    isolated function selectNextTool(ExecutionProgress progress) returns LlmToolResponse|LlmChatResponse|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
         FunctionCall|string|error response = self.model.functionaCall(messages, self.toolStore.tools.toArray());
         if response is error {
@@ -39,7 +41,7 @@ public isolated class FunctionCallAgent {
         }
         string? name = response.name;
         if name is () {
-            return {tool: error LlmInvalidGenerationError("Missing name", name = response.name, arguments = response.arguments), generated: response.toJson()};
+            return {tool: error LlmInvalidGenerationError("Missing name", name = response.name, arguments = response.arguments), llmResponse: response.toJson()};
         }
         string? stringArgs = response.arguments;
         map<json>|error? arguments = ();
@@ -47,23 +49,22 @@ public isolated class FunctionCallAgent {
             arguments = stringArgs.fromJsonStringWithType();
         }
         if arguments is error {
-            return {tool: error LlmInvalidGenerationError("Invalid arguments", arguments, name = response.name, arguments = stringArgs), generated: response.toJson()};
+            return {tool: error LlmInvalidGenerationError("Invalid arguments", arguments, name = response.name, arguments = stringArgs), llmResponse: response.toJson()};
         }
         return {
             tool: {
                 name,
                 arguments
             },
-            generated: {
-                "name": name,
-                "arguments": stringArgs
+            llmResponse: {
+                name: name,
+                arguments: stringArgs
             }
         };
-
     }
 }
 
-isolated function createFunctionCallMessages(QueryProgress progress) returns ChatMessage[] {
+isolated function createFunctionCallMessages(ExecutionProgress progress) returns ChatMessage[] {
     // add the question
     ChatMessage[] messages = [
         {
@@ -80,9 +81,9 @@ isolated function createFunctionCallMessages(QueryProgress progress) returns Cha
     }
     // include the history
     foreach ExecutionStep step in progress.history {
-        FunctionCall|error functionCall = step.action.generated.fromJsonWithType();
+        FunctionCall|error functionCall = step.toolResponse.llmResponse.fromJsonWithType();
         if functionCall is error {
-            panic error("Badly formated history for function call agent", generated = step.action.generated);
+            panic error("Badly formated history for function call agent", generated = step.toolResponse.llmResponse);
         }
         messages.push({
             role: ASSISTANT,

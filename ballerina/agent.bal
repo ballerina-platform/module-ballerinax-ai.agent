@@ -13,44 +13,50 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/log;
 import ballerina/io;
+import ballerina/log;
 
-# Prompt construct record
-public type QueryProgress record {|
-    # Query to the prompt
+# Execution progress record
+public type ExecutionProgress record {|
+    # Question to the agent
     string query;
-    # Execution history up to the current point
+    # Execution history up to the current action
     ExecutionStep[] history = [];
-    # Contextual instruction to the prompt
+    # Contextual instruction that can be used by the agent during the execution
     map<json>|string context?;
 |};
 
+# Execution step information
 public type ExecutionStep record {|
     # Tool decided by the LLM during the reasoning
-    ToolResponse action;
+    LlmToolResponse toolResponse;
     # Observations produced by the tool during the execution
     anydata|error observation;
 |};
 
-public type NextTool record {|
-    # Name of the tool to be performed
+# An LLM response containing the selected tool to be executed
+public type LlmToolResponse record {|
+    # Next tool to be executed
+    SelectedTool|LlmInvalidGenerationError tool;
+    # Raw LLM generated output
+    json llmResponse;
+|};
+
+# An chat response by the LLM
+public type LlmChatResponse record {|
+    # A text response to the question
+    string content;
+|};
+
+# Tool selected by LLM to be performed by the agent
+public type SelectedTool record {|
+    # Name of the tool to selected
     string name;
     # Input to the tool
     map<json>? arguments = {};
 |};
 
-public type ToolResponse record {|
-    NextTool|LlmInvalidGenerationError tool;
-    json generated;
-|};
-
-type ChatResponse record {|
-    # answer to the question
-    string content;
-|};
-
-# Output from executing a tool
+# Output from executing an action
 public type ToolOutput record {|
     # Output value the tool
     anydata|error value;
@@ -64,41 +70,52 @@ public type BaseAgent distinct isolated object {
     #
     # + progress - QueryProgress with the current query and execution history
     # + return - NextAction decided by the LLM or an error if call to the LLM fails
-    isolated function decideNextTool(QueryProgress progress) returns ToolResponse|ChatResponse|LlmError;
+    isolated function selectNextTool(ExecutionProgress progress) returns LlmToolResponse|LlmChatResponse|LlmError;
 };
 
+# An iterator to iterate over agent's execution
 public class AgentIterator {
     *object:Iterable;
-
     private final AgentExecutor executor;
 
-    isolated function init(BaseAgent agent, string query, map<json>|string? context = ()) {
+    # Initialize the iterator with the agent and the query.
+    #
+    # + agent - Agent instance to be executed
+    # + query - Natural language query to be executed by the agent
+    # + context - Contextual information to be used by the agent during the execution
+    public isolated function init(BaseAgent agent, string query, map<json>|string? context = ()) {
         self.executor = new (agent, query, context = context);
     }
 
     # Iterate over the agent's execution steps.
     # + return - a record with the execution step or an error if the agent failed
     public function iterator() returns object {
-        public function next() returns record {|ExecutionStep|ChatResponse|error value;|}?;
+        public function next() returns record {|ExecutionStep|LlmChatResponse|error value;|}?;
     } {
         return self.executor;
     }
 }
 
+# An executor to perform step-by-step execution of the agent.
 public class AgentExecutor {
     private boolean isCompleted = false;
     private final BaseAgent agent;
-    private final ToolStore toolStore;
-    QueryProgress progress;
+    # Contains the current execution progress for the agent and the query
+    public ExecutionProgress progress;
 
-    isolated function init(BaseAgent agent, string query, ExecutionStep[] history = [], map<json>|string? context = ()) {
+    # Initialize the executor with the agent and the query.
+    #
+    # + agent - Agent instance to be executed
+    # + query - Natural language query to be executed by the agent
+    # + history - Execution history of the agent (This is used to continue an execution paused without completing)
+    # + context - Contextual information to be used by the agent during the execution
+    public isolated function init(BaseAgent agent, string query, ExecutionStep[] history = [], map<json>|string? context = ()) {
         self.agent = agent;
         self.progress = {
-            query: query,
-            history: history,
-            context: context
+            query,
+            history,
+            context
         };
-        self.toolStore = agent.toolStore;
     }
 
     # Checks whether agent has more steps to execute.
@@ -111,31 +128,34 @@ public class AgentExecutor {
     # Reason the next step of the agent.
     #
     # + return - Thought to be executed by the agent or an error if the reasoning failed
-    public isolated function reason() returns ToolResponse|ChatResponse|TaskCompletedError|LlmError {
+    public isolated function reason() returns LlmToolResponse|LlmChatResponse|TaskCompletedError|LlmError {
         if self.isCompleted {
             return error TaskCompletedError("Task is already completed. No more reasoning is needed.");
         }
-        ToolResponse|ChatResponse respond = check self.agent.decideNextTool(self.progress);
-        if respond is ChatResponse {
+        LlmToolResponse|LlmChatResponse respond = check self.agent.selectNextTool(self.progress);
+        if respond is LlmChatResponse {
             self.isCompleted = true;
-
         }
         return respond;
     }
 
     # Execute the next step of the agent.
     #
-    # + action - NextTool record to be executed by the agent or FinalResponse record if the task is completed (LlmInvalidGenerationError if the tool generated is not valid)
+    # + toolResponse - LLM tool response containing the tool to be executed and the raw LLM output
     # + return - Observations from the tool can be any|error|null
-    public isolated function act(ToolResponse action) returns ToolOutput {
+    public isolated function act(LlmToolResponse toolResponse) returns ToolOutput {
         ToolOutput observation;
-        NextTool|LlmInvalidGenerationError tool = action.tool;
+        SelectedTool|LlmInvalidGenerationError tool = toolResponse.tool;
 
         // TODO Improve to use intructions from the error instead of generic error instructions 
-        if tool is NextTool {
-            ToolOutput|error output = self.toolStore.runTool(tool);
-            if output is error {
+        if tool is SelectedTool {
+            ToolOutput|error output = self.agent.toolStore.execute(tool);
+            if output is ToolNotFoundError {
+                observation = {value: "Tool is not found. Please check the tool name and retry."};
+            } else if output is ToolInvalidInputError {
                 observation = {value: "Tool execution failed due to invalid inputs. Retry with correct inputs."};
+            } else if output is error {
+                observation = {value: "Tool execution failed. Retry with correct inputs."};
             } else {
                 observation = output;
             }
@@ -143,35 +163,33 @@ public class AgentExecutor {
         else {
             observation = {value: "Tool extraction failed due to invalid JSON_BLOB. Retry with correct JSON_BLOB."};
         }
-
-        self.progress.history.push(
-            {
-            action,
+        // update the execution history with the latest step
+        self.update({
+            toolResponse,
             observation: observation.value
         });
         return observation;
     }
 
-    # Update the agent with the latest exectuion step.
+    # Update the agent with an execution step.
     #
     # + step - Latest step to be added to the history
     public isolated function update(ExecutionStep step) {
-        ExecutionStep[] history = self.progress.history;
-        history.push(step);
+        self.progress.history.push(step);
     }
 
     # Execute the next step of the agent.
     #
     # + return - A record with ExecutionStep or error 
-    public isolated function next() returns record {|ExecutionStep|ChatResponse|error value;|}? {
-        ToolResponse|ChatResponse|error action = self.reason();
-        if action is ChatResponse|error {
-            return {value: action};
+    public isolated function next() returns record {|ExecutionStep|LlmChatResponse|error value;|}? {
+        LlmToolResponse|LlmChatResponse|error toolResponse = self.reason();
+        if toolResponse is LlmChatResponse|error {
+            return {value: toolResponse};
         }
         return {
             value: {
-                action,
-                observation: self.act(action).value
+                toolResponse,
+                observation: self.act(toolResponse).value
             }
         };
     }
@@ -188,16 +206,16 @@ public class AgentExecutor {
 #
 # + agent - Agent to be executed
 # + query - Natural langauge commands to the agent  
-# + maxIter - No. of max iterations that agent will run to execute the task  
+# + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
 # + context - Context values to be used by the agent to execute the task
-# + verbose - If true, then print the reasoning steps
+# + verbose - If true, then print the reasoning steps (default: true)
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
 public isolated function run(BaseAgent agent, string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|ExecutionStep[] steps; string answer?;|} {
     ExecutionStep[] steps = [];
     string? content = ();
     AgentIterator iterator = new (agent, query, context = context);
     int iter = 0;
-    foreach ExecutionStep|ChatResponse|error step in iterator {
+    foreach ExecutionStep|LlmChatResponse|error step in iterator {
         if iter == maxIter {
             break;
         }
@@ -206,7 +224,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
             log:printError("Error occured while executing the agent", step, cause = cause !is () ? cause.toString() : "");
             break;
         }
-        if step is ChatResponse {
+        if step is LlmChatResponse {
             content = step.content;
             if verbose {
                 io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
@@ -216,8 +234,8 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
         iter += 1;
         if verbose {
             io:println(string `${"\n\n"}Agent Iteration ${iter.toString()}`);
-            NextTool|LlmInvalidGenerationError tool = step.action.tool;
-            if tool is NextTool {
+            SelectedTool|LlmInvalidGenerationError tool = step.toolResponse.tool;
+            if tool is SelectedTool {
 
                 io:println(string `Action:
 ${"```"}
@@ -234,12 +252,13 @@ ${"```"}`);
                 }
             } else {
                 error? cause = tool.cause();
-                string thought = step.action.generated.toString();
+                string llmResponse = step.toolResponse.llmResponse.toString();
                 io:println(string `LLM Generation Error: 
 ${"```"}
 {
     message: ${tool.message()},
-    cause: ${(cause is error ? cause.message() : "Unspecified")}${string `,${"\n"}    thought: ${thought}`}
+    cause: ${(cause is error ? cause.message() : "Unspecified")},
+    llmResponse: ${llmResponse}
 }
 ${"```"}`);
             }
@@ -251,7 +270,7 @@ ${"```"}`);
 
 isolated function getObservationString(anydata|error observation) returns string {
     if observation is () {
-        return "Tool didn't return anything. Probably it is successful. Can I verify using another tool?";
+        return "Tool didn't return anything. Probably it is successful. Should we verify using another tool?";
     } else if observation is error {
         record {|string message; string cause?;|} errorInfo = {
             message: observation.message().trim()
