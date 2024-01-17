@@ -30,7 +30,12 @@ const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 //agent
 // const FINAL_ANSWER = "final answer";
 const THOUGHT_KEY = "Thought:";
-const BACKTICK = "`";
+const BACKTICKS = "```";
 const ERROR_INSTRUCTION_KEY = "instruction";
 
 final regexp:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;
+
+const ACTION_KEY = "action";
+const ACTION_NAME_KEY = "name";
+const ACTION_ARGUEMENTS_KEY = "arguments";
+final regexp:RegExp ACTION_INPUT_REGEX = re `^action.?input`;

@@ -127,7 +127,7 @@ public class AgentExecutor {
 
     # Reason the next step of the agent.
     #
-    # + return - Thought to be executed by the agent or an error if the reasoning failed
+    # + return - Llm tool response, chat response or an error if reasoning has failed
     public isolated function reason() returns LlmToolResponse|LlmChatResponse|TaskCompletedError|LlmError {
         if self.isCompleted {
             return error TaskCompletedError("Task is already completed. No more reasoning is needed.");
@@ -178,9 +178,9 @@ public class AgentExecutor {
         self.progress.history.push(step);
     }
 
-    # Execute the next step of the agent.
+    # Reason and execute the next step of the agent.
     #
-    # + return - A record with ExecutionStep or error 
+    # + return - A record with ExecutionStep, chat response or an error 
     public isolated function next() returns record {|ExecutionStep|LlmChatResponse|error value;|}? {
         LlmToolResponse|LlmChatResponse|error toolResponse = self.reason();
         if toolResponse is LlmChatResponse|error {
@@ -238,12 +238,12 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
             if tool is SelectedTool {
 
                 io:println(string `Action:
-${"```"}
+${BACKTICKS}
 {
     name: ${tool.name},
     arguments: ${(tool.arguments ?: "None").toString()}}
 }
-${"```"}`);
+${BACKTICKS}`);
                 anydata|error observation = step?.observation;
                 if observation is error {
                     io:println(string `Observation (Error): ${observation.toString()}`);
@@ -254,13 +254,13 @@ ${"```"}`);
                 error? cause = tool.cause();
                 string llmResponse = step.toolResponse.llmResponse.toString();
                 io:println(string `LLM Generation Error: 
-${"```"}
+${BACKTICKS}
 {
     message: ${tool.message()},
     cause: ${(cause is error ? cause.message() : "Unspecified")},
     llmResponse: ${llmResponse}
 }
-${"```"}`);
+${BACKTICKS}`);
             }
         }
         steps.push(step);

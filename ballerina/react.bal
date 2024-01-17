@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 import ballerina/lang.regexp;
-import ballerina/lang.value;
 import ballerina/log;
 
+# A ReAct Agent that uses ReAct prompt to answer questions by using tools.
 public isolated class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
@@ -80,47 +80,6 @@ ${THOUGHT_KEY}`;
 
 }
 
-isolated function constructReActPrompt(ToolInfo toolInfo) returns string {
-
-    return string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
-
-${toolInfo.toolIntro}
-
-Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
-
-Valid "action" values: "Final Answer" or ${toolInfo.toolList}
-
-Provide only ONE action per $JSON_BLOB, as shown:
-
-${BACKTICK}${BACKTICK}${BACKTICK}
-{
-  "action": $TOOL_NAME,
-  "action_input": $INPUT_JSON
-}
-${BACKTICK}${BACKTICK}${BACKTICK}
-
-Follow this format:
-
-Question: input question to answer
-Thought: consider previous and subsequent steps
-Action:
-${BACKTICK}${BACKTICK}${BACKTICK}
-$JSON_BLOB
-${BACKTICK}${BACKTICK}${BACKTICK}
-Observation: action result
-... (repeat Thought/Action/Observation N times)
-Thought: I know what to respond
-Action:
-${BACKTICK}${BACKTICK}${BACKTICK}
-{
-  "action": "Final Answer",
-  "action_input": "Final response to human"
-}
-${BACKTICK}${BACKTICK}${BACKTICK}
-
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:${BACKTICK}${BACKTICK}${BACKTICK}$JSON_BLOB${BACKTICK}${BACKTICK}${BACKTICK}then Observation:.`;
-}
-
 isolated function normalizeLlmResponse(string llmResponse) returns string {
     string normalizedResponse = llmResponse.trim();
     if !normalizedResponse.includes("```") {
@@ -147,7 +106,7 @@ isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmCh
         return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");
     }
 
-    map<json>|error jsonThought = content[1].toString().fromJsonStringWithType();
+    map<json>|error jsonThought = content[1].fromJsonStringWithType();
     if jsonThought is error {
         log:printWarn("Invalid JSON is given as the action.", jsonThought);
         return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonThought, thought = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
@@ -155,14 +114,14 @@ isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmCh
 
     map<json> jsonAction = {};
     foreach [string, json] [key, value] in jsonThought.entries() {
-        if key.toLowerAscii() == "action" {
-            jsonAction["name"] = value;
-        } else if key.toLowerAscii().matches(re `^action.?input`) {
-            jsonAction["arguments"] = value;
+        if key.toLowerAscii() == ACTION_KEY {
+            jsonAction[ACTION_NAME_KEY] = value;
+        } else if key.toLowerAscii().matches(ACTION_INPUT_REGEX) {
+            jsonAction[ACTION_ARGUEMENTS_KEY] = value;
         }
     }
-    json input = jsonAction["arguments"];
-    if jsonAction["name"].toString().toLowerAscii().matches(FINAL_ANSWER_REGEX) && input is string {
+    json input = jsonAction[ACTION_ARGUEMENTS_KEY];
+    if jsonAction[ACTION_NAME_KEY].toString().toLowerAscii().matches(FINAL_ANSWER_REGEX) && input is string {
         return {
             content: input
         };
@@ -188,13 +147,44 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     return historyPrompt;
 }
 
-isolated function getErrorInfo(error 'e, string key) returns string? {
-    map<value:Cloneable> detail = 'e.detail();
-    if detail.hasKey(key) {
-        value:Cloneable errorInfoValue = detail.get(key);
-        if errorInfoValue is string {
-            return errorInfoValue;
-        }
-    }
-    return ();
+isolated function constructReActPrompt(ToolInfo toolInfo) returns string {
+
+    return string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
+
+${toolInfo.toolIntro}
+
+Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
+
+Valid "action" values: "Final Answer" or ${toolInfo.toolList}
+
+Provide only ONE action per $JSON_BLOB, as shown:
+
+${BACKTICKS}
+{
+  "action": $TOOL_NAME,
+  "action_input": $INPUT_JSON
 }
+${BACKTICKS}
+
+Follow this format:
+
+Question: input question to answer
+Thought: consider previous and subsequent steps
+Action:
+${BACKTICKS}
+$JSON_BLOB
+${BACKTICKS}
+Observation: action result
+... (repeat Thought/Action/Observation N times)
+Thought: I know what to respond
+Action:
+${BACKTICKS}
+{
+  "action": "Final Answer",
+  "action_input": "Final response to human"
+}
+${BACKTICKS}
+
+Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:${BACKTICKS}$JSON_BLOB${BACKTICKS}then Observation:.`;
+}
+

@@ -278,7 +278,7 @@ Action:
 ${"```"}
 {
   "action": "Final Answer",
-  "action_input": "The pets available for adoption are: Lion 1 (ID: 7), Lion 2 (ID: 8), Lion 3 (ID: 9), Собака (ID: 11), O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG"e#H#${"`"}wwC1;| (ID: -1414197701106907177), 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\\6vx^6*'FFHaKp+Gvq-i":bB=;5qG:QK8!!uV/]xYJ&nk~b"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390), My Pet (ID: 0), Winter (ID: 1122), New name for my pet 1212 (ID: 108333023), doggie (ID: -34), Dog 224 (ID: 224), and New name for my pet 1212 (ID: 1016156941)."
+  "action_input": "The pets available for adoption are: Lion 1 (ID: 7), Lion 2 (ID: 8), Lion 3 (ID: 9), Собака (ID: 11), O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG\"e#H#${"`"}wwC1;| (ID: -1414197701106907177), 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\\6vx^6*'FFHaKp+Gvq-i\":bB=;5qG:QK8!!uV/]xYJ&nk~b\"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390), My Pet (ID: 0), Winter (ID: 1122), New name for my pet 1212 (ID: 108333023), doggie (ID: -34), Dog 224 (ID: 224), and New name for my pet 1212 (ID: 1016156941)."
 }
 ${"```"}`;
 

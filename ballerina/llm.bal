@@ -22,6 +22,14 @@ import ballerinax/openai.text;
 // requirs using never prompt?; never stop? to prevent setting those during initialization
 // change once https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
 
+# Roles for the chat messages.
+public enum ROLE {
+    SYSTEM = "system",
+    USER = "user",
+    ASSISTANT = "assistant",
+    FUNCTION = "function"
+}
+
 # Completion model configurations.
 public type CompletionModelConfig readonly & record {|
     # Model type to be used for the completion. Default is `davinci`.
@@ -32,13 +40,13 @@ public type CompletionModelConfig readonly & record {|
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
 |};
 
-# Roles for the chat messages.
-public enum ROLE {
-    SYSTEM = "system",
-    USER = "user",
-    ASSISTANT = "assistant",
-    FUNCTION = "function"
-}
+# Chat model configurations.
+public type ChatModelConfig readonly & record {|
+    # Model type to be used for the completion. Default is `gpt-3.5-turbo`
+    string model = GPT3_5_MODEL_NAME;
+    # Temperature value to be used for the completion. Default is `0.7`.
+    decimal temperature = DEFAULT_TEMPERATURE;
+|};
 
 # Chat message record
 public type ChatMessage record {|
@@ -52,6 +60,7 @@ public type ChatMessage record {|
     FunctionCall function_call?;
 |};
 
+# Function call record
 public type FunctionCall record {|
     # Name of the function
     string name?;
@@ -59,31 +68,26 @@ public type FunctionCall record {|
     string arguments?;
 |};
 
-# Chat model configurations.
-public type ChatModelConfig readonly & record {|
-    # Model type to be used for the completion. Default is `gpt-3.5-turbo`
-    string model = GPT3_5_MODEL_NAME;
-    # Temperature value to be used for the completion. Default is `0.7`.
-    decimal temperature = DEFAULT_TEMPERATURE;
-|};
-
 # Extendable LLM model object that can be used for completion tasks.
 # Useful to initialize the agents.
 public type LlmModel distinct isolated object {
 };
 
+# Extendable LLM model object for completion models.
 public type CompletionLlmModel distinct isolated object {
     *LlmModel;
     CompletionModelConfig modelConfig;
     public isolated function complete(string prompt, string? stop = ()) returns string|error;
 };
 
+# Extendable LLM model object for chat LLM models
 public type ChatLlmModel distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error;
 };
 
+# Extendable LLM model object for LLM models with function call API
 public type FunctionCallLlm distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;

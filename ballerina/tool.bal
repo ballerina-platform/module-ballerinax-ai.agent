@@ -16,11 +16,18 @@
 import ballerina/lang.regexp;
 import ballerina/log;
 
+# This is the tool used by LLMs during reasoning.
+# This tool is same as the Tool record, but it has a clear separation between the variables that should be generated with the help of the LLMs and the constants that are defined by the users. 
 public type AgentTool record {|
+    # Name of the tool
     string name;
+    # Description of the tool
     string description;
+    # Variables that should be generated with the help of the LLMs
     JsonInputSchema variables?;
+    # Constants that are defined by the users
     map<json> constants = {};
+    # Function that should be called to execute the tool
     isolated function caller;
 |};
 
@@ -83,13 +90,16 @@ isolated class ToolStore {
         } on fail error e {
             return {value: e};
         }
-        if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
-        }
-        if observation is anydata|error {
+        if observation is anydata {
             return {value: observation};
         }
-        return error ToolInvaludOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
+        if observation !is error {
+            return error ToolInvaludOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
+        }
+        if observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
+        }
+        return error ToolExecutionError("Tool execution failed.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
     }
 
     # Generate descriptions for the tools registered.

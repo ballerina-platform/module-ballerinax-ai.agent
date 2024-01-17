@@ -286,7 +286,7 @@ isolated function extractResponsePayload(string path, http:Response response) re
     };
 }
 
-public isolated function getContentLength(http:Response response) returns int|error? {
+isolated function getContentLength(http:Response response) returns int|error? {
     string|error contentLengthHeader = response.getHeader(mime:CONTENT_LENGTH);
     if contentLengthHeader is error || contentLengthHeader == "" {
         return;
