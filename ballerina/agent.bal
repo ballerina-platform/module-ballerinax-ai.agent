@@ -133,10 +133,10 @@ public class AgentExecutor {
             return error TaskCompletedError("Task is already completed. No more reasoning is needed.");
         }
         LlmToolResponse|LlmChatResponse response = check self.agent.selectNextTool(self.progress);
-        if respond is LlmChatResponse {
+        if response is LlmChatResponse {
             self.isCompleted = true;
         }
-        return respond;
+        return response;
     }
 
     # Execute the next step of the agent.
