@@ -223,52 +223,112 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
         if tool.name == "createCompletion" {
             test:assertEquals(tool,
             {
-                name: "createCompletion",
-                description: "Creates a completion for the provided prompt and parameters",
-                method: POST,
-                path: "/completions",
-                requestBody: {
-                    mediaType: "application/json",
-                    schema: {
-                        'type: "object",
-                        properties:
-                        {
-                            model: {'type: "string"},
-                            prompt: {
-                                oneOf: [
-                                    {'type: "string"},
-                                    {'type: "array", items: {'type: "string"}},
-                                    {'type: "array", items: {'type: "integer"}},
-                                    {
-                                        'type: "array",
-                                        items: {
-                                            'type: "array",
-                                            items: {'type: "integer"}
-                                        }
+                "name": "createCompletion",
+                "description": "Creates a completion for the provided prompt and parameters",
+                "method": "POST",
+                "path": "/completions",
+                "requestBody": {
+                    "mediaType": "application/xml",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "CreateCompletionRequest": {
+                                "type": "object",
+                                "required": [
+                                    "model"
+                                ],
+                                "properties": {
+                                    "model": {
+                                        "type": "string"
+                                    },
+                                    "prompt": {
+                                        "oneOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "suffix": {
+                                        "type": "string"
+                                    },
+                                    "max_tokens": {
+                                        "type": "integer"
+                                    },
+                                    "temperature": {
+                                        "type": "float"
+                                    },
+                                    "top_p": {
+                                        "type": "float"
+                                    },
+                                    "n": {
+                                        "type": "integer"
+                                    },
+                                    "stream": {
+                                        "type": "boolean"
+                                    },
+                                    "logprobs": {
+                                        "type": "integer"
+                                    },
+                                    "echo": {
+                                        "type": "boolean"
+                                    },
+                                    "stop": {
+                                        "oneOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "presence_penalty": {
+                                        "type": "float"
+                                    },
+                                    "frequency_penalty": {
+                                        "type": "float"
+                                    },
+                                    "best_of": {
+                                        "type": "integer"
+                                    },
+                                    "logit_bias": {
+                                        "type": "object",
+                                        "properties": {}
+                                    },
+                                    "user": {
+                                        "type": "string"
                                     }
-                                ]
-                            },
-                            suffix: {'type: "string"},
-                            max_tokens: {'type: "integer"},
-                            temperature: {'type: "float"},
-                            top_p: {'type: "float"},
-                            n: {'type: "integer"},
-                            'stream: {'type: "boolean"},
-                            logprobs: {'type: "integer"},
-                            echo: {'type: "boolean"},
-                            stop: {oneOf: [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
-                            presence_penalty: {'type: "float"},
-                            frequency_penalty: {'type: "float"},
-                            best_of: {'type: "integer"},
-                            logit_bias: {'type: "object", properties: {}},
-                            user: {'type: "string"}
-                        },
-                        required: [
-                            "model"
-                        ]
+                                }
+                            }
+                        }
                     }
                 }
-            });
+            }
+);
         }
         else if tool.name == "createChatCompletion" {
             test:assertEquals(tool, {

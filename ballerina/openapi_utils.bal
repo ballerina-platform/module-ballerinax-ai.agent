@@ -17,6 +17,7 @@
 import ballerina/io;
 import ballerina/log;
 import ballerina/yaml;
+import ballerina/regex;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
 public type HttpApiSpecification record {|
@@ -203,14 +204,14 @@ class OpenApiSpecVisitor {
     private isolated function visitContent(map<MediaType> content) returns record {|string mediaType; Schema schema;|}|error {
         // check for json content
         foreach [string, MediaType] [key, value] in content.entries() {
-            if key.trim().matches(re `(application/.*json|text/.*plain|\*/\*)`) {
+            if key.trim().matches(re `(application/.*json|application/.*xml|text/.*plain|\*/\*)`) {
                 return {
                     mediaType: key,
                     schema: value.schema
                 };
             }
         }
-        return error UnsupportedMediaTypeError("Only json or text content is supported.", availableContentTypes = content.keys());
+        return error UnsupportedMediaTypeError("Only json or xml or text content is supported.", availableContentTypes = content.keys());
     }
 
     private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
@@ -218,7 +219,18 @@ class OpenApiSpecVisitor {
         string mediaType;
         Schema schema;
         {mediaType, schema} = check self.visitContent(content);
-        return {mediaType, schema: check self.visitSchema(schema)};
+        if mediaType == "application/json" {
+            return {
+                mediaType,
+                schema: check self.visitSchema(schema)
+            };
+        } else {
+            return {
+                mediaType,
+                schema: check self.visitXMLSchema(schema, "", "", true)
+            };
+        }
+
     }
 
     private isolated function visitParameters((Parameter|Reference)[]? parameters) returns map<ParameterSchema>?|error {
@@ -277,15 +289,17 @@ class OpenApiSpecVisitor {
         return parameterSchemas;
     }
 
-    private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
+    private isolated function visitReference(Reference reference) returns [ComponentType, string]|InvalidReferenceError {
         if !self.referenceMap.hasKey(reference.\$ref) {
             return error InvalidReferenceError("Missing component object for the given reference", reference = reference.\$ref);
         }
         ComponentType|Reference component = self.referenceMap.get(reference.\$ref);
+        string[] refList = regex:split(reference.\$ref, "/");
+        string refName = refList[refList.length() - 1];
         if component is Reference {
             return self.visitReference(component);
         }
-        return component;
+        return [component, refName];
     }
 
     private isolated function visitSchema(Schema schema) returns JsonSubSchema|error {
@@ -310,8 +324,9 @@ class OpenApiSpecVisitor {
         if schema is NotSchema {
             return self.visitNotSchema(schema);
         }
-        Schema resolvedSchema = check self.visitReference(<Reference>schema).ensureType();
-        return check self.visitSchema(resolvedSchema);
+        [ComponentType, string] [resolvedSchema, _] = check self.visitReference(<Reference>schema);
+        Schema ensuredResolvedSchema = check resolvedSchema.ensureType();
+        return check self.visitSchema(ensuredResolvedSchema);
     }
 
     private isolated function visitObjectSchema(ObjectSchema schema) returns ObjectInputSchema|error {
@@ -407,6 +422,226 @@ class OpenApiSpecVisitor {
     private isolated function visitNotSchema(NotSchema schema) returns NotInputSchema|error {
         return {
             not: check self.visitSchema(schema.not)
+        };
+    }
+
+    private isolated function visitXMLSchema(Schema schema, string refName, string parentName, boolean outerBlock) returns JsonSubSchema|error {
+        if schema is ObjectSchema {
+            return self.visitObjectXMLSchema(schema, refName, outerBlock);
+        }
+        if schema is ArraySchema {
+            return self.visitArrayXMLSchema(schema, parentName, outerBlock);
+        }
+        if schema is PrimitiveTypeSchema {
+            return self.visitPrimitiveTypeXMLSchema(schema, refName, outerBlock);
+        }
+        if schema is AnyOfSchema {
+            return self.visitAnyOfXMLSchema(schema);
+        }
+        if schema is OneOfSchema {
+            return self.visitOneOfXMLSchema(schema);
+        }
+        if schema is AllOfSchema {
+            return self.visitAllOfXMLSchema(schema);
+        }
+        if schema is NotSchema {
+            return self.visitNotXMLSchema(schema);
+        }
+        [ComponentType, string] [resolvedSchema, resolvedRefName] = check self.visitReference(<Reference>schema);
+        Schema ensuredResolvedSchema = check resolvedSchema.ensureType();
+        return check self.visitXMLSchema(ensuredResolvedSchema, resolvedRefName, parentName, outerBlock);
+    }
+
+    private isolated function wrapObjectXMLSchema(string? xmlName, string? xmlNamespace, string? xmlPrefix, string refName, ObjectInputSchema|ArrayInputSchema|PrimitiveInputSchema inputSchema) returns ObjectInputSchema|error {
+        ObjectInputSchema outerObjectSchema = {
+            'type: OBJECT,
+            properties: {}
+        };
+        if xmlName is string {
+            if xmlPrefix is string {
+                outerObjectSchema.properties[xmlPrefix + ":" + xmlName] = inputSchema;
+            } else {
+                outerObjectSchema.properties[xmlName] = inputSchema;
+            }
+        } else if refName != "" {
+            if xmlPrefix is string {
+                outerObjectSchema.properties[xmlPrefix + ":" + refName] = inputSchema;
+            } else {
+                outerObjectSchema.properties[refName] = inputSchema;
+            }
+        }
+        if xmlNamespace is string {
+            if xmlPrefix is string {
+                outerObjectSchema.properties["@xmlns:" + xmlPrefix] = {'const: xmlNamespace};
+            } else {
+                outerObjectSchema.properties["@xmlns"] = {'const: xmlNamespace};
+            }
+        }
+        if inputSchema is PrimitiveInputSchema {
+            outerObjectSchema.properties["#content"] = inputSchema;
+        }
+        return outerObjectSchema;
+    }
+
+    private isolated function visitObjectXMLSchema(ObjectSchema schema, string refName, boolean outerBlock) returns ObjectInputSchema|error {
+        ObjectInputSchema objectSchema = {
+            'type: OBJECT,
+            properties: {}
+        };
+        string? xmlNamespace = schema.'xml?.namespace;
+        string? xmlPrefix = schema.'xml?.prefix;
+        if xmlNamespace is string {
+            if xmlPrefix is string {
+                objectSchema.properties["@xmlns:" + xmlPrefix] = {'const: xmlNamespace};
+            } else {
+                objectSchema.properties["@xmlns"] = {'const: xmlNamespace};
+            }
+        }
+        if schema?.properties == () {
+            if outerBlock {
+                return self.wrapObjectXMLSchema(schema?.'xml?.name, null, xmlPrefix, refName, objectSchema);
+            }
+            return objectSchema;
+        }
+
+        map<Schema> properties = <map<Schema>>schema?.properties;
+        if properties.length() == 0 {
+            if outerBlock {
+                return self.wrapObjectXMLSchema(schema?.'xml?.name, null, xmlPrefix, refName, objectSchema);
+            }
+            return objectSchema;
+        }
+
+        foreach [string, Schema] [propertyName, property] in properties.entries() {
+            string? xmlName = property.'xml?.name;
+            boolean? xmlAttribute = property.'xml?.attribute;
+            string? innerXmlPrefix = property.'xml?.prefix;
+            if xmlName is string {
+                if xmlAttribute is boolean && xmlAttribute {
+                    if innerXmlPrefix is string {
+                        objectSchema.properties["@" + innerXmlPrefix + ":" + xmlName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    } else {
+                        objectSchema.properties["@" + xmlName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    }
+                } else {
+                    if innerXmlPrefix is string {
+                        objectSchema.properties[innerXmlPrefix + ":" + xmlName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    } else {
+                        objectSchema.properties[xmlName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    }
+                }
+            } else {
+                if xmlAttribute is boolean && xmlAttribute {
+                    if innerXmlPrefix is string {
+                        objectSchema.properties["@" + innerXmlPrefix + ":" + propertyName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    } else {
+                        objectSchema.properties["@" + propertyName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    }
+                } else {
+                    if innerXmlPrefix is string {
+                        objectSchema.properties[innerXmlPrefix + ":" + propertyName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    } else {
+                        objectSchema.properties[propertyName] = check self.visitXMLSchema(property, "", propertyName, false);
+                    }
+                }
+            }
+        }
+        boolean|string[]? required = schema?.required;
+        if required is string[] {
+            objectSchema.required = required;
+        }
+        if outerBlock {
+            return self.wrapObjectXMLSchema(schema?.'xml?.name, null, xmlPrefix, refName, objectSchema);
+        }
+        return objectSchema;
+    }
+
+    private isolated function visitArrayXMLSchema(ArraySchema schema, string parentName, boolean outerBlock) returns ArrayInputSchema|ObjectInputSchema|error {
+        ArrayInputSchema arraySchema = {
+            'type: ARRAY,
+            items: check self.visitXMLSchema(schema.items, "", parentName, false)
+        };
+        boolean? xmlWrapped = schema?.'xml?.wrapped;
+        string? xmlNamespace = schema?.'xml?.namespace;
+        string? xmlPrefix = schema?.'xml?.prefix;
+        if xmlWrapped is boolean && xmlWrapped {
+            return self.wrapObjectXMLSchema(schema.items.'xml?.name, xmlNamespace, xmlPrefix, parentName, arraySchema);
+        }
+        return {
+            'type: ARRAY,
+            items: check self.visitXMLSchema(schema.items, "", parentName, false)
+        };
+    }
+
+    private isolated function visitPrimitiveTypeXMLSchema(PrimitiveTypeSchema schema, string refName, boolean outerBlock) returns PrimitiveInputSchema|ObjectInputSchema|error {
+        PrimitiveInputSchema inputSchema = {
+            'type: schema.'type
+        };
+        string? xmlNamespace = schema.'xml?.namespace;
+        string? xmlPrefix = schema.'xml?.prefix;
+
+        if self.additionalInfoFlags.extractDescription {
+            inputSchema.description = schema.description;
+        }
+        if self.additionalInfoFlags.extractDefault {
+            inputSchema.default = check schema?.default.ensureType();
+        }
+
+        if schema is StringSchema {
+            string? pattern = schema.pattern;
+            string? format = schema.format;
+            if pattern is () && format is string {
+                if format == "date" {
+                    pattern = OPENAPI_PATTERN_DATE;
+                }
+                else if format == "date-time" {
+                    pattern = OPENAPI_PATTERN_DATE_TIME;
+                }
+            }
+
+            inputSchema.format = format;
+            inputSchema.pattern = pattern;
+            inputSchema.'enum = schema.'enum;
+        }
+        if schema is NumberSchema {
+            inputSchema.'type = FLOAT;
+        }
+
+        if outerBlock {
+            return self.wrapObjectXMLSchema(schema?.'xml?.name, xmlNamespace, xmlPrefix, refName, inputSchema);
+        } else if xmlNamespace is string {
+            return self.wrapObjectXMLSchema(null, xmlNamespace, xmlPrefix, "", inputSchema);
+        }
+        return inputSchema;
+    }
+
+    private isolated function visitAnyOfXMLSchema(AnyOfSchema schema) returns AnyOfInputSchema|error {
+        JsonSubSchema[] anyOf = from Schema element in schema.anyOf
+            select check self.visitXMLSchema(element, "", "", false).ensureType();
+        return {
+            anyOf
+        };
+    }
+
+    private isolated function visitAllOfXMLSchema(AllOfSchema schema) returns AllOfInputSchema|error {
+        JsonSubSchema[] allOf = from Schema element in schema.allOf
+            select check self.visitXMLSchema(element, "", "", false).ensureType();
+        return {
+            allOf
+        };
+    }
+
+    private isolated function visitOneOfXMLSchema(OneOfSchema schema) returns OneOfInputSchema|error {
+        JsonSubSchema[] oneOf = from Schema element in schema.oneOf
+            select check self.visitXMLSchema(element, "", "", false);
+        return {
+            oneOf
+        };
+    }
+
+    private isolated function visitNotXMLSchema(NotSchema schema) returns NotInputSchema|error {
+        return {
+            not: check self.visitXMLSchema(schema.not, "", "", false)
         };
     }
 }
