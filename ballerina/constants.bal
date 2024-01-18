@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/lang.regexp;
 
 // model default parameters 
 const GPT3_MODEL_NAME = "text-davinci-003";
@@ -28,14 +27,12 @@ const OPENAPI_PATTERN_DATE = "yyyy-MM-dd";
 const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 
 //agent
-// const FINAL_ANSWER = "final answer";
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
-const ERROR_INSTRUCTION_KEY = "instruction";
 
-final regexp:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;
+final string:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;
 
 const ACTION_KEY = "action";
 const ACTION_NAME_KEY = "name";
 const ACTION_ARGUEMENTS_KEY = "arguments";
-final regexp:RegExp ACTION_INPUT_REGEX = re `^action.?input`;
+final string:RegExp ACTION_INPUT_REGEX = re `^action.?input`;

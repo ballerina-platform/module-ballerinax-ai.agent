@@ -82,25 +82,25 @@ ${THOUGHT_KEY}`;
 
 isolated function normalizeLlmResponse(string llmResponse) returns string {
     string normalizedResponse = llmResponse.trim();
-    if !normalizedResponse.includes("```") {
+    if !normalizedResponse.includes(BACKTICKS) {
         if normalizedResponse.startsWith("{") && normalizedResponse.endsWith("}") {
-            normalizedResponse = string `${"```"}${normalizedResponse}${"```"}`;
+            normalizedResponse = string `${BACKTICKS}${normalizedResponse}${BACKTICKS}`;
         } else {
             int? jsonStart = normalizedResponse.indexOf("{");
             int? jsonEnd = normalizedResponse.lastIndexOf("}");
             if jsonStart is int && jsonEnd is int {
-                normalizedResponse = string `${"```"}${normalizedResponse.substring(jsonStart, jsonEnd + 1)}${"```"}`;
+                normalizedResponse = string `${BACKTICKS}${normalizedResponse.substring(jsonStart, jsonEnd + 1)}${BACKTICKS}`;
             }
         }
     }
-    normalizedResponse = regexp:replace(re `${"```"}json`, normalizedResponse, "```"); // replace ```json  
+    normalizedResponse = regexp:replace(re `${BACKTICKS}json`, normalizedResponse, BACKTICKS); // replace ```json  
     normalizedResponse = regexp:replaceAll(re `"\{\}"`, normalizedResponse, "{}"); // replace "{}"
     normalizedResponse = regexp:replaceAll(re `\\"`, normalizedResponse, "\""); // replace \"
     return normalizedResponse;
 }
 
 isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmChatResponse|LlmInvalidGenerationError {
-    string[] content = regexp:split(re `${"```"}`, llmResponse + "<endtoken>");
+    string[] content = regexp:split(re `${BACKTICKS}`, llmResponse + "<endtoken>");
     if content.length() < 3 {
         log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");
@@ -142,14 +142,12 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     foreach ExecutionStep step in history {
         string observationStr = getObservationString(step.observation);
         string thoughtStr = step.toolResponse.llmResponse.toString();
-        historyPrompt += string `${thoughtStr}${"\n"}Observation: ${observationStr}${"\n"}`;
+        historyPrompt += string `${thoughtStr}${"\n"}${OBSERVATION_KEY}: ${observationStr}${"\n"}`;
     }
     return historyPrompt;
 }
 
-isolated function constructReActPrompt(ToolInfo toolInfo) returns string {
-
-    return string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
+isolated function constructReActPrompt(ToolInfo toolInfo) returns string => string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
 
 ${toolInfo.toolIntro}
 
@@ -186,5 +184,3 @@ ${BACKTICKS}
 ${BACKTICKS}
 
 Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:${BACKTICKS}$JSON_BLOB${BACKTICKS}then Observation:.`;
-}
-

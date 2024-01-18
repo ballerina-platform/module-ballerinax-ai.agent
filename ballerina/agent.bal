@@ -159,8 +159,7 @@ public class AgentExecutor {
             } else {
                 observation = output;
             }
-        }
-        else {
+        } else {
             observation = {value: "Tool extraction failed due to invalid JSON_BLOB. Retry with correct JSON_BLOB."};
         }
         // update the execution history with the latest step
@@ -239,15 +238,15 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
                 io:println(string `Action:
 ${BACKTICKS}
 {
-    name: ${tool.name},
-    arguments: ${(tool.arguments ?: "None").toString()}}
+    ${ACTION_NAME_KEY}: ${tool.name},
+    ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}}
 }
 ${BACKTICKS}`);
                 anydata|error observation = step?.observation;
                 if observation is error {
-                    io:println(string `Observation (Error): ${observation.toString()}`);
+                    io:println(string `${OBSERVATION_KEY} (Error): ${observation.toString()}`);
                 } else if observation !is () {
-                    io:println(string `Observation: ${observation.toString()}`);
+                    io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
                 }
             } else {
                 error? cause = tool.cause();

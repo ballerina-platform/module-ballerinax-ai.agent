@@ -26,9 +26,9 @@ const string DEFAULT_QUERY = "create a new wifi account with user newGuest and p
 "Send the available list of wifi accounts for that email to alica@wso2.com";
 
 // define send mail tool as a function
-isolated function sendMail(record {|string senderEmail; gmail:MessageRequest messageRequest;|} 'input) returns string|error {
+isolated function sendMail(record {|string senderEmail; gmail:MessageRequest messageRequest;|} input) returns string|error {
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
-    gmail:Message message = check gmail->/users/['input.senderEmail]/messages/send.post('input.messageRequest);
+    gmail:Message message = check gmail->/users/[input.senderEmail]/messages/send.post(input.messageRequest);
     return message.toString();
 }
 

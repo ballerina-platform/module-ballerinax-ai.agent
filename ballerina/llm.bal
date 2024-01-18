@@ -288,7 +288,8 @@ public isolated class AzureChatGptModel {
                     parameters: tool.variables
                 }
         };
-        azure_chat:CreateChatCompletionResponse response = check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, request);
+        azure_chat:CreateChatCompletionResponse response =
+        check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, request);
         azure_chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {

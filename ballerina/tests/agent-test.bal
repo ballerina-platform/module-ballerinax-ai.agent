@@ -92,7 +92,6 @@ function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, searchTool, calculatorTool);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     AgentExecutor agentExecutor = new (agent, query);
-    // _ = run(agent, query);
     record {|ExecutionStep|LlmChatResponse|error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
@@ -287,4 +286,3 @@ ${"```"}`;
         test:assertFail("Parsed result should be a ChatResponse");
     }
 }
-
