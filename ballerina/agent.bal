@@ -132,7 +132,7 @@ public class AgentExecutor {
         if self.isCompleted {
             return error TaskCompletedError("Task is already completed. No more reasoning is needed.");
         }
-        LlmToolResponse|LlmChatResponse respond = check self.agent.selectNextTool(self.progress);
+        LlmToolResponse|LlmChatResponse response = check self.agent.selectNextTool(self.progress);
         if respond is LlmChatResponse {
             self.isCompleted = true;
         }
@@ -236,7 +236,6 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
             io:println(string `${"\n\n"}Agent Iteration ${iter.toString()}`);
             SelectedTool|LlmInvalidGenerationError tool = step.toolResponse.tool;
             if tool is SelectedTool {
-
                 io:println(string `Action:
 ${BACKTICKS}
 {
