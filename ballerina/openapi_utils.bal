@@ -230,7 +230,6 @@ class OpenApiSpecVisitor {
             string refName = refList[refList.length() - 1];
             schema = {'type: OBJECT, properties: {[refName] : schema}};
         }
-        io:println("schema:", schema);
         return {
             mediaType,
             schema: check self.visitSchema(schema, null, true)
