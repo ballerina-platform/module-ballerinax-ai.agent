@@ -15,7 +15,6 @@
 // under the License.
 import ballerina/http;
 import ballerina/log;
-import ballerina/io;
 import ballerina/xmldata;
 
 # Supported HTTP methods.
@@ -213,12 +212,12 @@ public isolated class HttpServiceToolKit {
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${POST}`), httpInput?.parameters);
+        HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${POST}`);
+        string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult;
-        if httpInput?.tool.requestBody?.mediaType is "application/xml" {
+        if httpTool.requestBody?.mediaType is "application/xml" {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
-            io:println(xmlRequest);
             if xmlRequest is xml {
                 postResult = check self.httpClient->post(path, message = xmlRequest, headers = self.headers);
             } else {
@@ -231,10 +230,11 @@ public isolated class HttpServiceToolKit {
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`), httpInput?.parameters);
+        HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`);
+        string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult;
-        if httpInput?.tool.requestBody?.mediaType is "application/xml" {
+        if httpTool.requestBody?.mediaType is "application/xml" {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 deleteResult = check self.httpClient->delete(path, message = xmlRequest, headers = self.headers);
@@ -248,10 +248,11 @@ public isolated class HttpServiceToolKit {
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`), httpInput?.parameters);
+        HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`);
+        string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult;
-        if httpInput?.tool.requestBody?.mediaType is "application/xml" {
+        if httpTool.requestBody?.mediaType is "application/xml" {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 putResult = check self.httpClient->put(path, message = xmlRequest, headers = self.headers);
@@ -265,10 +266,11 @@ public isolated class HttpServiceToolKit {
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`), httpInput?.parameters);
+        HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`);
+        string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult;
-        if httpInput?.tool.requestBody?.mediaType is "application/xml" {
+        if httpTool.requestBody?.mediaType is "application/xml" {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 patchResult = check self.httpClient->patch(path, message = xmlRequest, headers = self.headers);

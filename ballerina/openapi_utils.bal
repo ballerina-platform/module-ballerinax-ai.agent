@@ -15,8 +15,8 @@
 // under the License.
 import ballerina/io;
 import ballerina/log;
-import ballerina/yaml;
 import ballerina/regex;
+import ballerina/yaml;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
 public type HttpApiSpecification record {|
@@ -292,7 +292,7 @@ class OpenApiSpecVisitor {
         return parameterSchemas;
     }
 
-    private isolated function visitReference(Reference reference) returns [ComponentType, string?]|InvalidReferenceError {
+    private isolated function visitReference(Reference reference) returns [ComponentType, string?, string?]|InvalidReferenceError {
         if !self.referenceMap.hasKey(reference.\$ref) {
             return error InvalidReferenceError("Missing component object for the given reference", reference = reference.\$ref);
         }
@@ -301,10 +301,12 @@ class OpenApiSpecVisitor {
             return self.visitReference(component);
         }
         string? xmlName = ();
+        string? xmlPrefix = ();
         if component is Schema {
             xmlName = component.'xml?.name;
+            xmlPrefix = component.'xml?.prefix;
         }
-        return [component, xmlName];
+        return [component, xmlName, xmlPrefix];
     }
 
     private isolated function visitSchema(Schema schema, string? parentName, boolean isXML) returns JsonSubSchema|error {
@@ -329,7 +331,7 @@ class OpenApiSpecVisitor {
         if schema is NotSchema {
             return self.visitNotSchema(schema, isXML);
         }
-        [ComponentType, string?] [resolvedComponentType, _] = check self.visitReference(<Reference>schema);
+        [ComponentType, string?, string?] [resolvedComponentType, _, _] = check self.visitReference(<Reference>schema);
         Schema resolvedSchema = check resolvedComponentType.ensureType();
         return check self.visitSchema(resolvedSchema, null, isXML);
     }
@@ -371,7 +373,6 @@ class OpenApiSpecVisitor {
         };
         string? xmlNamespace = schema.'xml?.namespace;
         string? xmlPrefix = schema.'xml?.prefix;
-
         if isXML {
             if xmlNamespace is string {
                 if xmlPrefix is string {
@@ -401,10 +402,13 @@ class OpenApiSpecVisitor {
                 xmlName = innerXmlName;
             }
             if property is Reference {
-                [ComponentType, string?] [resolvedSchema, resolvedXmlName] = check self.visitReference(<Reference>propertySchema);
+                [ComponentType, string?, string?] [resolvedSchema, resolvedXmlName, resolvedXmlPrefix] = check self.visitReference(<Reference>propertySchema);
                 propertySchema = check resolvedSchema.ensureType();
                 if resolvedXmlName is string {
                     xmlName = resolvedXmlName;
+                }
+                if resolvedXmlPrefix is string {
+                    innerXmlPrefix = resolvedXmlPrefix;
                 }
             }
             JsonSubSchema resolvedPropertySchema = check self.visitSchema(propertySchema, propertyName, isXML);
