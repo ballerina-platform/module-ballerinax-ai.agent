@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;
@@ -22,6 +21,14 @@ import ballerinax/openai.text;
 // TODO: change the configs to extend the config record from the respective clients.
 // requirs using never prompt?; never stop? to prevent setting those during initialization
 // change once https://github.com/ballerina-platform/ballerina-lang/issues/32012 is fixed
+
+# Roles for the chat messages.
+public enum ROLE {
+    SYSTEM = "system",
+    USER = "user",
+    ASSISTANT = "assistant",
+    FUNCTION = "function"
+}
 
 # Completion model configurations.
 public type CompletionModelConfig readonly & record {|
@@ -33,20 +40,6 @@ public type CompletionModelConfig readonly & record {|
     int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
 |};
 
-# Roles for the chat messages.
-public enum ROLE {
-    SYSTEM_ROLE = "system",
-    USER_ROLE = "user"
-}
-
-# Chat message record
-public type ChatMessage record {|
-    # Role of the message
-    ROLE role;
-    # Content of the message
-    string content;
-|};
-
 # Chat model configurations.
 public type ChatModelConfig readonly & record {|
     # Model type to be used for the completion. Default is `gpt-3.5-turbo`
@@ -55,32 +48,50 @@ public type ChatModelConfig readonly & record {|
     decimal temperature = DEFAULT_TEMPERATURE;
 |};
 
-# Prompt construct record
-public type PromptConstruct record {|
-    # Instructions in the prompt
-    string instruction;
-    # Query to the prompt
-    string query;
-    # Execution history to the prompt
-    ExecutionStep[] history;
+# Chat message record
+public type ChatMessage record {|
+    # Role of the message
+    ROLE role;
+    # Content of the message
+    string? content = ();
+    # Name of the function when the message is a function call
+    string name?;
+    # Function call record if the message is a function call
+    FunctionCall function_call?;
+|};
+
+# Function call record
+public type FunctionCall record {|
+    # Name of the function
+    string name?;
+    # Arguments of the function
+    string arguments?;
 |};
 
 # Extendable LLM model object that can be used for completion tasks.
 # Useful to initialize the agents.
 public type LlmModel distinct isolated object {
-    public isolated function generate(PromptConstruct prompt) returns string|error;
 };
 
-type CompletionLlmModel distinct isolated object {
+# Extendable LLM model object for completion models.
+public type CompletionLlmModel distinct isolated object {
     *LlmModel;
     CompletionModelConfig modelConfig;
     public isolated function complete(string prompt, string? stop = ()) returns string|error;
 };
 
-type ChatLlmModel distinct isolated object {
+# Extendable LLM model object for chat LLM models
+public type ChatLlmModel distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error;
+};
+
+# Extendable LLM model object for LLM models with function call API
+public type FunctionCallLlm distinct isolated object {
+    *LlmModel;
+    ChatModelConfig modelConfig;
+    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error;
 };
 
 public isolated class Gpt3Model {
@@ -110,14 +121,6 @@ public isolated class Gpt3Model {
             prompt
         });
         return response.choices[0].text ?: error("Empty response from the model");
-    }
-
-    # Generate ReAct response for the given prompt
-    #
-    # + prompt - Prompt construct
-    # + return - ReAct response
-    public isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
     }
 }
 
@@ -157,17 +160,10 @@ public isolated class AzureGpt3Model {
         });
         return response.choices[0].text ?: error("Empty response from the model");
     }
-
-    # Generate ReAct response for the given prompt
-    #
-    # + prompt - Prompt construct
-    # + return - ReAct response
-    public isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.complete(createCompletionPrompt(prompt), stop = OBSERVATION_KEY);
-    }
 }
 
 public isolated class ChatGptModel {
+    *FunctionCallLlm;
     *ChatLlmModel;
     final chat:Client llmClient;
     final ChatModelConfig modelConfig;
@@ -198,16 +194,44 @@ public isolated class ChatGptModel {
         return content ?: error("Empty response from the model");
     }
 
-    # Generate ReAct response for the given prompt
+    # Uses function call API to determine next function to be called
     #
-    # + prompt - Prompt construct
-    # + return - ReAct response
-    public isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.chatComplete(createChatPrompt(prompt), stop = OBSERVATION_KEY);
+    # + messages - List of chat messages 
+    # + tools - Tools to be used for the function call
+    # + stop - Stop sequence to stop the completion
+    # + return - Next tool to be used or error if the function call fails
+    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
+
+        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(
+            {
+                ...self.modelConfig,
+                stop,
+                messages,
+                functions: from AgentTool tool in tools
+                    select {
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: tool.variables
+                    }
+            }
+        );
+        chat:ChatCompletionResponseMessage? message = response.choices[0].message;
+        string? content = message?.content;
+        if content is string {
+            return content;
+        }
+        chat:ChatCompletionRequestMessage_function_call? 'function = message?.function_call;
+        if 'function is chat:ChatCompletionRequestMessage_function_call {
+            return {
+                ...'function
+            };
+        }
+        return error LlmInvalidGenerationError("Empty response from the model when using function call API");
     }
 }
 
 public isolated class AzureChatGptModel {
+    *FunctionCallLlm;
     *ChatLlmModel;
     final azure_chat:Client llmClient;
     final ChatModelConfig modelConfig;
@@ -246,44 +270,38 @@ public isolated class AzureChatGptModel {
         return content ?: error("Empty response from the model");
     }
 
-    # Generate ReAct response for the given prompt
+    # Uses function call API to determine next function to be called
     #
-    # + prompt - Prompt construct
-    # + return - ReAct response
-    public isolated function generate(PromptConstruct prompt) returns string|error {
-        return check self.chatComplete(createChatPrompt(prompt), stop = OBSERVATION_KEY);
-    }
-}
-
-# Generate a ReAct prompt for completion LLMs (e.g. GPT3)
-#
-# + prompt - Prompt construct
-# + return - ReAct prompt for completion LLMs
-public isolated function createCompletionPrompt(PromptConstruct prompt) returns string => string
-`${prompt.instruction}${"\n\n"}Question: ${prompt.query}${"\n"}${constructHistoryPrompt(prompt.history)}${THOUGHT_KEY}`;
-
-# Generate a ReAct prompt for chat LLMs (e.g. ChatGPT, GPT4)
-#
-# + prompt - Prompt construct
-# + return - ReAct prompt for chat LLMs
-public isolated function createChatPrompt(PromptConstruct prompt) returns ChatMessage[] {
-    string userMessage = "";
-    if prompt.history.length() == 0 {
-        userMessage = prompt.query;
-    }
-    else {
-        userMessage = string `${prompt.query}${"\n\n"}This was your previous work (but I haven\'t seen any of it! I only see what you return as final answer):${"\n"}`;
-        userMessage += constructHistoryPrompt(prompt.history);
-    }
-    userMessage += ("\n" + THOUGHT_KEY);
-    return [
-        {
-            role: SYSTEM_ROLE,
-            content: prompt.instruction
-        },
-        {
-            role: USER_ROLE,
-            content: userMessage
+    # + messages - List of chat messages 
+    # + tools - Tools to be used for the function call
+    # + stop - Stop sequence to stop the completion
+    # + return - Next tool to be used or error if the function call fails
+    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
+        azure_chat:CreateChatCompletionRequest request = {
+            ...self.modelConfig,
+            stop,
+            messages,
+            functions: from AgentTool tool in tools
+                select {
+                    name: tool.name,
+                    description: tool.description,
+                    parameters: tool.variables
+                }
+        };
+        azure_chat:CreateChatCompletionResponse response =
+        check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, request);
+        azure_chat:ChatCompletionResponseMessage? message = response.choices[0].message;
+        string? content = message?.content;
+        if content is string {
+            return content;
         }
-    ];
+        azure_chat:ChatCompletionRequestMessage_function_call? 'function = message?.function_call;
+        if 'function is azure_chat:ChatCompletionRequestMessage_function_call {
+            return {
+                ...'function
+            };
+        }
+        return error LlmInvalidGenerationError("Empty response from the model when using function call API");
+    }
 }
+

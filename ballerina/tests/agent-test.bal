@@ -25,8 +25,8 @@ Tool calculatorTool = {
 Gpt3Model model = test:mock(Gpt3Model, new MockLLM());
 
 @test:Config {}
-function testAgentInitialization() {
-    Agent|error agent = new (model, searchTool, calculatorTool);
+function testReActAgentInitialization() {
+    ReActAgent|error agent = new (model, searchTool, calculatorTool);
     if agent is error {
         test:assertFail("Agent creation is unsuccessful");
     }
@@ -37,51 +37,66 @@ function testAgentInitialization() {
 Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.parameters}.toString()}`
     };
 
-    ToolStore store = agent.getToolStore();
+    ToolStore store = agent.toolStore;
     test:assertEquals(store.extractToolInfo(), toolInfo);
 }
 
 @test:Config {}
 function testInitializedPrompt() returns error? {
-    Agent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, searchTool, calculatorTool);
 
-    string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExecutor agentExecutor = agent.getExecutor(query);
+    string ExpectedPrompt = string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
 
-    ToolInfo toolInfo = agent.getToolStore().extractToolInfo();
+Search: {"description":" A search engine. Useful for when you need to answer questions about current events","inputSchema":{"type":"object","properties":{"query":{"type":"string","description":"The search query"}}}}
+Calculator: {"description":"Useful for when you need to answer questions about math.","inputSchema":{"type":"object","properties":{"expression":{"type":"string","description":"The mathematical expression to evaluate"}}}}
 
-    string instruction = "Answer the following questions without making assumptions. You have access to the following tools. If needed, you can use them multiple times for repeated tasks:\n\n" +
-        toolInfo.toolIntro + "\n\n" +
-        "ALWAYS use the following format for each question:\n\n" +
-        "Question: [The input question you must answer]\n" +
-        "Thought: [You should always think about what to do]\n" +
-        "Action: [Select a single tool from the provided list and use the following format within backticks. This field is mandatory after 'Thought'.]\n" +
-        "```\n" +
-        "{\n" +
-        "  \"tool\": \"[Insert the tool you are using from the given options: [" + toolInfo.toolList + "]\",\n" +
-        "  \"tool_input\": \"[Insert the JSON input record to the tool following the 'inputSchema' with the specified types. Required properties are mandatory.]\"\n" +
-        "}\n" +
-        "```\n" +
-        "Observation: [Describe the result of the action]\n" +
-        "... (this Thought/Action/Observation can repeat N times)\n" +
-        "Thought: [Summarize your understanding of the final answer]\n" +
-        "Final Answer: [Provide the final answer to the original input question]\n\n" +
-        "Let's get started!";
+Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
 
-    test:assertEquals(agentExecutor.prompt.instruction, instruction);
+Valid "action" values: "Final Answer" or Search, Calculator
+
+Provide only ONE action per $JSON_BLOB, as shown:
+
+${"```"}
+{
+  "action": $TOOL_NAME,
+  "action_input": $INPUT_JSON
+}
+${"```"}
+
+Follow this format:
+
+Question: input question to answer
+Thought: consider previous and subsequent steps
+Action:
+${"```"}
+$JSON_BLOB
+${"```"}
+Observation: action result
+... (repeat Thought/Action/Observation N times)
+Thought: I know what to respond
+Action:
+${"```"}
+{
+  "action": "Final Answer",
+  "action_input": "Final response to human"
+}
+${"```"}
+
+Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:${"```"}$JSON_BLOB${"```"}then Observation:.`;
+
+    test:assertEquals(agent.instructionPrompt, ExpectedPrompt);
 }
 
 @test:Config {}
 function testAgentExecutorRun() returns error? {
-    Agent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, searchTool, calculatorTool);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExecutor agentExecutor = agent.getExecutor(query);
-
-    record {|ExecutionStep|error value;|}? result = agentExecutor.next();
+    AgentExecutor agentExecutor = new (agent, query);
+    record {|ExecutionStep|LlmChatResponse|error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
-    ExecutionStep|error output = result.value;
+    ExecutionStep|LlmChatResponse|error output = result.value;
     if output is error {
         test:assertFail("AgentExecutor.next returns an error during first iteration");
     }
@@ -112,7 +127,19 @@ function testAgentExecutorRun() returns error? {
 function testConstructHistoryPrompt() {
     ExecutionStep[] history = [
         {
-            thought: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
+            toolResponse: {
+                tool: {
+                    name: "Create wifi",
+                    arguments: {
+                        "path": "/guest-wifi-accounts",
+                        "requestBody": {
+                            "email": "johnny@wso2.com",
+                            "username": "newGuest",
+                            "password": "jh123"
+                        }
+                    }
+                },
+                llmResponse: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
 Action:
 {
   "tool": "Create wifi",
@@ -124,22 +151,41 @@ Action:
       "password": "jh123"
     }
   }
-}`,
+}`
+
+            },
             observation: "Successfully added the wifi account"
         },
         {
-            thought: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
+            toolResponse: {
+                tool: {
+                    name: "List wifi",
+                    arguments: {
+                        "path": "//guest-wifi-accounts/johnny@wso2.com"
+                    }
+                },
+                llmResponse: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
 Action:
 {
   "tool": "List wifi",
   "tool_input": {
     "path": "/guest-wifi-accounts/johnny@wso2.com"
   }
-}`,
+}`
+            },
             observation: ["freeWifi.guestOf.johnny", "newGuest.guestOf.johnny"]
         },
         {
-            thought: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
+            toolResponse: {
+                tool: {
+                    name: "Send mail",
+                    arguments: {
+                        "recipient": "alica@wso2.com",
+                        "subject": "Available Wifi Accounts",
+                        "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
+                    }
+                },
+                llmResponse: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
 Action:
 {
   "tool": "Send mail",
@@ -148,7 +194,8 @@ Action:
     "subject": "Available Wifi Accounts",
     "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
   }
-}`,
+}`
+            },
             observation: error("Error while sending the email(ballerinax/googleapis.gmail)GmailError")
         }
     ];
@@ -189,5 +236,53 @@ Action:
 }
 Observation: Error occured while trying to execute the tool: {"message":"Error while sending the email(ballerinax/googleapis.gmail)GmailError"}
 `);
+
 }
 
+@test:Config {}
+function testParseLlmReponse() returns error? {
+    string llmResponse = string `I know what to respond
+Action:
+${"```"}
+{
+  "action": "Final Answer",
+  "action_input": "The guest wifi account guestJohn with password abc123 has been successfully created. There are currently no other available wifi accounts."
+}
+${"```"}`;
+
+    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
+    if parsedResult is SelectedTool {
+        test:assertFail("Parsed result should be a ChatResponse");
+    }
+    test:assertEquals(parsedResult.content, "The guest wifi account guestJohn with password abc123 has been successfully created. There are currently no other available wifi accounts.");
+}
+
+@test:Config {}
+function testParseLlmReponse2() returns error? {
+    string llmResponse = string `The pets available for adoption are:
+1. Lion 1 (ID: 7)
+2. Lion 2 (ID: 8)
+3. Lion 3 (ID: 9)
+4. Собака (ID: 11)
+5. O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG"e#H#${"`"}wwC1;| (ID: -1414197701106907177)
+6. 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\6vx^6*'FFHaKp+Gvq-i":bB=;5qG:QK8!!uV/]xYJ&nk~b"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390)
+7. My Pet (ID: 0)
+8. Winter (ID: 1122)
+9. New name for my pet 1212 (ID: 108333023)
+10. doggie (ID: -34)
+11. Dog 224 (ID: 224)
+12. New name for my pet 1212 (ID: 1016156941)
+
+Action:
+${"```"}
+{
+  "action": "Final Answer",
+  "action_input": "The pets available for adoption are: Lion 1 (ID: 7), Lion 2 (ID: 8), Lion 3 (ID: 9), Собака (ID: 11), O~e~kd/!qA4.yfkZJ|)q6c9%kv,/_qL JNObVwE$v48lk4{2hN#V?SCb/{M9ad4N7S4m&$|=!*PG\"e#H#${"`"}wwC1;| (ID: -1414197701106907177), 5;x[EY^~6t'.26qSk(7NSPwDTP7oD@TZNQov0=s[?/Kz\\6vx^6*'FFHaKp+Gvq-i\":bB=;5qG:QK8!!uV/]xYJ&nk~b\"lO3!EoQGEY0p-%*|,=c;!oPw7+Rt?EjQrQ;Lu4R:?${"`"}goAU1KPjC*CqkU.{7UNm^(L13wPUpL*Zwa*KST${"`"}>s, (ID: -3408360315760843390), My Pet (ID: 0), Winter (ID: 1122), New name for my pet 1212 (ID: 108333023), doggie (ID: -34), Dog 224 (ID: 224), and New name for my pet 1212 (ID: 1016156941)."
+}
+${"```"}`;
+
+    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
+    if parsedResult is SelectedTool {
+        test:assertFail("Parsed result should be a ChatResponse");
+    }
+}

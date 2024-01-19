@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/http;
 import ballerina/lang.regexp;
 import ballerina/mime;
@@ -287,7 +286,7 @@ isolated function extractResponsePayload(string path, http:Response response) re
     };
 }
 
-public isolated function getContentLength(http:Response response) returns int|error? {
+isolated function getContentLength(http:Response response) returns int|error? {
     string|error contentLengthHeader = response.getHeader(mime:CONTENT_LENGTH);
     if contentLengthHeader is error || contentLengthHeader == "" {
         return;
