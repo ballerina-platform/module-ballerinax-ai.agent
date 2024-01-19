@@ -13,14 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/lang.regexp;
+import ballerina/log;
 
-type AgentTool record {|
+# This is the tool used by LLMs during reasoning.
+# This tool is same as the Tool record, but it has a clear separation between the variables that should be generated with the help of the LLMs and the constants that are defined by the users. 
+public type AgentTool record {|
+    # Name of the tool
     string name;
+    # Description of the tool
     string description;
+    # Variables that should be generated with the help of the LLMs
     JsonInputSchema variables?;
+    # Constants that are defined by the users
     map<json> constants = {};
+    # Function that should be called to execute the tool
     isolated function caller;
 |};
 
@@ -30,46 +37,69 @@ type ToolInfo readonly & record {|
 |};
 
 isolated class ToolStore {
-    private final map<AgentTool> & readonly tools;
+    final map<AgentTool> & readonly tools;
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
     #
     # + tools - A list of tools that are available to the LLM
     # + return - An error if the tool is already registered
-    isolated function init(Tool[] tools) returns error? {
+    isolated function init((BaseToolKit|Tool)... tools) returns error? {
+        if tools.length() == 0 {
+            return error("Initialization failed.", cause = "No tools provided to the agent.");
+        }
+        Tool[] toolList = [];
+        foreach BaseToolKit|Tool tool in tools {
+            if tool is BaseToolKit {
+                Tool[] toolsFromToolKit = tool.getTools(); // TODO remove this after Ballerina fixes nullpointer exception
+                toolList.push(...toolsFromToolKit);
+            } else {
+                toolList.push(tool);
+            }
+        }
         map<AgentTool & readonly> toolMap = {};
-        check registerTool(toolMap, tools);
+        check registerTool(toolMap, toolList);
         self.tools = toolMap.cloneReadOnly();
     }
 
     # execute the tool decided by the LLM.
     #
-    # + toolName - Name of the tool to be executed
-    # + inputs - Variable inputs to the tool
-    # + return - Result of the tool execution or an error if tool execution fails
-    isolated function runTool(string toolName, map<json>? inputs) returns any|error {
-        if !self.tools.hasKey(toolName) {
-            return error ToolNotFoundError("Cannot find the tool.", toolName = toolName, instruction = string `Tool "${toolName}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
+    # + action - Action object that contains the tool name and inputs
+    # + return - ActionResult containing the results of the tool execution or an error if tool execution fails
+    isolated function execute(SelectedTool action) returns ToolOutput|error {
+        string name = action.name;
+        map<json>? inputs = action.arguments;
+
+        if !self.tools.hasKey(name) {
+            return error ToolNotFoundError("Cannot find the tool.", toolName = name, instruction = string `Tool "${name}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
         }
 
-        isolated function caller = self.tools.get(toolName).caller;
-        map<json>|error inputValues = mergeInputs(inputs, self.tools.get(toolName).constants);
+        map<json>|error inputValues = mergeInputs(inputs, self.tools.get(name).constants);
         if inputValues is error {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = toolName, inputs = inputs ?: {}, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = name, inputs = inputs ?: (), instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
         }
-
+        isolated function caller = self.tools.get(name).caller;
         any|error observation;
-        if inputValues.length() == 0 {
-            observation = trap check function:call(caller);
-        } else {
-            map<json> & readonly toolParams = inputValues.cloneReadOnly();
-            observation = trap check function:call(caller, toolParams);
+        do {
+            if inputValues.length() == 0 {
+                observation = trap check function:call(caller);
+            } else {
+                map<json> & readonly toolParams = inputValues.cloneReadOnly();
+                observation = trap check function:call(caller, toolParams);
+            }
+        } on fail error e {
+            return {value: e};
         }
-        if observation is error && observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = toolName, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${toolName}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(toolName).variables.toString()}`);
+        if observation is anydata {
+            return {value: observation};
         }
-        return observation;
+        if observation !is error {
+            return error ToolInvaludOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
+        }
+        if observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
+        }
+        return error ToolExecutionError("Tool execution failed.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
     }
 
     # Generate descriptions for the tools registered.
@@ -81,7 +111,7 @@ isolated class ToolStore {
 
         map<AgentTool> tools = self.tools;
         foreach AgentTool tool in tools {
-            toolNameList.push(tool.name);
+            toolNameList.push(string `${tool.name}`);
             record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
                 description: tool.description,
                 inputSchema: tool.variables
@@ -89,16 +119,27 @@ isolated class ToolStore {
             toolIntroList.push(tool.name + ": " + toolDescription.toString());
         }
         return {
-            toolList: string:'join(", ", ...toolNameList),
-            toolIntro: string:'join("\n", ...toolIntroList)
+            toolList: string:'join(", ", ...toolNameList).trim(),
+            toolIntro: string:'join("\n", ...toolIntroList).trim()
         };
     }
 }
 
 isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) returns error? {
     foreach Tool tool in tools {
-        if toolMap.hasKey(tool.name) {
-            return error("Duplicated tools. Tool name should be unique.", toolName = tool.name);
+        string name = tool.name;
+        if toolMap.hasKey(name) {
+            return error("Duplicated tools. Tool name should be unique.", toolName = name);
+        }
+        if name.toLowerAscii().matches(FINAL_ANSWER_REGEX) {
+            return error(string ` Tool name '${name}' is reserved for the 'Final answer'.`);
+        }
+        if !name.matches(re `^[a-zA-Z0-9_-]{1,64}$`) {
+            log:printWarn(string `Tool name '${name}' contains invalid characters. Only alphanumeric, underscore and hyphen are allowed.`);
+            if name.length() > 64 {
+                name = name.substring(0, 64);
+            }
+            name = regexp:replaceAll(re `[^a-zA-Z0-9_-]`, name, "_");
         }
 
         JsonInputSchema? variables = check tool.parameters.cloneWithType();
@@ -109,13 +150,13 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
         }
 
         AgentTool agentTool = {
-            name: tool.name,
-            description: regexp:replaceAll(re `\n`, tool.description, ". "),
-            variables: variables,
-            constants: constants,
+            name,
+            description: regexp:replaceAll(re `\n`, tool.description, " "),
+            variables,
+            constants,
             caller: tool.caller
         };
-        toolMap[tool.name] = agentTool.cloneReadOnly();
+        toolMap[name] = agentTool.cloneReadOnly();
     }
 }
 

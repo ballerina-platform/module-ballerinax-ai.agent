@@ -34,6 +34,11 @@ public type ConstantValueSchema record {|
     json 'const;
 |};
 
+# Defines a internal value field in the schema
+public type InternalValueSchema record {|
+    *ConstantValueSchema;
+|};
+
 # Defines a base input type schema.
 public type BaseInputTypeSchema record {|
     # Input data type

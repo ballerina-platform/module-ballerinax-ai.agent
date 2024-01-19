@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerinax/ai.agent;
 
 configurable string wifiAPIUrl = ?;
@@ -48,9 +47,9 @@ public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_Q
     });
 
     // 3) Create the agent
-    agent:Agent agent = check new (model, toolKit);
+    agent:ReActAgent agent = check new (model, toolKit);
 
     // 4) Execute the user's query
-    _ = agent.run(query, context = {"email": "johnw@gmail.com"});
+    _ = agent:run(agent, query, context = {"email": "johnw@gmail.com"});
 
 }
