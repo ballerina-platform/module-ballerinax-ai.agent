@@ -15,7 +15,6 @@
 // under the License.
 import ballerina/io;
 import ballerina/log;
-import ballerina/regex;
 import ballerina/yaml;
 
 # Provides extracted tools and service URL from the OpenAPI specification.
@@ -225,8 +224,9 @@ class OpenApiSpecVisitor {
             };
         }
         if schema is Reference {
-            string[] refList = regex:split(schema.\$ref, "/");
-            string refName = refList[refList.length() - 1];
+            string:RegExp refPath = re `/`;
+            string[] refList = refPath.split(schema.\$ref);
+            string refName = refList.pop();
             schema = {'type: OBJECT, properties: {[refName] : schema}};
         }
         return {
@@ -292,7 +292,7 @@ class OpenApiSpecVisitor {
         return parameterSchemas;
     }
 
-    private isolated function visitReference(Reference reference) returns [ComponentType, string?, string?]|InvalidReferenceError {
+    private isolated function visitReference(Reference reference) returns ComponentType|InvalidReferenceError {
         if !self.referenceMap.hasKey(reference.\$ref) {
             return error InvalidReferenceError("Missing component object for the given reference", reference = reference.\$ref);
         }
@@ -300,16 +300,20 @@ class OpenApiSpecVisitor {
         if component is Reference {
             return self.visitReference(component);
         }
-        string? xmlName = ();
-        string? xmlPrefix = ();
         if component is Schema {
-            xmlName = component.'xml?.name;
-            xmlPrefix = component.'xml?.prefix;
+            string? innerXmlName = component.'xml?.name;
+            string? innerXmlPrefix = component.'xml?.prefix;
+            if reference.'xml?.name is () {
+                reference.'xml.name = innerXmlName;
+            }
+            if component.'xml?.prefix is () {
+                reference.'xml.prefix = innerXmlPrefix;
+            }
         }
-        return [component, xmlName, xmlPrefix];
+        return component;
     }
 
-    private isolated function visitSchema(Schema schema, string? parentName, boolean isXML) returns JsonSubSchema|error {
+    private isolated function visitSchema(Schema schema, string? parentName, boolean isXML = false) returns JsonSubSchema|error {
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema, isXML);
         }
@@ -331,8 +335,7 @@ class OpenApiSpecVisitor {
         if schema is NotSchema {
             return self.visitNotSchema(schema, isXML);
         }
-        [ComponentType, string?, string?] [resolvedComponentType, _, _] = check self.visitReference(<Reference>schema);
-        Schema resolvedSchema = check resolvedComponentType.ensureType();
+        Schema resolvedSchema = check self.visitReference(<Reference>schema).ensureType();
         return check self.visitSchema(resolvedSchema, null, isXML);
     }
     private isolated function wrapObjectSchema(string? xmlName, string? xmlNamespace, string? xmlPrefix, string? refName, ObjectInputSchema|ArrayInputSchema|PrimitiveInputSchema inputSchema) returns ObjectInputSchema|error {
@@ -393,25 +396,14 @@ class OpenApiSpecVisitor {
         }
 
         foreach [string, Schema] [propertyName, property] in properties.entries() {
+            JsonSubSchema resolvedPropertySchema = check self.visitSchema(property, propertyName, isXML);
             string? innerXmlName = property.'xml?.name;
             boolean? xmlAttribute = property.'xml?.attribute;
             string? innerXmlPrefix = property.'xml?.prefix;
-            Schema propertySchema = property;
             string xmlName = propertyName;
             if innerXmlName is string {
                 xmlName = innerXmlName;
             }
-            if property is Reference {
-                [ComponentType, string?, string?] [resolvedSchema, resolvedXmlName, resolvedXmlPrefix] = check self.visitReference(<Reference>propertySchema);
-                propertySchema = check resolvedSchema.ensureType();
-                if resolvedXmlName is string {
-                    xmlName = resolvedXmlName;
-                }
-                if resolvedXmlPrefix is string {
-                    innerXmlPrefix = resolvedXmlPrefix;
-                }
-            }
-            JsonSubSchema resolvedPropertySchema = check self.visitSchema(propertySchema, propertyName, isXML);
             if isXML {
                 if xmlAttribute is boolean && xmlAttribute {
                     if innerXmlPrefix is string {

@@ -311,7 +311,7 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
 
 @test:Config {}
 function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
-    string wifiSpecPath = "tests/resources/openapi/openai-spec (2).json";
+    string wifiSpecPath = "tests/resources/openapi/openai-spec-with-xml-schema.json";
     HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
     if apiSpec is error {
