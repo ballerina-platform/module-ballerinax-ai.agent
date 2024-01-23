@@ -31,11 +31,6 @@ public type AgentTool record {|
     isolated function caller;
 |};
 
-type ToolInfo readonly & record {|
-    string toolList;
-    string toolIntro;
-|};
-
 isolated class ToolStore {
     final map<AgentTool> & readonly tools;
 
@@ -66,12 +61,12 @@ isolated class ToolStore {
     #
     # + action - Action object that contains the tool name and inputs
     # + return - ActionResult containing the results of the tool execution or an error if tool execution fails
-    isolated function execute(SelectedTool action) returns ToolOutput|error {
+    isolated function execute(LlmToolResponse action) returns ToolOutput|LlmInvalidGenerationError|ToolExecutionError {
         string name = action.name;
         map<json>? inputs = action.arguments;
 
         if !self.tools.hasKey(name) {
-            return error ToolNotFoundError("Cannot find the tool.", toolName = name, instruction = string `Tool "${name}" does not exists. Use a tool from the list: ${self.extractToolInfo().toolList}`);
+            return error ToolNotFoundError("Cannot find the tool.", toolName = name, instruction = string `Tool "${name}" does not exists. Use a tool from the list: ${self.tools.keys().toString()}}`);
         }
 
         map<json>|error inputValues = mergeInputs(inputs, self.tools.get(name).constants);
@@ -101,36 +96,11 @@ isolated class ToolStore {
         }
         return error ToolExecutionError("Tool execution failed.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
     }
-
-    # Generate descriptions for the tools registered.
-    #
-    # + return - Return a record with tool names and descriptions
-    isolated function extractToolInfo() returns ToolInfo {
-        string[] toolNameList = [];
-        string[] toolIntroList = [];
-
-        map<AgentTool> tools = self.tools;
-        foreach AgentTool tool in tools {
-            toolNameList.push(string `${tool.name}`);
-            record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
-                description: tool.description,
-                inputSchema: tool.variables
-            };
-            toolIntroList.push(tool.name + ": " + toolDescription.toString());
-        }
-        return {
-            toolList: string:'join(", ", ...toolNameList).trim(),
-            toolIntro: string:'join("\n", ...toolIntroList).trim()
-        };
-    }
 }
 
 isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) returns error? {
     foreach Tool tool in tools {
         string name = tool.name;
-        if toolMap.hasKey(name) {
-            return error("Duplicated tools. Tool name should be unique.", toolName = name);
-        }
         if name.toLowerAscii().matches(FINAL_ANSWER_REGEX) {
             return error(string ` Tool name '${name}' is reserved for the 'Final answer'.`);
         }
@@ -140,6 +110,9 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, Tool[] tools) 
                 name = name.substring(0, 64);
             }
             name = regexp:replaceAll(re `[^a-zA-Z0-9_-]`, name, "_");
+        }
+        if toolMap.hasKey(name) {
+            return error("Duplicated tools. Tool name should be unique.", toolName = name);
         }
 
         JsonInputSchema? variables = check tool.parameters.cloneWithType();

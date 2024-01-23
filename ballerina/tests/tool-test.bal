@@ -96,7 +96,7 @@ function testExecuteSuccessfullOutput() {
         },
         caller: sendMail
     };
-    SelectedTool sendMailInput = {
+    LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
             "messageRequest": {
@@ -143,7 +143,7 @@ function testExecuteErrorOutput() {
         },
         caller: sendMail
     };
-    SelectedTool sendMailInput = {
+    LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
             "messageRequest": {
@@ -190,7 +190,7 @@ function testExecutionError() {
         },
         caller: sendMail
     };
-    SelectedTool sendMailInput = {
+    LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
             "messageRequest": {
