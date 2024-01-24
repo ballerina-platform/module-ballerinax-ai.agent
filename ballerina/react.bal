@@ -40,7 +40,7 @@ public isolated class ReActAgent {
     }
 
     isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
-        return parseReActLlmResponse(llmResponse);
+        return parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
     }
 
     isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
@@ -93,26 +93,24 @@ isolated function normalizeLlmResponse(string llmResponse) returns string {
     }
     normalizedResponse = regexp:replace(re `${BACKTICKS}json`, normalizedResponse, BACKTICKS); // replace ```json  
     normalizedResponse = regexp:replaceAll(re `"\{\}"`, normalizedResponse, "{}"); // replace "{}"
-    normalizedResponse = regexp:replaceAll(re `\\"`, normalizedResponse, "\""); // replace \"
     return normalizedResponse;
 }
 
-isolated function parseReActLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
-    string llmResponseStr = normalizeLlmResponse(llmResponse.toString());
-    string[] content = regexp:split(re `${BACKTICKS}`, llmResponseStr + "<endtoken>");
+isolated function parseReActLlmResponse(string llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
+    string[] content = regexp:split(re `${BACKTICKS}`, llmResponse + "<endtoken>");
     if content.length() < 3 {
         log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
-        return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");
+        return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", llmResponse = llmResponse, instruction = "Tool execution failed due to invalid generation.");
     }
 
-    map<json>|error jsonThought = content[1].fromJsonStringWithType();
-    if jsonThought is error {
-        log:printWarn("Invalid JSON is given as the action.", jsonThought);
-        return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonThought, thought = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
+    map<json>|error jsonResponse = content[1].fromJsonStringWithType();
+    if jsonResponse is error {
+        log:printWarn("Invalid JSON is given as the action.", jsonResponse);
+        return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonResponse, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
     }
 
     map<json> jsonAction = {};
-    foreach [string, json] [key, value] in jsonThought.entries() {
+    foreach [string, json] [key, value] in jsonResponse.entries() {
         if key.toLowerAscii() == ACTION_KEY {
             jsonAction[ACTION_NAME_KEY] = value;
         } else if key.toLowerAscii().matches(ACTION_INPUT_REGEX) {
@@ -128,7 +126,7 @@ isolated function parseReActLlmResponse(json llmResponse) returns LlmToolRespons
     LlmToolResponse|error tool = jsonAction.fromJsonWithType();
     if tool is error {
         log:printError("Error while extracting action name and inputs from LLM response.", tool, llmResponse = llmResponse);
-        return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, thought = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
+        return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
     }
     return {
         name: tool.name,
@@ -140,8 +138,8 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     string historyPrompt = "";
     foreach ExecutionStep step in history {
         string observationStr = getObservationString(step.observation);
-        string thoughtStr = step.llmResponse.toString();
-        historyPrompt += string `${thoughtStr}${"\n"}${OBSERVATION_KEY}: ${observationStr}${"\n"}`;
+        string llmResponseStr = step.llmResponse.toString();
+        historyPrompt += string `${llmResponseStr}${"\n"}${OBSERVATION_KEY}: ${observationStr}${"\n"}`;
     }
     return historyPrompt;
 }
