@@ -121,6 +121,7 @@ public isolated class HttpServiceToolKit {
     private final Tool[] & readonly tools;
     private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
+    private final string:RegExp xmlMedia = re `(application/.*xml)`;
 
     # Initializes the toolkit with the given service url and http tools.
     #
@@ -216,7 +217,8 @@ public isolated class HttpServiceToolKit {
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
         http:Response postResult;
-        if httpTool.requestBody?.mediaType is "application/xml" {
+        string? mediaType = httpTool.requestBody?.mediaType;
+        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 postResult = check self.httpClient->post(path, message = xmlRequest, headers = self.headers);
@@ -234,7 +236,8 @@ public isolated class HttpServiceToolKit {
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
         http:Response deleteResult;
-        if httpTool.requestBody?.mediaType is "application/xml" {
+        string? mediaType = httpTool.requestBody?.mediaType;
+        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 deleteResult = check self.httpClient->delete(path, message = xmlRequest, headers = self.headers);
@@ -252,7 +255,8 @@ public isolated class HttpServiceToolKit {
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
         http:Response putResult;
-        if httpTool.requestBody?.mediaType is "application/xml" {
+        string? mediaType = httpTool.requestBody?.mediaType;
+        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 putResult = check self.httpClient->put(path, message = xmlRequest, headers = self.headers);
@@ -270,7 +274,8 @@ public isolated class HttpServiceToolKit {
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
         http:Response patchResult;
-        if httpTool.requestBody?.mediaType is "application/xml" {
+        string? mediaType = httpTool.requestBody?.mediaType;
+        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
             xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
             if xmlRequest is xml {
                 patchResult = check self.httpClient->patch(path, message = xmlRequest, headers = self.headers);
