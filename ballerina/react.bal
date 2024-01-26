@@ -39,9 +39,7 @@ public isolated class ReActAgent {
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
-    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
-        return parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
-    }
+    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
 
     isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         map<json>|string? context = progress.context;
@@ -157,7 +155,7 @@ isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
             description: tool.description,
             inputSchema: tool.variables
         };
-        toolIntroList.push(tool.name + ": " + toolDescription.toString());
+        toolIntroList.push(string `${tool.name}: ${toolDescription.toString()}`);
     }
     return {
         toolList: string:'join(", ", ...toolNameList).trim(),

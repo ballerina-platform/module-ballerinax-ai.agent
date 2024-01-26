@@ -57,14 +57,13 @@ public isolated class FunctionCallAgent {
 
     isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        FunctionCall|string|LlmError functionaCall = self.model.functionaCall(messages,
+        return self.model.functionaCall(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
-        return functionaCall;
     }
 }
 
