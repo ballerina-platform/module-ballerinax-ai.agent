@@ -121,7 +121,6 @@ public isolated class HttpServiceToolKit {
     private final Tool[] & readonly tools;
     private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
-    private final string:RegExp xmlMedia = re `(application/.*xml)`;
 
     # Initializes the toolkit with the given service url and http tools.
     #
@@ -216,18 +215,17 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${POST}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response postResult;
+        xml|json? message;
         string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
-            xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
-            if xmlRequest is xml {
-                postResult = check self.httpClient->post(path, message = xmlRequest, headers = self.headers);
-            } else {
+        if mediaType is string && mediaType.matches(XML_MEDIA) {
+            message = check xmldata:fromJson(httpInput?.requestBody);
+            if message !is xml {
                 return error InvalidParameterDefinition("Error occurred while converting json to xml.");
             }
         } else {
-            postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
+            message = httpInput?.requestBody;
         }
+        http:Response postResult = check self.httpClient->post(path, message = message, headers = self.headers);
         return extractResponsePayload(path, postResult);
     }
 
@@ -235,18 +233,17 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response deleteResult;
+        xml|json? message;
         string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
-            xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
-            if xmlRequest is xml {
-                deleteResult = check self.httpClient->delete(path, message = xmlRequest, headers = self.headers);
-            } else {
+        if mediaType is string && mediaType.matches(XML_MEDIA) {
+            message = check xmldata:fromJson(httpInput?.requestBody);
+            if message !is xml {
                 return error InvalidParameterDefinition("Error occurred while converting json to xml.");
             }
         } else {
-            deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
+            message = httpInput?.requestBody;
         }
+        http:Response deleteResult = check self.httpClient->delete(path, message = message, headers = self.headers);
         return extractResponsePayload(path, deleteResult);
     }
 
@@ -254,18 +251,17 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response putResult;
+        xml|json? message;
         string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
-            xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
-            if xmlRequest is xml {
-                putResult = check self.httpClient->put(path, message = xmlRequest, headers = self.headers);
-            } else {
+        if mediaType is string && mediaType.matches(XML_MEDIA) {
+            message = check xmldata:fromJson(httpInput?.requestBody);
+            if message !is xml {
                 return error InvalidParameterDefinition("Error occurred while converting json to xml.");
             }
         } else {
-            putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
+            message = httpInput?.requestBody;
         }
+        http:Response putResult = check self.httpClient->put(path, message = message, headers = self.headers);
         return extractResponsePayload(path, putResult);
     }
 
@@ -273,18 +269,17 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response patchResult;
+        xml|json? message;
         string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.trim().matches(self.xmlMedia) {
-            xml? xmlRequest = check xmldata:fromJson(httpInput?.requestBody);
-            if xmlRequest is xml {
-                patchResult = check self.httpClient->patch(path, message = xmlRequest, headers = self.headers);
-            } else {
+        if mediaType is string && mediaType.matches(XML_MEDIA) {
+            message = check xmldata:fromJson(httpInput?.requestBody);
+            if message !is xml {
                 return error InvalidParameterDefinition("Error occurred while converting json to xml.");
             }
         } else {
-            patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
+            message = httpInput?.requestBody;
         }
+        http:Response patchResult = check self.httpClient->patch(path, message = message, headers = self.headers);
         return extractResponsePayload(path, patchResult);
     }
 

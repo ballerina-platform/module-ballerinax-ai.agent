@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import ballerina/io;
+import ballerina/lang.regexp;
 import ballerina/log;
 import ballerina/yaml;
 
@@ -224,9 +225,7 @@ class OpenApiSpecVisitor {
             };
         }
         if schema is Reference {
-            string:RegExp refPath = re `/`;
-            string[] refList = refPath.split(schema.\$ref);
-            string refName = refList.pop();
+            string refName = regexp:split(re `/`, schema.\$ref).pop();
             schema = {'type: OBJECT, properties: {[refName] : schema}};
         }
         return {
@@ -359,13 +358,13 @@ class OpenApiSpecVisitor {
         }
         if xmlNamespace is string {
             if xmlPrefix is string {
-                outerObjectSchema.properties[string `@xmlns:${xmlPrefix}`] = {'const: xmlNamespace};
+                outerObjectSchema.properties[string `${XML_NAMESPACE}:${xmlPrefix}`] = {'const: xmlNamespace};
             } else {
-                outerObjectSchema.properties["@xmlns"] = {'const: xmlNamespace};
+                outerObjectSchema.properties[XML_NAMESPACE] = {'const: xmlNamespace};
             }
         }
         if inputSchema is PrimitiveInputSchema {
-            outerObjectSchema.properties["#content"] = inputSchema;
+            outerObjectSchema.properties[XML_CONTENT] = inputSchema;
         }
         return outerObjectSchema;
     }
@@ -379,9 +378,9 @@ class OpenApiSpecVisitor {
         string? xmlPrefix = schema.'xml?.prefix;
         if isXml && xmlNamespace is string {
             if xmlPrefix is string {
-                objectSchema.properties[string `@xmlns:${xmlPrefix}`] = {'const: xmlNamespace};
+                objectSchema.properties[string `${XML_NAMESPACE}:${xmlPrefix}`] = {'const: xmlNamespace};
             } else {
-                objectSchema.properties["@xmlns"] = {'const: xmlNamespace};
+                objectSchema.properties[XML_NAMESPACE] = {'const: xmlNamespace};
             }
         }
 
@@ -403,23 +402,24 @@ class OpenApiSpecVisitor {
             if innerXmlName is string {
                 xmlName = innerXmlName;
             }
-            if isXml {
-                if xmlAttribute is boolean && xmlAttribute {
-                    if innerXmlPrefix is string {
-                        objectSchema.properties[string `@${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
-                    } else {
-                        objectSchema.properties[string `@${xmlName}`] = resolvedPropertySchema;
-                    }
+            if !isXml {
+                objectSchema.properties[propertyName] = resolvedPropertySchema;
+                continue;
+            }
+            if xmlAttribute is boolean && xmlAttribute {
+                if innerXmlPrefix is string {
+                    objectSchema.properties[string `@${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
                 } else {
-                    if innerXmlPrefix is string {
-                        objectSchema.properties[string `${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
-                    } else {
-                        objectSchema.properties[xmlName] = resolvedPropertySchema;
-                    }
+                    objectSchema.properties[string `@${xmlName}`] = resolvedPropertySchema;
                 }
             } else {
-                objectSchema.properties[propertyName] = resolvedPropertySchema;
+                if innerXmlPrefix is string {
+                    objectSchema.properties[string `${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
+                } else {
+                    objectSchema.properties[xmlName] = resolvedPropertySchema;
+                }
             }
+
         }
         boolean|string[]? required = schema?.required;
         if required is string[] {
