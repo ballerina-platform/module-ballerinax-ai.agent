@@ -70,20 +70,20 @@ public type ToolOutput record {|
 |};
 
 public type BaseAgent distinct isolated object {
-    LlmModel model;
-    ToolStore toolStore;
-
-    # Use LLMs to decide the next tool/step.
-    #
-    # + progress - QueryProgress with the current query and execution history
-    # + return - NextAction decided by the LLM or an error if call to the LLM fails
-    isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError;
+    public LlmModel model;
+    public ToolStore toolStore;
 
     # Parse the llm response and extract the tool to be executed.
     #
     # + llmResponse - Raw LLM response
-    # + return - SelectedTool or an error if parsing fails
-    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError;
+    # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
+    public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError;
+
+    # Use LLM to decide the next tool/step.
+    #
+    # + progress - Execution progress with the current query and execution history
+    # + return - LLM response containing the tool or chat response (or an error if the call fails)
+    public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError;
 };
 
 # An iterator to iterate over agent's execution
@@ -96,8 +96,8 @@ public class Iterator {
     # + agent - Agent instance to be executed
     # + query - Natural language query to be executed by the agent
     # + context - Contextual information to be used by the agent during the execution
-    public isolated function init(BaseAgent agent, string query, map<json>|string? context = ()) {
-        self.executor = new (agent, query = query, context = context);
+    public isolated function init(BaseAgent agent, *ExecutionProgress progress) {
+        self.executor = new (agent, progress);
     }
 
     # Iterate over the agent's execution steps.
@@ -226,7 +226,7 @@ public class Executor {
 public isolated function run(BaseAgent agent, string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];
     string? content = ();
-    Iterator iterator = new (agent, query, context = context);
+    Iterator iterator = new (agent, query = query, context = context);
     int iter = 0;
     foreach ExecutionResult|LlmChatResponse|ExecutionError|error step in iterator {
         if iter == maxIter {
@@ -253,7 +253,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter = 5, str
 ${BACKTICKS}
 {
     ${ACTION_NAME_KEY}: ${tool.name},
-    ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}}
+    ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}
 }
 ${BACKTICKS}`);
                 anydata|error observation = step?.observation;

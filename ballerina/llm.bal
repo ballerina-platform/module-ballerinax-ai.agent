@@ -86,28 +86,25 @@ public type LlmModel distinct isolated object {
 # Extendable LLM model object for completion models.
 public type CompletionLlmModel distinct isolated object {
     *LlmModel;
-    CompletionModelConfig modelConfig;
     public isolated function complete(string prompt, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for chat LLM models
 public type ChatLlmModel distinct isolated object {
     *LlmModel;
-    ChatModelConfig modelConfig;
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for LLM models with function call API
-public type FunctionCallLlm distinct isolated object {
+public type FunctionCallLlmModel distinct isolated object {
     *LlmModel;
-    ChatModelConfig modelConfig;
-    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError;
+    public isolated function functionCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns string|FunctionCall|LlmError;
 };
 
 public isolated class Gpt3Model {
     *CompletionLlmModel;
     final text:Client llmClient;
-    final CompletionModelConfig modelConfig;
+    public final CompletionModelConfig modelConfig;
 
     # Initializes the GPT-3 model with the given connection configuration and model configuration.
     #
@@ -140,7 +137,7 @@ public isolated class Gpt3Model {
 public isolated class AzureGpt3Model {
     *CompletionLlmModel;
     final azure_text:Client llmClient;
-    final CompletionModelConfig modelConfig;
+    public final CompletionModelConfig modelConfig;
     private final string deploymentId;
     private final string apiVersion;
 
@@ -179,10 +176,10 @@ public isolated class AzureGpt3Model {
 }
 
 public isolated class ChatGptModel {
-    *FunctionCallLlm;
+    *FunctionCallLlmModel;
     *ChatLlmModel;
     final chat:Client llmClient;
-    final ChatModelConfig modelConfig;
+    public final ChatModelConfig modelConfig;
 
     # Initializes the ChatGPT model with the given connection configuration and model configuration.
     #
@@ -219,7 +216,7 @@ public isolated class ChatGptModel {
     # + functions - Function definitions to be used for the function call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError {
+    public isolated function functionCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns string|FunctionCall|LlmError {
 
         chat:CreateChatCompletionResponse|error response = self.llmClient->/chat/completions.post({
             ...self.modelConfig,
@@ -246,10 +243,10 @@ public isolated class ChatGptModel {
 }
 
 public isolated class AzureChatGptModel {
-    *FunctionCallLlm;
+    *FunctionCallLlmModel;
     *ChatLlmModel;
     final azure_chat:Client llmClient;
-    final ChatModelConfig modelConfig;
+    public final ChatModelConfig modelConfig;
     private final string deploymentId;
     private final string apiVersion;
 
@@ -294,7 +291,7 @@ public isolated class AzureChatGptModel {
     # + functions - Function definitions to be used for the function call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError {
+    public isolated function functionCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns string|FunctionCall|LlmError {
         azure_chat:CreateChatCompletionResponse|error response =
     self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
             ...self.modelConfig,
