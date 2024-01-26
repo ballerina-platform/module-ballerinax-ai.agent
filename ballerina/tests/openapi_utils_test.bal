@@ -269,8 +269,7 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                     }
                 }
             });
-        }
-        else if tool.name == "createChatCompletion" {
+        } else if tool.name == "createChatCompletion" {
             test:assertEquals(tool, {
                 name: "createChatCompletion",
                 description: "Creates a completion for the chat message",
@@ -439,8 +438,7 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                     }
                 }
             });
-        }
-        else if tool.name == "createChatCompletion" {
+        } else if tool.name == "createChatCompletion" {
             test:assertEquals(tool, {
                 "name": "createChatCompletion",
                 "description": "Creates a completion for the chat message",

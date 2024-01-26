@@ -17,6 +17,7 @@ import ballerina/http;
 import ballerina/lang.regexp;
 import ballerina/mime;
 import ballerina/url;
+import ballerina/xmldata;
 
 type QueryParamEncoding record {
     EncodingStyle style = FORM;
@@ -294,3 +295,16 @@ isolated function getContentLength(http:Response response) returns int|error? {
     return int:fromString(contentLengthHeader);
 }
 
+isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) returns xml|json|error {
+    xml|json? message;
+    string? mediaType = httpTool.requestBody?.mediaType;
+    if mediaType is string && mediaType.matches(XML_MEDIA) {
+        message = check xmldata:fromJson(httpInput?.requestBody);
+        if message !is xml {
+            return error InvalidParameterDefinition("Error occurred while converting json to xml.");
+        }
+    } else {
+        message = httpInput?.requestBody;
+    }
+    return message;
+}

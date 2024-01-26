@@ -15,7 +15,6 @@
 // under the License.
 import ballerina/http;
 import ballerina/log;
-import ballerina/xmldata;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -215,16 +214,7 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${POST}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
-        xml|json? message;
-        string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.matches(XML_MEDIA) {
-            message = check xmldata:fromJson(httpInput?.requestBody);
-            if message !is xml {
-                return error InvalidParameterDefinition("Error occurred while converting json to xml.");
-            }
-        } else {
-            message = httpInput?.requestBody;
-        }
+        xml|json message = check getRequestMessage(httpTool, httpInput);
         http:Response postResult = check self.httpClient->post(path, message = message, headers = self.headers);
         return extractResponsePayload(path, postResult);
     }
@@ -233,16 +223,7 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
-        xml|json? message;
-        string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.matches(XML_MEDIA) {
-            message = check xmldata:fromJson(httpInput?.requestBody);
-            if message !is xml {
-                return error InvalidParameterDefinition("Error occurred while converting json to xml.");
-            }
-        } else {
-            message = httpInput?.requestBody;
-        }
+        xml|json message = check getRequestMessage(httpTool, httpInput);
         http:Response deleteResult = check self.httpClient->delete(path, message = message, headers = self.headers);
         return extractResponsePayload(path, deleteResult);
     }
@@ -251,16 +232,7 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
-        xml|json? message;
-        string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.matches(XML_MEDIA) {
-            message = check xmldata:fromJson(httpInput?.requestBody);
-            if message !is xml {
-                return error InvalidParameterDefinition("Error occurred while converting json to xml.");
-            }
-        } else {
-            message = httpInput?.requestBody;
-        }
+        xml|json message = check getRequestMessage(httpTool, httpInput);
         http:Response putResult = check self.httpClient->put(path, message = message, headers = self.headers);
         return extractResponsePayload(path, putResult);
     }
@@ -269,16 +241,7 @@ public isolated class HttpServiceToolKit {
         HttpTool httpTool = self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`);
         string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
         log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
-        xml|json? message;
-        string? mediaType = httpTool.requestBody?.mediaType;
-        if mediaType is string && mediaType.matches(XML_MEDIA) {
-            message = check xmldata:fromJson(httpInput?.requestBody);
-            if message !is xml {
-                return error InvalidParameterDefinition("Error occurred while converting json to xml.");
-            }
-        } else {
-            message = httpInput?.requestBody;
-        }
+        xml|json message = check getRequestMessage(httpTool, httpInput);
         http:Response patchResult = check self.httpClient->patch(path, message = message, headers = self.headers);
         return extractResponsePayload(path, patchResult);
     }
