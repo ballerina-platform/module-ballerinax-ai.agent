@@ -37,8 +37,7 @@ function testReActAgentInitialization() {
 Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.parameters}.toString()}`
     };
 
-    ToolStore store = agent.toolStore;
-    test:assertEquals(store.extractToolInfo(), toolInfo);
+    test:assertEquals(extractToolInfo(agent.toolStore), toolInfo);
 }
 
 @test:Config {}
@@ -91,12 +90,12 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, searchTool, calculatorTool);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    AgentExecutor agentExecutor = new (agent, query);
-    record {|ExecutionStep|LlmChatResponse|error value;|}? result = agentExecutor.next();
+    Executor agentExecutor = new (agent, query = query);
+    record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
-    ExecutionStep|LlmChatResponse|error output = result.value;
+    ExecutionResult|LlmChatResponse|ExecutionError|error output = result.value;
     if output is error {
         test:assertFail("AgentExecutor.next returns an error during first iteration");
     }
@@ -127,19 +126,7 @@ function testAgentExecutorRun() returns error? {
 function testConstructHistoryPrompt() {
     ExecutionStep[] history = [
         {
-            toolResponse: {
-                tool: {
-                    name: "Create wifi",
-                    arguments: {
-                        "path": "/guest-wifi-accounts",
-                        "requestBody": {
-                            "email": "johnny@wso2.com",
-                            "username": "newGuest",
-                            "password": "jh123"
-                        }
-                    }
-                },
-                llmResponse: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
+            llmResponse: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
 Action:
 {
   "tool": "Create wifi",
@@ -151,41 +138,23 @@ Action:
       "password": "jh123"
     }
   }
-}`
-
-            },
+}`,
             observation: "Successfully added the wifi account"
         },
         {
-            toolResponse: {
-                tool: {
-                    name: "List wifi",
-                    arguments: {
-                        "path": "//guest-wifi-accounts/johnny@wso2.com"
-                    }
-                },
-                llmResponse: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
+
+            llmResponse: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
 Action:
 {
   "tool": "List wifi",
   "tool_input": {
     "path": "/guest-wifi-accounts/johnny@wso2.com"
   }
-}`
-            },
+}`,
             observation: ["freeWifi.guestOf.johnny", "newGuest.guestOf.johnny"]
         },
         {
-            toolResponse: {
-                tool: {
-                    name: "Send mail",
-                    arguments: {
-                        "recipient": "alica@wso2.com",
-                        "subject": "Available Wifi Accounts",
-                        "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
-                    }
-                },
-                llmResponse: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
+            llmResponse: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
 Action:
 {
   "tool": "Send mail",
@@ -194,8 +163,7 @@ Action:
     "subject": "Available Wifi Accounts",
     "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
   }
-}`
-            },
+}`,
             observation: error("Error while sending the email(ballerinax/googleapis.gmail)GmailError")
         }
     ];
@@ -250,8 +218,8 @@ ${"```"}
 }
 ${"```"}`;
 
-    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
-    if parsedResult is SelectedTool {
+    LlmToolResponse|LlmChatResponse parsedResult = check parseReActLlmResponse(llmResponse);
+    if parsedResult is LlmToolResponse {
         test:assertFail("Parsed result should be a ChatResponse");
     }
     test:assertEquals(parsedResult.content, "The guest wifi account guestJohn with password abc123 has been successfully created. There are currently no other available wifi accounts.");
@@ -281,8 +249,8 @@ ${"```"}
 }
 ${"```"}`;
 
-    SelectedTool|LlmChatResponse parsedResult = check parseLlmReponse(llmResponse);
-    if parsedResult is SelectedTool {
+    LlmToolResponse|LlmChatResponse parsedResult = check parseReActLlmResponse(llmResponse);
+    if parsedResult is LlmToolResponse {
         test:assertFail("Parsed result should be a ChatResponse");
     }
 }

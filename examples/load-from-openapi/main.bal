@@ -32,7 +32,7 @@ const string DEFAULT_QUERY = "create a new guest wifi with user openAPIwifi and 
 public function main(string openAPIPath = OPENAPI_PATH, string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
-    agent:AzureGpt3Model model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
+    agent:AzureChatGptModel model = check new ({auth: {apiKey}}, serviceUrl, deploymentId, apiVersion);
 
     // 2) Extract tools from openAPI specification
     final agent:HttpApiSpecification apiSpecification = check agent:extractToolsFromOpenApiSpecFile(openAPIPath);
