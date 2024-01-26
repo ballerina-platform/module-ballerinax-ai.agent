@@ -16,6 +16,11 @@
 import ballerina/lang.regexp;
 import ballerina/log;
 
+type ToolInfo readonly & record {|
+    string toolList;
+    string toolIntro;
+|};
+
 # A ReAct Agent that uses ReAct prompt to answer questions by using tools.
 public isolated class ReActAgent {
     *BaseAgent;
@@ -30,11 +35,13 @@ public isolated class ReActAgent {
     public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|Tool)... tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.instructionPrompt = constructReActPrompt(self.toolStore.extractToolInfo());
+        self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
-    isolated function selectNextTool(ExecutionProgress progress) returns LlmToolResponse|LlmChatResponse|LlmError {
+    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
+
+    isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         map<json>|string? context = progress.context;
         string contextPrompt = context is () ? "" : string `${"\n\n"}You can use these information if needed: ${context.toString()}$`;
 
@@ -43,24 +50,15 @@ public isolated class ReActAgent {
 Question: ${progress.query}
 ${constructHistoryPrompt(progress.history)}
 ${THOUGHT_KEY}`;
-
-        string llmResponse = check self.generate(reactPrompt);
-        SelectedTool|LlmChatResponse|LlmInvalidGenerationError parsedResponse = parseLlmReponse(normalizeLlmResponse(llmResponse));
-        if parsedResponse is LlmChatResponse {
-            return parsedResponse;
-        }
-        return {
-            tool: parsedResponse,
-            llmResponse
-        };
+        return check self.generate(reactPrompt);
     }
 
     # Generate ReAct response for the given prompt
     #
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response
-    isolated function generate(string prompt) returns string|LlmConnectionError {
-        string|error? llmResult = ();
+    isolated function generate(string prompt) returns string|LlmError {
+        string|LlmError llmResult;
         CompletionLlmModel|ChatLlmModel model = self.model;
         if model is CompletionLlmModel {
             llmResult = model.complete(prompt, stop = OBSERVATION_KEY);
@@ -71,13 +69,11 @@ ${THOUGHT_KEY}`;
                     content: prompt
                 }
             ], stop = OBSERVATION_KEY);
+        } else {
+            return error LlmError("Invalid LLM model is given.");
         }
-        if llmResult is string {
-            return llmResult;
-        }
-        return error LlmConnectionError("Geneartion Failed.", llmResult);
+        return llmResult;
     }
-
 }
 
 isolated function normalizeLlmResponse(string llmResponse) returns string {
@@ -95,25 +91,24 @@ isolated function normalizeLlmResponse(string llmResponse) returns string {
     }
     normalizedResponse = regexp:replace(re `${BACKTICKS}json`, normalizedResponse, BACKTICKS); // replace ```json  
     normalizedResponse = regexp:replaceAll(re `"\{\}"`, normalizedResponse, "{}"); // replace "{}"
-    normalizedResponse = regexp:replaceAll(re `\\"`, normalizedResponse, "\""); // replace \"
     return normalizedResponse;
 }
 
-isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmChatResponse|LlmInvalidGenerationError {
+isolated function parseReActLlmResponse(string llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
     string[] content = regexp:split(re `${BACKTICKS}`, llmResponse + "<endtoken>");
     if content.length() < 3 {
         log:printWarn("Unexpected LLM response is given", llmResponse = llmResponse);
-        return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", thought = llmResponse, instruction = "Tool execution failed due to invalid generation.");
+        return error LlmInvalidGenerationError("Unable to extract the tool due to invalid generation", llmResponse = llmResponse, instruction = "Tool execution failed due to invalid generation.");
     }
 
-    map<json>|error jsonThought = content[1].fromJsonStringWithType();
-    if jsonThought is error {
-        log:printWarn("Invalid JSON is given as the action.", jsonThought);
-        return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonThought, thought = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
+    map<json>|error jsonResponse = content[1].fromJsonStringWithType();
+    if jsonResponse is error {
+        log:printWarn("Invalid JSON is given as the action.", jsonResponse);
+        return error LlmInvalidGenerationError("Invalid JSON is given as the action.", jsonResponse, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid 'Action' JSON_BLOB.");
     }
 
     map<json> jsonAction = {};
-    foreach [string, json] [key, value] in jsonThought.entries() {
+    foreach [string, json] [key, value] in jsonResponse.entries() {
         if key.toLowerAscii() == ACTION_KEY {
             jsonAction[ACTION_NAME_KEY] = value;
         } else if key.toLowerAscii().matches(ACTION_INPUT_REGEX) {
@@ -126,10 +121,10 @@ isolated function parseLlmReponse(string llmResponse) returns SelectedTool|LlmCh
             content: input
         };
     }
-    SelectedTool|error tool = jsonAction.fromJsonWithType();
+    LlmToolResponse|error tool = jsonAction.fromJsonWithType();
     if tool is error {
         log:printError("Error while extracting action name and inputs from LLM response.", tool, llmResponse = llmResponse);
-        return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, thought = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
+        return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
     }
     return {
         name: tool.name,
@@ -141,10 +136,31 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
     string historyPrompt = "";
     foreach ExecutionStep step in history {
         string observationStr = getObservationString(step.observation);
-        string thoughtStr = step.toolResponse.llmResponse.toString();
-        historyPrompt += string `${thoughtStr}${"\n"}${OBSERVATION_KEY}: ${observationStr}${"\n"}`;
+        string llmResponseStr = step.llmResponse.toString();
+        historyPrompt += string `${llmResponseStr}${"\n"}${OBSERVATION_KEY}: ${observationStr}${"\n"}`;
     }
     return historyPrompt;
+}
+
+# Generate descriptions for the tools registered.
+#
+# + toolStore - ToolStore instance
+# + return - Return a record with tool names and descriptions
+isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
+    string[] toolNameList = [];
+    string[] toolIntroList = [];
+    foreach AgentTool tool in toolStore.tools {
+        toolNameList.push(string `${tool.name}`);
+        record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
+            description: tool.description,
+            inputSchema: tool.variables
+        };
+        toolIntroList.push(string `${tool.name}: ${toolDescription.toString()}`);
+    }
+    return {
+        toolList: string:'join(", ", ...toolNameList).trim(),
+        toolIntro: string:'join("\n", ...toolIntroList).trim()
+    };
 }
 
 isolated function constructReActPrompt(ToolInfo toolInfo) returns string => string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:

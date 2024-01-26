@@ -30,37 +30,40 @@ public isolated class FunctionCallAgent {
         self.model = model;
     }
 
-    isolated function selectNextTool(ExecutionProgress progress) returns LlmToolResponse|LlmChatResponse|LlmError {
-        ChatMessage[] messages = createFunctionCallMessages(progress);
-        FunctionCall|string|error response = self.model.functionaCall(messages, self.toolStore.tools.toArray());
-        if response is error {
-            return error LlmConnectionError("Error while function call generation", response);
+    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
+        if llmResponse is string {
+            return {content: llmResponse};
         }
-        if response is string {
-            return {content: response};
+        if llmResponse !is FunctionCall {
+            return error LlmInvalidGenerationError("Invalid response", llmResponse = llmResponse);
         }
-        string? name = response.name;
+        string? name = llmResponse.name;
         if name is () {
-            return {tool: error LlmInvalidGenerationError("Missing name", name = response.name, arguments = response.arguments), llmResponse: response.toJson()};
+            return error LlmInvalidGenerationError("Missing name", name = llmResponse.name, arguments = llmResponse.arguments);
         }
-        string? stringArgs = response.arguments;
+        string? stringArgs = llmResponse.arguments;
         map<json>|error? arguments = ();
         if stringArgs is string {
             arguments = stringArgs.fromJsonStringWithType();
         }
         if arguments is error {
-            return {tool: error LlmInvalidGenerationError("Invalid arguments", arguments, name = response.name, arguments = stringArgs), llmResponse: response.toJson()};
+            return error LlmInvalidGenerationError("Invalid arguments", arguments, name = llmResponse.name, arguments = stringArgs);
         }
         return {
-            tool: {
-                name,
-                arguments
-            },
-            llmResponse: {
-                name: name,
-                arguments: stringArgs
-            }
+            name,
+            arguments
         };
+    }
+
+    isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
+        ChatMessage[] messages = createFunctionCallMessages(progress);
+        return self.model.functionaCall(messages,
+        from AgentTool tool in self.toolStore.tools.toArray()
+        select {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.variables
+        });
     }
 }
 
@@ -81,9 +84,9 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
     }
     // include the history
     foreach ExecutionStep step in progress.history {
-        FunctionCall|error functionCall = step.toolResponse.llmResponse.fromJsonWithType();
+        FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
         if functionCall is error {
-            panic error("Badly formated history for function call agent", generated = step.toolResponse.llmResponse);
+            panic error("Badly formated history for function call agent", llmResponse = step.llmResponse);
         }
         messages.push({
             role: ASSISTANT,

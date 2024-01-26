@@ -50,7 +50,7 @@ const string DEFAULT_QUERY = "create a new guest wifi with user guestJohn and pa
 public function main(string query = DEFAULT_QUERY) returns error? {
 
     // 1) Create the model (brain of the agent)
-    agent:Gpt3Model model = check new ({auth: {token: openAIToken}});
+    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
 
     // 2) Define functions as tools 
     agent:Tool listwifi = {

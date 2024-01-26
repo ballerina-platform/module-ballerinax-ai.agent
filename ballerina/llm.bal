@@ -60,6 +60,16 @@ public type ChatMessage record {|
     FunctionCall function_call?;
 |};
 
+# Function definitions for function calling API.
+public type ChatCompletionFunctions record {|
+    # Name of the function
+    string name;
+    # Description of the function
+    string description;
+    # Parameters of the function
+    JsonInputSchema parameters?;
+|};
+
 # Function call record
 public type FunctionCall record {|
     # Name of the function
@@ -77,21 +87,21 @@ public type LlmModel distinct isolated object {
 public type CompletionLlmModel distinct isolated object {
     *LlmModel;
     CompletionModelConfig modelConfig;
-    public isolated function complete(string prompt, string? stop = ()) returns string|error;
+    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for chat LLM models
 public type ChatLlmModel distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;
-    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error;
+    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for LLM models with function call API
 public type FunctionCallLlm distinct isolated object {
     *LlmModel;
     ChatModelConfig modelConfig;
-    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error;
+    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError;
 };
 
 public isolated class Gpt3Model {
@@ -114,13 +124,16 @@ public isolated class Gpt3Model {
     # + prompt - Prompt to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
-    public isolated function complete(string prompt, string? stop = ()) returns string|error {
-        text:CreateCompletionResponse response = check self.llmClient->/completions.post({
+    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError {
+        text:CreateCompletionResponse|error response = self.llmClient->/completions.post({
             ...self.modelConfig,
             stop,
             prompt
         });
-        return response.choices[0].text ?: error("Empty response from the model");
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
+        return response.choices[0].text ?: error LlmInvalidResponseError("Empty response from the model");
     }
 }
 
@@ -152,13 +165,16 @@ public isolated class AzureGpt3Model {
     # + prompt - Prompt to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed prompt or error if the completion fails
-    public isolated function complete(string prompt, string? stop = ()) returns string|error {
-        azure_text:Inline_response_200 response = check self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, {
+    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError {
+        azure_text:Inline_response_200|error response = self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, {
             ...self.modelConfig,
             stop,
             prompt
         });
-        return response.choices[0].text ?: error("Empty response from the model");
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
+        return response.choices[0].text ?: error LlmInvalidResponseError("Empty response from the model");
     }
 }
 
@@ -183,38 +199,37 @@ public isolated class ChatGptModel {
     # + messages - Messages to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed message or error if the completion fails
-    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error {
-        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post({
+    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|LlmError {
+        chat:CreateChatCompletionResponse|error response = self.llmClient->/chat/completions.post({
             ...self.modelConfig,
             stop,
             messages
         });
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
-        return content ?: error("Empty response from the model");
+        return content ?: error LlmInvalidResponseError("Empty response from the model");
     }
 
     # Uses function call API to determine next function to be called
     #
     # + messages - List of chat messages 
-    # + tools - Tools to be used for the function call
+    # + functions - Function definitions to be used for the function call
     # + stop - Stop sequence to stop the completion
-    # + return - Next tool to be used or error if the function call fails
-    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
+    # + return - Function to be called, chat response or an error in-case of failures
+    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError {
 
-        chat:CreateChatCompletionResponse response = check self.llmClient->/chat/completions.post(
-            {
-                ...self.modelConfig,
-                stop,
-                messages,
-                functions: from AgentTool tool in tools
-                    select {
-                        name: tool.name,
-                        description: tool.description,
-                        parameters: tool.variables
-                    }
-            }
-        );
+        chat:CreateChatCompletionResponse|error response = self.llmClient->/chat/completions.post({
+            ...self.modelConfig,
+            stop,
+            messages,
+            functions
+        });
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {
@@ -226,7 +241,7 @@ public isolated class ChatGptModel {
                 ...'function
             };
         }
-        return error LlmInvalidGenerationError("Empty response from the model when using function call API");
+        return error LlmInvalidResponseError("Empty response from the model when using function call API");
     }
 }
 
@@ -259,37 +274,37 @@ public isolated class AzureChatGptModel {
     # + messages - Messages to be completed
     # + stop - Stop sequence to stop the completion
     # + return - Completed message or error if the completion fails
-    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|error {
-        azure_chat:CreateChatCompletionResponse response = check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
+    public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|LlmError {
+        azure_chat:CreateChatCompletionResponse|error response = self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
             ...self.modelConfig,
             stop,
             messages
         });
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
         azure_chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
-        return content ?: error("Empty response from the model");
+        return content ?: error LlmInvalidResponseError("Empty response from the model");
     }
 
     # Uses function call API to determine next function to be called
     #
     # + messages - List of chat messages 
-    # + tools - Tools to be used for the function call
+    # + functions - Function definitions to be used for the function call
     # + stop - Stop sequence to stop the completion
-    # + return - Next tool to be used or error if the function call fails
-    public isolated function functionaCall(ChatMessage[] messages, AgentTool[] tools, string? stop = ()) returns FunctionCall|string|error {
-        azure_chat:CreateChatCompletionRequest request = {
+    # + return - Function to be called, chat response or an error in-case of failures
+    public isolated function functionaCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns FunctionCall|string|LlmError {
+        azure_chat:CreateChatCompletionResponse|error response =
+    self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, {
             ...self.modelConfig,
             stop,
             messages,
-            functions: from AgentTool tool in tools
-                select {
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.variables
-                }
-        };
-        azure_chat:CreateChatCompletionResponse response =
-        check self.llmClient->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, request);
+            functions
+        });
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
         azure_chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {
@@ -301,7 +316,7 @@ public isolated class AzureChatGptModel {
                 ...'function
             };
         }
-        return error LlmInvalidGenerationError("Empty response from the model when using function call API");
+        return error LlmInvalidResponseError("Empty response from the model when using function call API");
     }
 }
 

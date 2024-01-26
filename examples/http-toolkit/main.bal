@@ -71,7 +71,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     // 2) Create the model (brain of the agent)
     agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
     // 3) Create the agent
-    agent:ReActAgent agent = check new (model, httpToolKit);
+    agent:FunctionCallAgent agent = check new (model, httpToolKit);
     // 4) Run the agent to execute user's query
     _ = agent:run(agent, query, maxIter = 5, context = "email is john@gmail.com");
 }

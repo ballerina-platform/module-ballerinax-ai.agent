@@ -175,7 +175,7 @@ class OpenApiSpecVisitor {
         }
         string? name = operation.operationId;
         if name is () {
-            return error(string `OperationId is mandotory for API paths. But, tt is missing for the resource "[${method}]:${path}"`);
+            return error(string `OperationId is mandotory for API paths. But, it is missing for the resource "[${method}]:${path}"`);
         }
 
         // resolve parameters
