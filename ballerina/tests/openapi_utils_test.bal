@@ -438,9 +438,7 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                         }
                     }
                 }
-            }
-
-);
+            });
         }
         else if tool.name == "createChatCompletion" {
             test:assertEquals(tool, {
@@ -548,8 +546,7 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                         }
                     }
                 }
-            }
-);
+            });
         }
     }
 }
