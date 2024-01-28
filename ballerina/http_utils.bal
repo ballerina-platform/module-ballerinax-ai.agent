@@ -15,6 +15,7 @@
 // under the License.
 import ballerina/http;
 import ballerina/lang.regexp;
+import ballerina/log;
 import ballerina/mime;
 import ballerina/url;
 import ballerina/xmldata;
@@ -307,4 +308,12 @@ isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) retu
         message = httpInput?.requestBody;
     }
     return message;
+}
+
+isolated function getHttpParameters(map<HttpTool> httpTools, string httpMethod, HttpInput httpInput, boolean writeOperation) returns [string, xml|json]|error {
+    HttpTool httpTool = httpTools.get(string `${httpInput.path.toString()}:${httpMethod}`);
+    string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
+    log:printDebug(string `HTTP ${httpMethod} ${path} ${httpInput?.requestBody.toString()}`);
+    xml|json message = writeOperation ? check getRequestMessage(httpTool, httpInput) : ();
+    return [path, message];
 }

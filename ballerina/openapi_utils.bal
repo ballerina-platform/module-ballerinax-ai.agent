@@ -345,17 +345,9 @@ class OpenApiSpecVisitor {
             properties: {}
         };
         if xmlName is string {
-            if xmlPrefix is string {
-                outerObjectSchema.properties[string `${xmlPrefix}:${xmlName}`] = inputSchema;
-            } else {
-                outerObjectSchema.properties[xmlName] = inputSchema;
-            }
+            outerObjectSchema.properties[self.getPropertyName(xmlName, xmlPrefix)] = inputSchema;
         } else if refName is string {
-            if xmlPrefix is string {
-                outerObjectSchema.properties[string `${xmlPrefix}:${refName}`] = inputSchema;
-            } else {
-                outerObjectSchema.properties[refName] = inputSchema;
-            }
+            outerObjectSchema.properties[self.getPropertyName(refName, xmlPrefix)] = inputSchema;
         }
         if xmlNamespace is string {
             if xmlPrefix is string {
@@ -407,20 +399,9 @@ class OpenApiSpecVisitor {
                 objectSchema.properties[propertyName] = resolvedPropertySchema;
                 continue;
             }
-            if xmlAttribute is boolean && xmlAttribute {
-                if innerXmlPrefix is string {
-                    objectSchema.properties[string `@${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
-                } else {
-                    objectSchema.properties[string `@${xmlName}`] = resolvedPropertySchema;
-                }
-            } else {
-                if innerXmlPrefix is string {
-                    objectSchema.properties[string `${innerXmlPrefix}:${xmlName}`] = resolvedPropertySchema;
-                } else {
-                    objectSchema.properties[xmlName] = resolvedPropertySchema;
-                }
-            }
-
+            string attributePrefix = xmlAttribute is boolean && xmlAttribute ? "@" : "";
+            string resolvedPropertyName = self.getPropertyName(xmlName, innerXmlPrefix);
+            objectSchema.properties[string `${attributePrefix}${resolvedPropertyName}`] = resolvedPropertySchema;
         }
         boolean|string[]? required = schema?.required;
         if required is string[] {
@@ -510,5 +491,9 @@ class OpenApiSpecVisitor {
         return {
             not: check self.visitSchema(schema.not, (), isXml)
         };
+    }
+
+    isolated function getPropertyName(string name, string? prefix) returns string {
+        return prefix is () ? name : string `${prefix}:${name}`;
     }
 }
