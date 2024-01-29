@@ -230,9 +230,18 @@ This module enables the extension of new types of agents by modifying the reason
 This module allows extending new type of Agents by modifying the reasoning protocols. To define a new Agent, `selectNextTool` and `parseLlmResponse` methods should be implemented accordingly. 
 
 ```ballerina
-isolated class NewAgent{
+isolated class NewChatAgent {
     *agent:BaseAgent;
-    
+    public final agent:ChatLlmModel model; // define the type of model to be used chat agent
+    public final agent:ToolStore toolStore;
+
+    // defines the init function to initialize the agent
+    public function init(agent:ChatLlmModel model, (agent:BaseToolKit|agent:Tool)... tools) returns error? {
+        // initialize the agent with the given model and tools is mandatory
+        self.model = model;
+        self.toolStore = check new (...tools);
+    }
+
     public isolated function selectNextTool(agent:ExecutionProgress progress) returns json|agent:LlmError {
         // define the logic to reason and select the next tool
         // returns the content from the LLM response, which can be parsed using the parseLlmResponse function
@@ -244,7 +253,7 @@ isolated class NewAgent{
         // returns a LlmToolResponse if parsed response contains a tool
         // returns a LlmChatResponse if parsed response contains a chat response
         // returns a LlmInvalidGenerationError if the response is invalid
-        return {};
+        return {name: "<TOOL_NAME", arguments: {"arg1": "value1", "arg2": "value2"}};
     }
 }
 ```
