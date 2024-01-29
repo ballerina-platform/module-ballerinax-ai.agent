@@ -350,11 +350,8 @@ class OpenApiSpecVisitor {
             outerObjectSchema.properties[self.getPropertyName(refName, xmlPrefix)] = inputSchema;
         }
         if xmlNamespace is string {
-            if xmlPrefix is string {
-                outerObjectSchema.properties[string `${XML_NAMESPACE}:${xmlPrefix}`] = {'const: xmlNamespace};
-            } else {
-                outerObjectSchema.properties[XML_NAMESPACE] = {'const: xmlNamespace};
-            }
+            string namespaceProperty = xmlPrefix is string ? string `${XML_NAMESPACE}:${xmlPrefix}` : XML_NAMESPACE;
+            outerObjectSchema.properties[namespaceProperty] = {'const: xmlNamespace};
         }
         if inputSchema is PrimitiveInputSchema {
             outerObjectSchema.properties[XML_CONTENT] = inputSchema;
@@ -370,11 +367,8 @@ class OpenApiSpecVisitor {
         string? xmlNamespace = schema.'xml?.namespace;
         string? xmlPrefix = schema.'xml?.prefix;
         if isXml && xmlNamespace is string {
-            if xmlPrefix is string {
-                objectSchema.properties[string `${XML_NAMESPACE}:${xmlPrefix}`] = {'const: xmlNamespace};
-            } else {
-                objectSchema.properties[XML_NAMESPACE] = {'const: xmlNamespace};
-            }
+            string namespaceProperty = xmlPrefix is string ? string `${XML_NAMESPACE}:${xmlPrefix}` : XML_NAMESPACE;
+            objectSchema.properties[namespaceProperty] = {'const: xmlNamespace};
         }
 
         if schema?.properties == () {
@@ -493,7 +487,6 @@ class OpenApiSpecVisitor {
         };
     }
 
-    isolated function getPropertyName(string name, string? prefix) returns string {
-        return prefix is () ? name : string `${prefix}:${name}`;
-    }
+    isolated function getPropertyName(string name, string? prefix) returns string =>
+        prefix is () ? name : string `${prefix}:${name}`;
 }

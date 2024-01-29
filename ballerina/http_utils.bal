@@ -296,7 +296,7 @@ isolated function getContentLength(http:Response response) returns int|error? {
     return int:fromString(contentLengthHeader);
 }
 
-isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) returns xml|json|error {
+isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) returns xml|json|InvalidParameterDefinition|error {
     xml|json? message;
     string? mediaType = httpTool.requestBody?.mediaType;
     if mediaType is string && mediaType.matches(XML_MEDIA) {
