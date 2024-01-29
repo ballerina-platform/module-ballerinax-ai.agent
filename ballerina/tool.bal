@@ -31,7 +31,7 @@ public type AgentTool record {|
     isolated function caller;
 |};
 
-isolated class ToolStore {
+public isolated class ToolStore {
     final map<AgentTool> & readonly tools;
 
     # Register tools to the agent. 
@@ -39,7 +39,7 @@ isolated class ToolStore {
     #
     # + tools - A list of tools that are available to the LLM
     # + return - An error if the tool is already registered
-    isolated function init((BaseToolKit|Tool)... tools) returns error? {
+    public isolated function init((BaseToolKit|Tool)... tools) returns error? {
         if tools.length() == 0 {
             return error("Initialization failed.", cause = "No tools provided to the agent.");
         }

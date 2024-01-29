@@ -25,8 +25,10 @@ type ToolInfo readonly & record {|
 public isolated class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
-    final ToolStore toolStore;
-    final CompletionLlmModel|ChatLlmModel model;
+    # ToolStore instance to store the tools used by the agent
+    public final ToolStore toolStore;
+    # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
+    public final CompletionLlmModel|ChatLlmModel model;
 
     # Initialize an Agent.
     #
@@ -39,9 +41,17 @@ public isolated class ReActAgent {
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
-    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
+    # Parse the ReAct llm response and extract the tool to be executed.
+    #
+    # + llmResponse - Raw LLM response
+    # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
+    public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
 
-    isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
+    # Use LLM to decide the next tool/step based on the ReAct prompting
+    #
+    # + progress - Execution progress with the current query and execution history
+    # + return - LLM response containing the tool or chat response (or an error if the call fails)
+    public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         map<json>|string? context = progress.context;
         string contextPrompt = context is () ? "" : string `${"\n\n"}You can use these information if needed: ${context.toString()}$`;
 
