@@ -140,109 +140,182 @@ agent:HttpServiceToolKit serviceAToolKit = check new (
 
 ## Model
 
-This is a large language model (LLM) instance. Currently, the agent module has support for the following LLM APIs. 
+This is a large language model (LLM) instance. This module offers three types of LLM APIs: completion, chat, and function calling. Currently, the module includes the following LLMs. 
 
-1) OpenAI GPT3 
+### Completion LLM APIs
+- OpenAI GPT3
     ```ballerina
-    agent:Gpt3Model model = check new ({auth: {token: <OPENAI API KEY>}});
+    agent:Gpt3Model model = check new ({auth: {token: "<OPENAI API KEY>"}});
     ```
-2) OpenAI ChatGPT (e.g. GPT3.5, GPT4)
+- Azure OpenAI GPT3
     ```ballerina
-    agent:ChatGptModel model = check new ({auth: {token: <OPENAI API KEY>}});
+    agent:AzureGpt3Model model = check new ({auth: {apiKey: "<AZURE OPENAI API KEY>"}},  serviceUrl, deploymentId, apiVersion);
     ```
-3) Azure OpenAI GPT3
+### Chat and function calling LLM APIs
+- OpenAI ChatGPT (GPT3.5 and GPT4)
     ```ballerina
-    agent:AzureGpt3Model model = check new ({auth: {apiKey: <AZURE OPENAI API KEY>}}, string serviceUrl, string deploymentId, string apiVersion);
+    agent:ChatGptModel model = check new ({auth: {token: "<OPENAI API KEY>"}});
     ```
-    ```
-4) Azure OpenAI ChatGPT (e.g. GPT3.5, GPT4)
+- Azure OpenAI ChatGPT (GPT3.5 and GPT4)
     ```ballerina
-    agent:AzureChatGptModel model = check new ({auth: {apiKey: <AZURE OPENAI API KEY>}}, string serviceUrl, string deploymentId, string apiVersion);
+    agent:AzureChatGptModel model = check new ({auth: {apiKey: "<AZURE OPENAI API KEY>"}}, serviceUrl, deploymentId, apiVersion);
     ```
+
+
 ### Extending `LlmModel` for Custom Models
-This module offers extended support for utilizing other LLMs by extending the `LlmModel` as demonstrated below:
+This module provides extended support for leveraging other LLMs through the extension of a suitable LLM API interface. To extend an LLM to support both chat and function calling APIs, the following example can be followed.
 
 ```ballerina
 isolated class NewLlmModel {
-    *agent:LlmModel; // extends LlmModel
+    *agent:ChatLlmModel; // extends Chat API interface
+    *agent:FunctionCallLlmModel; // extends FunctionCall API interface
 
-    // Implement the init method to initialize the connection with the new LLM (if required)
+    function init() returns error? {
+        // initialize the connection with the new LLM
+    }
 
-    public isolated function generate(agent:PromptConstruct prompt) returns string|error {
-        // Utilize utilities to create a completion prompt (or chat prompt) if applicable
-        string completionPrompt = agent:createCompletionPrompt(prompt);
-        // Add logic to call the LLM with the completionPrompt
-        // Return the generated text from the LLM
+    public isolated function chatComplete(agent:ChatMessage[] messages, string? stop = ()) returns string|agent:LlmError {
+        // implement to call chat API of the new LLM
+        // return the text content of the response
+        return "<TEXT_CONTENT>";
+    }
+
+    public isolated function functionCall(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] functions, string? stop) returns string|agent:FunctionCall|agent:LlmError {
+        // implement to call function call API of the new LLM
+        // return the function call or the text content if the response is a chat response
+        return {name: "FUNCTION_NAME", arguments: "FUNCTION_ARGUMENTS"};
     }
 }
 ```
 
-By extending `LlmModel`, the `NewLlmModel` gains the ability to interface with other LLMs seamlessly. To utilize `NewLlmModel`, you can follow a similar approach as with other built-in LLM models. This allows you to harness the power of custom LLMs while maintaining compatibility with existing functionality.
+By extending `agent:ChatLlmModel` and `agent:FunctionCallLlmModel`, the `NewLlmModel` is implemented to utilize the chat and function calling APIs of a new LLM model seamlessly. To gain a comprehensive understanding of the capabilities of this module in connecting to various custom LLM APIs for executing different types of agents, you can refer to other built-in LLM models.
 
 ## Agent
 
-The agent facilitates the execution of natural language (NL) commands by leveraging the reasoning and text generation capabilities of LLMs (Language Models). It follows the [ReAct framework](https://arxiv.org/pdf/2210.03629.pdf):
+The agent facilitates the execution of natural language (NL) commands by leveraging the reasoning and text generation capabilities of LLMs (Language Models). We have two types of Agents already in-built. 
 
-To create an agent, you need an LLM model and a set of Tool (or ToolKit) definitions.
+### 1. Creation of Agents
+#### a) ReAct Agent
 
+This Agent is implemented based on the [ReAct framework](https://arxiv.org/pdf/2210.03629.pdf).
+
+To create an `ReActAget`, you can use either `CompletionLlmModel` or `ChatCompletionLlmModel`.
 
 ```ballerina
+agent:ChatGptModel model = check new ({auth: {token: "<OPENAI_TOKEN>"}});
 (agent:Tool|agent:BaseToolKit)[] tools = [
     //tools and toolkits
 ];
-agent:Agent agent = check new (model, ...tools);
+agent:ReActAgent agent = check new (model, ...tools);
 ```
 
-There are multiple ways to utilize the agent.
+#### b) Function Calling Agent
 
-### 1. Agent.run() for Batch Execution
+This agent is implemented to use function calling APIs (e.g. [OpenAI Function Calls](https://openai.com/blog/function-calling-and-other-api-updates)).
 
-The agent can be executed without interruptions using `Agent.run()`. It attempts to fully execute the given NL command and returns the results at each step.
+Creating a `FunctionCall` agent is similar to the `ReActAgent`, but you can use only `FunctionCallLlmModel` with this type of agents. 
 
 ```ballerina
-agent:ExecutionStep[] execution = agent.run("<NL COMMAND>", maxIter = 10);
+agent:ChatGptModel model = check new ({auth: {token: "<OPENAI_TOKEN>"}});
+(agent:Tool|agent:BaseToolKit)[] tools = [
+    //tools and toolkits
+];
+agent:FunctionCallAgent agent = check new (model, ...tools);
 ```
 
-### 2. `AgentIterator` for `foreach` Execution
+### 2. Extending `BaseAgent` to build Custom Agents
 
-The agent can also act as an iterator, providing reasoning and output from the tool at each step while executing the command.
+This module enables the extension of new types of agents by modifying the reasoning protocols. To define a new agent, the selectNextTool and parseLlmResponse methods should be implemented accordingly.
+
+This module allows extending new type of Agents by modifying the reasoning protocols. To define a new Agent, `selectNextTool` and `parseLlmResponse` methods should be implemented accordingly. 
 
 ```ballerina
-agent:AgentIterator agentIterator = agent.getIterator("<NL COMMAND>");
-foreach agent:ExecutionStep|error step in agentIterator{
-    // logic goes here
-    // can decide whether to continue/rollback/exit the loop based on the observation from the tool
+isolated class NewChatAgent {
+    *agent:BaseAgent;
+    public final agent:ChatLlmModel model; // define the type of model to be used chat agent
+    public final agent:ToolStore toolStore;
+
+    // defines the init function to initialize the agent
+    public function init(agent:ChatLlmModel model, (agent:BaseToolKit|agent:Tool)... tools) returns error? {
+        // initialize the agent with the given model and tools is mandatory
+        self.model = model;
+        self.toolStore = check new (...tools);
+    }
+
+    public isolated function selectNextTool(agent:ExecutionProgress progress) returns json|agent:LlmError {
+        // define the logic to reason and select the next tool
+        // returns the content from the LLM response, which can be parsed using the parseLlmResponse function
+        return "<LLM_RESPONSE_CONTENT>";
+    }
+
+    public isolated function parseLlmResponse(json llmResponse) returns agent:LlmToolResponse|agent:LlmChatResponse|agent:LlmInvalidGenerationError {
+        // defines the logic to parse the LLM response generated by the selectNextTool function
+        // returns a LlmToolResponse if parsed response contains a tool
+        // returns a LlmChatResponse if parsed response contains a chat response
+        // returns a LlmInvalidGenerationError if the response is invalid
+        return {name: "<TOOL_NAME", arguments: {"arg1": "value1", "arg2": "value2"}};
+    }
 }
 ```
 
-### 3. `AgentExecutor` for Reason-Act Interface
+### 3. Using Agents
 
-The `AgentExecutor` offers enhanced flexibility for running agents through its `reason()` and `act(string thought)` methods. This separation of reasoning and acting enables developers to obtain user confirmation before executing actions based on the agent's reasoning. This feature is particularly valuable for verifying, validating, or refining the agent's reasoning by incorporating user intervention or feedback as new observations, which can be achieved using the `update(ExecutionStep step)` method of `AgentExecutor`.
+#### a). `agent:run` for Batch Execution
 
-Additionally, this approach empowers users to manipulate the execution trace of the agent based on specific requirements by modifying the records of previous execution steps. This capability becomes handy in situations where certain steps need to be excluded during execution (e.g., unsuccessful or outdated steps). Moreover, manual execution can be performed selectively, such as handling specific errors or acquiring user inputs. The `AgentExecutor` allows you to customize the execution trace to suit your needs effectively.
+The agent can be executed without interruptions using `agent:run`.
 
 ```ballerina
-string QUERY = "<NL COMMAND>";
-agent:AgentExecutor agentExecutor = agent.getExecutor(QUERY);
-while(agentExecutor.hasNext()){
-    string|error thought = agentExecutor.reason(); // reasoning step
-    if thought is error {
+record {|(agent:ExecutionResult|agent:ExecutionError)[] steps; string answer?;|} run = agent:run(agent, "<NL COMMAND>", maxIter = 10);
+```
+It attempts to fully execute the given NL command and returns a record with the execution steps (whether a tool execution or an error) and the final answer to the question. 
+
+#### b). `agent:Iterator` for `foreach` Execution
+
+The agent can function as an iterator, delivering reasoning and observation from the tool at each step during the execution of the command.
+
+```ballerina
+agent:Iterator agentIterator = new (agent, query = "<NL COMMAND>");
+foreach agent:ExecutionResult|agent:ExecutionError|agent:LlmChatResponse|error step in agentIterator {
+    // logic goes here
+    // can decide whether to continue/rollback/exit the loop based on returned record type and the observations during the execution
+}
+```
+
+The `agent:Iterator` returns one of the record types defined in the example above, depending on the execution status.
+
+#### c). `agent:Executor` for advanced use-cases
+
+The `agent:Executor` offers enhanced flexibility for running agents with a two-step process of `reason()` and `act(json llmResponse)`. This separation allows developers to obtain user confirmations before executing actions based on the agent's reasoning. This feature is particularly valuable for verifying, validating, or refining the agent's reasoning by incorporating user intervention or feedback as new observations, which can be achieved using the `update(ExecutionStep step)` method of `agent:Executor`.
+
+Additionally, this approach empowers users to manipulate the execution by modifying the query, history, or the context of the executor during the agent's execution. This capability becomes handy in situations where certain steps need to be excluded during execution (e.g., unsuccessful or outdated steps). Moreover, manual execution can be performed selectively, such as handling specific errors or acquiring user inputs. The `agent:Executor` allows you to customize the execution trace to suit your needs effectively.
+
+```ballerina
+agent:Executor agentExecutor = new (agent, query = "<NL COMMAND>");
+while agentExecutor.hasNext() {
+    json|error llmResponse = agentExecutor.reason(); // decide the next tool to execute
+    if llmResponse is error {
         // reasoning fails due to LLM error. Handle appropriately
         break;
     }
-    // <OPTIONAL> based on the reasoning user can decide whether to proceed with the action
-    // possible to validate the thought, improve it, or get user confirmation to proceed with the action
-    any|error observation = agentExecutor.act(thought); // acting step
-    if observation is error {
-        // error returned by the tool. Handle appropriately
-        // handle the error using another tool if needed tool
-        
-        // <OPTIONAL> restart the execution after manipulating the trace
-        agent:ExecutionStep[] trace = agentExecutor.getExecutionHistory().history;
-        // manipulate the traces if required (e.g. remove unnecessary steps, add manual steps)
-        agentExecutor = agent.getExecutor(QUERY, trace); // restarts the execution from the last step
-        break;
+
+    // based on the llmResponse users can take decisions here, but since it is still in raw format, processing is required
+    agent:ExecutionResult|agent:LlmChatResponse|agent:ExecutionError result = agentExecutor.act(llmResponse); // execute the tool based on the reasoning
+    if result is agent:ExecutionResult {
+        // tool executed and returned a result
+        // based on the tool result, can take decisions here
+    } else if result is agent:LlmChatResponse {
+        // execution completed with a chat response
+    } else {
+        // error during parsing the LLM response or invalid tool 
+        // agent will retry automatically, if continue the execution
     }
+
+    // can manipulate the `agentExecutor` at any point within this loop
+    // dynamically changing the query, history or context given to the agent can be useful in advanced use cases
+    // to get the current execution progress
+    agent:ExecutionProgress progress = agentExecutor.progress;
+    // modify the progress and replace the executor
+    agentExecutor = new (agent, progress);
 }
 ```
 
@@ -269,13 +342,10 @@ To begin, we need to define a `gmail->sendMessage` function as a tool. However, 
 
 
 ```ballerina
-isolated function sendEmail(gmail:MessageRequest messageRequest) returns string|error {
+isolated function sendMail(record {|string senderEmail; gmail:MessageRequest messageRequest;|} input) returns string|error {
     gmail:Client gmail = check new ({auth: {token: gmailToken}});
-    gmail:Message|error sendMessage = gmail->sendMessage(messageRequest);
-    if sendMessage is gmail:Message {
-        return sendMessage.toString();
-    }
-    return "Error while sending the email" + sendMessage.message();
+    gmail:Message message = check gmail->/users/[input.senderEmail]/messages/send.post(input.messageRequest);
+    return message.toString();
 }
 ```
 
@@ -287,10 +357,19 @@ agent:Tool sendEmailTool = {
     description: "useful to send emails to a given recipient",
     parameters: {
         properties: {
-            recipient: {'type: agent:STRING},
-            subject: {'type: agent:STRING},
-            messageBody: {'type: agent:STRING},
-            contentType: {'const: "text/plain"}
+            senderEmail: {'type: agent:STRING},
+            messageRequest: {
+                properties: {
+                    to: {
+                        items: {'type: agent:STRING}
+                    },
+                    subject: {'type: agent:STRING},
+                    bodyInHtml: {
+                        'type: agent:STRING,
+                        format: "text/html"
+                    }
+                }
+            }
         }
     },
     caller: sendMail
@@ -304,7 +383,13 @@ agent:HttpTool listWifiHttpTool = {
     name: "List wifi",
     path: "/guest-wifi-accounts/{ownerEmail}",
     method: agent:GET,
-    description: "useful to list the guest wifi accounts."
+    description: "useful to list the guest wifi accounts.",
+    parameters: {
+        ownerEmail: {
+            location: agent:PATH,
+            schema: {'type: agent:STRING}
+        }
+    }
 };
 
 agent:HttpTool createWifiHttpTool = {
@@ -342,7 +427,7 @@ To create the agent, we first need to initialize a LLM (e.g., `Gpt3Model`, `Chat
 
 ```ballerina
 agent:ChatGptModel model = check new ({auth: {token:  <OPENAI API KEY>}});
-agent:Agent agent = check new (model, wifiServiceToolKit, sendEmailTool);
+agent:FunctionCallAgent agent = check new (model, wifiServiceToolKit, sendEmailTool);
 ```
 
 ### Step 4 - Run the Agent
@@ -351,7 +436,7 @@ Now we can run the agent with NL commands from the user. Note that in this case,
 
 ```ballerina
 string queryTemplate = string`create a new guest WiFi account for email ${wifiOwnerEmail} with user ${wifiUsername} and password ${wifiPassword}. Send the available list of WiFi accounts for that email to ${recipientEmail}`;
-agent:ExecutionStep[] run = agent.run(query);
+_ run = agent.run(agent, query);
 ```
 
 ## Output
@@ -365,41 +450,29 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
 1) Agent creates a new WiFi account for owner `johnny@wso2.com`:
 
     ``````
-    Reasoning iteration: 1
-    Thought: We need to create a new guest WiFi account with the given username and password, and then list the available WiFi accounts for the email owner and send it to a specified recipient. 
-    Action: 
+    Agent Iteration 1
+    Action:
     ```
     {
-        "tool": "Create wifi",
-        "tool_input": {
-            "requestBody": {
-            "email": "johnny@wso2.com",
-            "username": "guest123",
-            "password": "john123"
-            }
-        }
+        name: Create_wifi,
+        arguments: {"requestBody":{"email":"johnny@wso2.com","username":"guest123","password":"john123"},"path":"/guest-wifi-accounts"}
     }
     ```
-    Observation: Successfully added the wifi account
+    Observation: {"code":201,"path":"/guest-wifi-accounts","headers":{"contentType":"text/plain","contentLength":35},"body":"Successfully added the wifi account"}
     ``````
 
 2) Agent finds existing guest WiFi accounts under the owner `johnny@wso2.com`:
 
     ``````
-    Reasoning iteration: 2
-    Thought: Now we need to use the "List wifi" tool to get the available list of wifi accounts for the email "alexa@wso2.com".
+    Agent Iteration 2
     Action:
     ```
     {
-        "tool": "List wifi",
-        "tool_input": {
-            "pathParameters": {
-                "ownerEmail": "johnny@wso2.com"
-            }
-        }
+        name: List_wifi,
+        arguments: {"parameters":{"ownerEmail":"johnny@wso2.com"},"path":"/guest-wifi-accounts/{ownerEmail}"}
     }
     ```
-    Observation: ["guest123.guestOf.johnny","newGuest.guestOf.johnny"]
+    Observation: {"code":200,"path":"/guest-wifi-accounts/johnny@wso2.com","headers":{"contentType":"application/json","contentLength":104},"body":"["guest123.guestOf.johnny","newGuest.guestOf.johnny"]"}
     ``````
 
 3) Agent sends an email to `alexa@wso2.com` with the information about the existing accounts:
@@ -407,17 +480,12 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
     In this step, the agent is responsible for generating the email subject and message body as well. The user provides only the recipient's email.
     
     ``````
-    Reasoning iteration: 3
-    Thought: Finally, we need to send the available wifi list to the specified recipient.
+    Agent Iteration 3
     Action:
     ```
     {
-        "tool": "Send mail",
-        "tool_input": {
-            "recipient": "alexa@wso2.com",
-            "subject": "Available Wifi List",
-            "messageBody": "The available wifi accounts for johnny@wso2.com are: guest123.guestOf.johnny, newGuest.guestOf.johnny"
-        }
+        name: Send_mail,
+        arguments: {"messageRequest":{"to":["alexa@wso2.com"],"subject":"List of WiFi accounts","bodyInHtml":"Here is the list of available WiFi accounts for your email:<br><br>guest123.guestOf.johnny<br>newGuest.guestOf.johnny"},"senderEmail":"johnny@wso2.com"}
     }
     ```
     Observation: {"threadId":"1884d1bda3d2c286","id":"1884d1bda3d2c286","labelIds":["SENT"]}
@@ -426,8 +494,6 @@ The agent will proceed with multiple reasoning-action iterations as follows to e
 4) Agent concludes the task:
 
     ```
-    Reasoning iteration: 4
-    Thought: I now know the final answer
     Final Answer: Successfully created a new guest wifi account with username "guest123" and password "john123" for the email owner "johnny@wso2.com". The available wifi accounts for "johnny@wso2.com" are "guest123.guestOf.johnny" and "newGuest.guestOf.johnny", and this list has been sent to the specified recipient "alexa@wso2.com".
     ```
 

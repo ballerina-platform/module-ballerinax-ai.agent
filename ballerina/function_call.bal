@@ -18,19 +18,25 @@
 # This agent uses OpenAI function call API to perform the tool selection.
 public isolated class FunctionCallAgent {
     *BaseAgent;
-    final ToolStore toolStore;
-    final FunctionCallLlm model;
+    # Tool store to be used by the agent
+    public final ToolStore toolStore;
+    # LLM model instance (should be a function call model)
+    public final FunctionCallLlmModel model;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlm model, (BaseToolKit|Tool)... tools) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|Tool)... tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }
 
-    isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
+    # Parse the function calling API response and extract the tool to be executed.
+    #
+    # + llmResponse - Raw LLM response
+    # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
+    public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError {
         if llmResponse is string {
             return {content: llmResponse};
         }
@@ -55,9 +61,13 @@ public isolated class FunctionCallAgent {
         };
     }
 
-    isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
+    # Use LLM to decide the next tool/step based on the function calling APIs.
+    #
+    # + progress - Execution progress with the current query and execution history
+    # + return - LLM response containing the tool or chat response (or an error if the call fails)
+    public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        return self.model.functionaCall(messages,
+        return self.model.functionCall(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,

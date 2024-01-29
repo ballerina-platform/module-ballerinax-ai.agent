@@ -50,5 +50,4 @@ ballerina/target
 ballerina/sample*
 ballerina/openapi*
 ballerina/schema*
-
-
+$(pwd)
