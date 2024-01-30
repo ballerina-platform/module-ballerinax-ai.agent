@@ -296,13 +296,13 @@ isolated function getContentLength(http:Response response) returns int|error? {
     return int:fromString(contentLengthHeader);
 }
 
-isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) returns xml|json|InvalidParameterDefinition|error {
-    xml|json? message;
-    string? mediaType = httpTool.requestBody?.mediaType;
+isolated function getRequestMessage(string? mediaType, HttpInput httpInput) returns json|xml|error {
+    json|xml message;
     if mediaType is string && mediaType.matches(XML_MEDIA) {
         message = check xmldata:fromJson(httpInput?.requestBody);
         if message !is xml {
-            return error InvalidParameterDefinition("Error occurred while converting json to xml.");
+            string msg = "Error occurred while converting json to xml.";
+            return error(msg, mediaType = mediaType, requestBody = httpInput?.requestBody);
         }
     } else {
         message = httpInput?.requestBody;
@@ -310,10 +310,13 @@ isolated function getRequestMessage(HttpTool httpTool, HttpInput httpInput) retu
     return message;
 }
 
-isolated function getHttpParameters(map<HttpTool> httpTools, string httpMethod, HttpInput httpInput, boolean writeOperation) returns [string, xml|json]|error {
+isolated function getHttpParameters(map<HttpTool> httpTools, string httpMethod, HttpInput httpInput, boolean writeOperation) returns HttpParameters|error {
     HttpTool httpTool = httpTools.get(string `${httpInput.path.toString()}:${httpMethod}`);
     string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
     log:printDebug(string `HTTP ${httpMethod} ${path} ${httpInput?.requestBody.toString()}`);
-    xml|json message = writeOperation ? check getRequestMessage(httpTool, httpInput) : ();
-    return [path, message];
+    if httpInput?.requestBody is () {
+        return {path: path, message: ()};
+    }
+    json|xml message = check getRequestMessage(httpTool.requestBody?.mediaType, httpInput);
+    return {path: path, message: message};
 }

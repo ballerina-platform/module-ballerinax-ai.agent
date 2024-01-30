@@ -203,7 +203,7 @@ class OpenApiSpecVisitor {
     private isolated function visitContent(map<MediaType> content) returns record {|string mediaType; Schema schema;|}|error {
         // check for json content
         foreach [string, MediaType] [key, value] in content.entries() {
-            if key.trim().matches(re `(application/.*json|application/.*xml|text/.*plain|\*/\*)`) {
+            if key.trim().matches(re `(application/.*json|${XML_MEDIA}|text/.*plain|\*/\*)`) {
                 return {
                     mediaType: key,
                     schema: value.schema
@@ -218,7 +218,7 @@ class OpenApiSpecVisitor {
         string mediaType;
         Schema schema;
         {mediaType, schema} = check self.visitContent(content);
-        if mediaType.matches(re `application/.*json|text/.*plain|\*/\*`) {
+        if !mediaType.matches(re `${XML_MEDIA}`) {
             return {
                 mediaType,
                 schema: check self.visitSchema(schema)
@@ -364,11 +364,13 @@ class OpenApiSpecVisitor {
             'type: OBJECT,
             properties: {}
         };
-        string? xmlNamespace = schema.'xml?.namespace;
-        string? xmlPrefix = schema.'xml?.prefix;
-        if isXml && xmlNamespace is string {
-            string namespaceProperty = xmlPrefix is string ? string `${XML_NAMESPACE}:${xmlPrefix}` : XML_NAMESPACE;
-            objectSchema.properties[namespaceProperty] = {'const: xmlNamespace};
+        if isXml {
+            string? xmlNamespace = schema.'xml?.namespace;
+            string? xmlPrefix = schema.'xml?.prefix;
+            if xmlNamespace is string {
+                string namespaceProperty = xmlPrefix is string ? string `${XML_NAMESPACE}:${xmlPrefix}` : XML_NAMESPACE;
+                objectSchema.properties[namespaceProperty] = {'const: xmlNamespace};
+            }
         }
 
         if schema?.properties == () {
@@ -382,16 +384,16 @@ class OpenApiSpecVisitor {
 
         foreach [string, Schema] [propertyName, property] in properties.entries() {
             JsonSubSchema resolvedPropertySchema = check self.visitSchema(property, propertyName, isXml);
+            if !isXml {
+                objectSchema.properties[propertyName] = resolvedPropertySchema;
+                continue;
+            }
             string? innerXmlName = property.'xml?.name;
             boolean? xmlAttribute = property.'xml?.attribute;
             string? innerXmlPrefix = property.'xml?.prefix;
             string xmlName = propertyName;
             if innerXmlName is string {
                 xmlName = innerXmlName;
-            }
-            if !isXml {
-                objectSchema.properties[propertyName] = resolvedPropertySchema;
-                continue;
             }
             string attributePrefix = xmlAttribute is boolean && xmlAttribute ? "@" : "";
             string resolvedPropertyName = self.getPropertyName(xmlName, innerXmlPrefix);
@@ -409,11 +411,14 @@ class OpenApiSpecVisitor {
             'type: ARRAY,
             items: check self.visitSchema(schema.items, (), isXml)
         };
-        boolean? xmlWrapped = schema?.'xml?.wrapped;
-        string? xmlNamespace = schema?.'xml?.namespace;
-        string? xmlPrefix = schema?.'xml?.prefix;
-        if isXml && xmlWrapped is boolean && xmlWrapped {
-            return self.wrapObjectSchema(schema.items.'xml?.name, xmlNamespace, xmlPrefix, parentName, arraySchema);
+
+        if isXml {
+            boolean? xmlWrapped = schema?.'xml?.wrapped;
+            string? xmlNamespace = schema?.'xml?.namespace;
+            string? xmlPrefix = schema?.'xml?.prefix;
+            if xmlWrapped is boolean && xmlWrapped {
+                return self.wrapObjectSchema(schema.items.'xml?.name, xmlNamespace, xmlPrefix, parentName, arraySchema);
+            }
         }
         return arraySchema;
     }
@@ -422,8 +427,6 @@ class OpenApiSpecVisitor {
         PrimitiveInputSchema inputSchema = {
             'type: schema.'type
         };
-        string? xmlNamespace = schema.'xml?.namespace;
-        string? xmlPrefix = schema.'xml?.prefix;
 
         if self.additionalInfoFlags.extractDescription {
             inputSchema.description = schema.description;
@@ -451,8 +454,12 @@ class OpenApiSpecVisitor {
         if schema is NumberSchema {
             inputSchema.'type = FLOAT;
         }
-        if isXml && xmlNamespace is string {
-            return self.wrapObjectSchema((), xmlNamespace, xmlPrefix, (), inputSchema);
+        if isXml {
+            string? xmlNamespace = schema.'xml?.namespace;
+            string? xmlPrefix = schema.'xml?.prefix;
+            if xmlNamespace is string {
+                return self.wrapObjectSchema((), xmlNamespace, xmlPrefix, (), inputSchema);
+            }
         }
         return inputSchema;
     }
