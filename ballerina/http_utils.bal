@@ -300,10 +300,6 @@ isolated function getRequestMessage(string? mediaType, HttpInput httpInput) retu
     json|xml message;
     if mediaType is string && mediaType.matches(XML_MEDIA) {
         message = check xmldata:fromJson(httpInput?.requestBody);
-        if message !is xml {
-            string msg = "Error occurred while converting json to xml.";
-            return error(msg, mediaType = mediaType, requestBody = httpInput?.requestBody);
-        }
     } else {
         message = httpInput?.requestBody;
     }
