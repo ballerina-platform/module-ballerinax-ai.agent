@@ -32,7 +32,7 @@ public type AgentTool record {|
 |};
 
 public isolated class ToolStore {
-    final map<AgentTool> & readonly tools;
+    public final map<AgentTool> & readonly tools;
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
