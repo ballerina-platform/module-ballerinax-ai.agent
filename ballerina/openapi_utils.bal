@@ -230,7 +230,7 @@ class OpenApiSpecVisitor {
         }
         return {
             mediaType,
-            schema: check self.visitSchema(schema, (), true)
+            schema: check self.visitSchema(schema, true)
         };
 
     }
@@ -313,12 +313,12 @@ class OpenApiSpecVisitor {
         return component;
     }
 
-    private isolated function visitSchema(Schema schema, string? parentName = (), boolean isXml = false) returns JsonSubSchema|error {
+    private isolated function visitSchema(Schema schema, boolean isXml = false) returns JsonSubSchema|error {
         if schema is ObjectSchema {
             return self.visitObjectSchema(schema, isXml);
         }
         if schema is ArraySchema {
-            return self.visitArraySchema(schema, parentName, isXml);
+            return self.visitArraySchema(schema, isXml);
         }
         if schema is PrimitiveTypeSchema {
             return self.visitPrimitiveTypeSchema(schema, isXml);
@@ -336,7 +336,7 @@ class OpenApiSpecVisitor {
             return self.visitNotSchema(schema, isXml);
         }
         Schema resolvedSchema = check self.visitReference(<Reference>schema).ensureType();
-        return check self.visitSchema(resolvedSchema, (), isXml);
+        return check self.visitSchema(resolvedSchema, isXml);
     }
 
     private isolated function wrapObjectSchema(string? xmlName, string? xmlNamespace, string? xmlPrefix, string? refName, ObjectInputSchema|ArrayInputSchema|PrimitiveInputSchema inputSchema) returns ObjectInputSchema|error {
@@ -383,7 +383,10 @@ class OpenApiSpecVisitor {
         }
 
         foreach [string, Schema] [propertyName, property] in properties.entries() {
-            JsonSubSchema resolvedPropertySchema = check self.visitSchema(property, propertyName, isXml);
+            if property.'xml?.name is () {
+                property.'xml.name = propertyName;
+            }
+            JsonSubSchema resolvedPropertySchema = check self.visitSchema(property, isXml);
             if !isXml {
                 objectSchema.properties[propertyName] = resolvedPropertySchema;
                 continue;
@@ -406,10 +409,10 @@ class OpenApiSpecVisitor {
         return objectSchema;
     }
 
-    private isolated function visitArraySchema(ArraySchema schema, string? parentName, boolean isXml) returns ArrayInputSchema|ObjectInputSchema|error {
+    private isolated function visitArraySchema(ArraySchema schema, boolean isXml) returns ArrayInputSchema|ObjectInputSchema|error {
         ArrayInputSchema arraySchema = {
             'type: ARRAY,
-            items: check self.visitSchema(schema.items, (), isXml)
+            items: check self.visitSchema(schema.items, isXml)
         };
 
         if isXml {
@@ -417,7 +420,7 @@ class OpenApiSpecVisitor {
             string? xmlNamespace = schema?.'xml?.namespace;
             string? xmlPrefix = schema?.'xml?.prefix;
             if xmlWrapped is boolean && xmlWrapped {
-                return self.wrapObjectSchema(schema.items.'xml?.name, xmlNamespace, xmlPrefix, parentName, arraySchema);
+                return self.wrapObjectSchema(schema.items.'xml?.name, xmlNamespace, xmlPrefix, schema.'xml?.name, arraySchema);
             }
         }
         return arraySchema;
@@ -466,7 +469,7 @@ class OpenApiSpecVisitor {
 
     private isolated function visitAnyOfSchema(AnyOfSchema schema, boolean isXml) returns AnyOfInputSchema|error {
         JsonSubSchema[] anyOf = from Schema element in schema.anyOf
-            select check self.visitSchema(element, (), isXml).ensureType();
+            select check self.visitSchema(element, isXml).ensureType();
         return {
             anyOf
         };
@@ -474,7 +477,7 @@ class OpenApiSpecVisitor {
 
     private isolated function visitAllOfSchema(AllOfSchema schema, boolean isXml) returns AllOfInputSchema|error {
         JsonSubSchema[] allOf = from Schema element in schema.allOf
-            select check self.visitSchema(element, (), isXml).ensureType();
+            select check self.visitSchema(element, isXml).ensureType();
         return {
             allOf
         };
@@ -482,7 +485,7 @@ class OpenApiSpecVisitor {
 
     private isolated function visitOneOfSchema(OneOfSchema schema, boolean isXml) returns OneOfInputSchema|error {
         JsonSubSchema[] oneOf = from Schema element in schema.oneOf
-            select check self.visitSchema(element, (), isXml);
+            select check self.visitSchema(element, isXml);
         return {
             oneOf
         };
@@ -490,7 +493,7 @@ class OpenApiSpecVisitor {
 
     private isolated function visitNotSchema(NotSchema schema, boolean isXml) returns NotInputSchema|error {
         return {
-            not: check self.visitSchema(schema.not, (), isXml)
+            not: check self.visitSchema(schema.not, isXml)
         };
     }
 
