@@ -47,7 +47,7 @@ public isolated class ReActAgent {
     # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
     public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
 
-    # Use LLM to decide the next tool/step based on the ReAct prompting
+    # Use LLM to decide the next tool/step based on the ReAct prompting.
     #
     # + progress - Execution progress with the current query and execution history
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
@@ -63,7 +63,7 @@ ${THOUGHT_KEY}`;
         return check self.generate(reactPrompt);
     }
 
-    # Generate ReAct response for the given prompt
+    # Generate ReAct response for the given prompt.
     #
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response

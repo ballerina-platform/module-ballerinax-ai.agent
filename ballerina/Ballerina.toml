@@ -2,7 +2,7 @@
 distribution = "2201.8.4"
 org = "ballerinax"
 name = "ai.agent"
-version = "0.7.2"
+version = "0.7.3"
 license = ["Apache-2.0"]
 authors = ["Ballerina"]
 keywords = ["AI/Agent", "Cost/Freemium"]
