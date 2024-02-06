@@ -28,7 +28,7 @@ public type ParameterSchema record {|
     string description?;
     # Whether the parameter is mandatory
     boolean required?;
-    # Describes how a specific property value will be serialized depending on its type.
+    # Describes how a specific property value will be serialized depending on its type
     EncodingStyle style?;
     # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
     boolean explode?;

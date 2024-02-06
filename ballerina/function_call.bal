@@ -98,10 +98,12 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
         if functionCall is error {
             panic error("Badly formated history for function call agent", llmResponse = step.llmResponse);
         }
+
         messages.push({
             role: ASSISTANT,
             function_call: functionCall
-        }, {
+        },
+        {
             role: FUNCTION,
             name: functionCall.name,
             content: getObservationString(step.observation)

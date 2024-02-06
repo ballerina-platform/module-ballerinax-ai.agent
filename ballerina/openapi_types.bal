@@ -34,9 +34,9 @@ public enum HeaderStyle {
 
 type ComponentType Schema|Response|Parameter|RequestBody|Header|PathItem;
 
-# Map of component objects
+# Map of component objects.
 public type Components record {
-    # A map of reusable schemas for different data types.
+    # A map of reusable schemas for different data types
     map<Schema|Reference> schemas?;
     # A map of reusable response objects 
     map<Response|Reference> responses?;
@@ -50,15 +50,15 @@ public type Components record {
     map<PathItem|Reference> pathItems?;
 };
 
-# Server information object
+# Server information object.
 public type Server record {
-    # A URL to the target host.
+    # A URL to the target host
     string url;
-    # An optional string describing the host designated by the URL.
+    # An optional string describing the host designated by the URL
     string description?;
 };
 
-# Map of pathItem objects
+# Map of pathItem objects.
 public type Paths record {|
     PathItem|Reference...;
 |};
@@ -87,27 +87,27 @@ public type PathItem record {
     Operation trace?;
     # Server information for the path
     Server[] servers?;
-    # A list of parameters that are applicable for all the operations described under this path item.
+    # A list of parameters that are applicable for all the operations described under this path item
     (Parameter|Reference)[] parameters?;
     # Not allowed $ref
     never \$ref?;
 };
 
-# Describes HTTP headers 
+# Describes HTTP headers.
 public type Header record {
-    # Whether this header parameter is mandatory.
+    # Whether this header parameter is mandatory
     boolean required?;
-    # A brief description of the header parameter.
+    # A brief description of the header parameter
     string description?;
-    # Whether empty value is allowed.
+    # Whether empty value is allowed
     string allowEmptyValue?;
-    # Describes how a specific property value will be serialized depending on its type.
+    # Describes how a specific property value will be serialized depending on its type
     HeaderStyle style?;
-    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map
     boolean explode?;
-    # Schema of the header parameter.
+    # Schema of the header parameter
     Schema schema?;
-    # Content of the header parameter.
+    # Content of the header parameter
     map<MediaType> content?;
     # Not allowed $ref
     never \$ref?;
@@ -115,17 +115,17 @@ public type Header record {
 
 # Describes a encoding definition applied to a schema property.
 public type Encoding record {
-    # Describes how a specific property value will be serialized depending on its type.
+    # Describes how a specific property value will be serialized depending on its type
     string style?;
-    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map
     boolean explode?;
-    # The Content-Type for encoding a specific property.
+    # The Content-Type for encoding a specific property
     string contentType?;
-    # A map allowing additional information to be provided as headers.
+    # A map allowing additional information to be provided as headers
     map<Header|Reference> headers?;
 };
 
-# Defines media type of a parameter, response body or header
+# Defines media type of a parameter, response body or header.
 public type MediaType record {
     # Schema of the content
     Schema schema = {};
@@ -133,7 +133,7 @@ public type MediaType record {
     map<Encoding> encoding?;
 };
 
-# Base schema object
+# Base schema object.
 public type BaseSchema record {
     # Description of the schema
     string description?;
@@ -147,7 +147,7 @@ public type BaseSchema record {
     never \$ref?;
 };
 
-# Base type schema object
+# Base type schema object.
 public type BaseTypeSchema record {
     *BaseSchema;
     # Type of the schema
@@ -163,13 +163,16 @@ public type BaseTypeSchema record {
 
 };
 
+# Base primitive type schema object.
 public type BasePrimitiveTypeSchema record {
     *BaseTypeSchema;
+    # Can not have properties in a primitive type schema
     never properties?;
+    # Can not have items in a primitive type schema
     never items?;
 };
 
-# Integer schema object
+# Integer schema object.
 public type IntegerSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the integer schema
@@ -188,7 +191,7 @@ public type IntegerSchema record {
     int multipleOf?;
 };
 
-# Number schema object
+# Number schema object.
 public type NumberSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the number schema
@@ -207,7 +210,7 @@ public type NumberSchema record {
     int|float multipleOf?;
 };
 
-# String schema object
+# String schema object.
 public type StringSchema record {|
     *BasePrimitiveTypeSchema;
     # Type of the string schema
@@ -224,17 +227,17 @@ public type StringSchema record {|
     (PrimitiveType?)[] 'enum?;
 |};
 
-# Boolean schema object
+# Boolean schema object.
 public type BooleanSchema record {
     *BasePrimitiveTypeSchema;
     # Type of the boolean schema
     BOOLEAN 'type;
 };
 
-# Primitive type schema object
+# Primitive type schema object.
 public type PrimitiveTypeSchema IntegerSchema|NumberSchema|StringSchema|BooleanSchema;
 
-# Array schema object
+# Array schema object.
 public type ArraySchema record {
     *BaseTypeSchema;
     # Type of the array schema
@@ -251,7 +254,7 @@ public type ArraySchema record {
     never properties?;
 };
 
-# Discriminator object
+# Discriminator object.
 public type Discriminator record {
     # Name of the property that specifies the type
     string propertyName;
@@ -259,7 +262,7 @@ public type Discriminator record {
     map<string> mapping?;
 };
 
-# One of schema object
+# One of schema object.
 public type OneOfSchema record {
     *BaseSchema;
     # List of schemas that should match
@@ -268,14 +271,14 @@ public type OneOfSchema record {
     Discriminator discriminator?;
 };
 
-# All of schema object
+# All of schema object.
 public type AllOfSchema record {
     *BaseSchema;
     # List of schemas that should match
     Schema[] allOf;
 };
 
-# Any of schema object
+# Any of schema object.
 public type AnyOfSchema record {
     *BaseSchema;
     # List of schemas that should match
@@ -284,14 +287,14 @@ public type AnyOfSchema record {
     Discriminator discriminator?;
 };
 
-# Not schema object
+# Not schema object.
 public type NotSchema record {
     *BaseSchema;
     # Schema that should not match
     Schema not;
 };
 
-# Object schema, where type should be specified and properties are optional
+# Defines an bbject schema with type is specified and properties are optional.
 public type ObjectSchemaType1 record {
     *BaseTypeSchema;
     # Type of the object schema
@@ -312,7 +315,7 @@ public type ObjectSchemaType1 record {
     never items?;
 };
 
-# Object schema, where type is not specified, but properties are specified
+# Defines an object schema with the properties defined and type is unspecified.
 public type ObjectSchemaType2 record {
     *ObjectSchemaType1;
     # To match when type is not specified, but properties are specified
@@ -321,7 +324,7 @@ public type ObjectSchemaType2 record {
     map<Schema> properties;
 };
 
-# Object schema
+# Defines an object schema.
 public type ObjectSchema ObjectSchemaType1|ObjectSchemaType2;
 
 public type XmlSchema record {|
@@ -337,7 +340,7 @@ public type XmlSchema record {|
     boolean wrapped?;
 |};
 
-# Reference object
+# Defines a reference object.
 public type Reference record {
     # Reference to a component
     string \$ref;
@@ -349,7 +352,7 @@ public type Reference record {
     string description?;
 };
 
-# Defines a OpenAPI schema
+# Defines a OpenAPI schema.
 public type Schema PrimitiveTypeSchema|ArraySchema|ObjectSchema|OneOfSchema|AllOfSchema|AnyOfSchema|NotSchema|Reference;
 
 # Describes a single request body.
@@ -364,36 +367,36 @@ public type RequestBody record {
 
 # Describes a single API operation on a path.
 public type Operation record {
-    # A list of tags for API documentation control.
+    # A list of tags for API documentation control
     string[] tags?;
-    # A short summary of what the operation does.
+    # A short summary of what the operation does
     string summary?;
-    # A description explanation of the operation behavior.
+    # A description explanation of the operation behavior
     string description?;
-    # Operation ID for referencing the operation.
+    # Operation ID for referencing the operation
     string operationId?;
-    # A list of parameters that are applicable for this operation.
+    # A list of parameters that are applicable for this operation
     (Parameter|Reference)[] parameters?;
-    # The request body applicable for this operation.
+    # The request body applicable for this operation
     RequestBody|Reference requestBody?;
-    # The list of possible responses as they are returned from executing this operation.
+    # The list of possible responses as they are returned from executing this operation
     map<Response|Reference> responses?;
 };
 
 # Describes the responses from an API Operation.
 public type Responses record {|
-    # Default response for the API Operation.
+    # Default response for the API Operation
     Response|Reference default?;
     Response|Reference...;
 |};
 
 # Describes a single response from an API Operation.
 public type Response record {
-    # A short description of the response.
+    # A short description of the response
     string description?;
-    # A map containing schema of the response headers.
+    # A map containing schema of the response headers
     map<Header|Reference> headers?;
-    # A map containing the structure of the response body.
+    # A map containing the structure of the response body
     map<MediaType> content?;
     # Not allowed $ref
     never \$ref?;
@@ -411,9 +414,9 @@ public type Parameter record {
     string description?;
     # Whether empty value is allowed
     boolean allowEmptyValue?;
-    # Describes how a specific property value will be serialized depending on its type.
+    # Describes how a specific property value will be serialized depending on its type
     EncodingStyle style?;
-    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map.
+    # When this is true, property values of type array or object generate separate parameters for each value of the array, or key-value-pair of the map
     boolean explode?;
     # Schema of the parameter
     Schema schema?;
