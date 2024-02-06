@@ -254,7 +254,7 @@ isolated function extractResponsePayload(string path, http:Response response) re
     if contentLength is error {
         return error HttpResponseParsingError("Error occurred while extracting content length from the response.", contentLength);
     }
-    if contentLength is () || contentLength == 0 {
+    if contentLength == 0 || code == 204 || code == 205 {
         return {
             code,
             path,
