@@ -36,3 +36,6 @@ const ACTION_KEY = "action";
 const ACTION_NAME_KEY = "name";
 const ACTION_ARGUEMENTS_KEY = "arguments";
 final string:RegExp ACTION_INPUT_REGEX = re `^action.?input`;
+const XML_NAMESPACE = "@xmlns";
+const XML_CONTENT = "#content";
+final string:RegExp XML_MEDIA = re `application/.*xml`;

@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import ballerina/http;
-import ballerina/log;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -86,6 +85,14 @@ type HttpInput record {|
     map<json> parameters?;
     # Request body of the Http resource
     map<json> requestBody?;
+|};
+
+# Defines an HTTP parameters record for requests.
+type HttpParameters record {|
+    # Http path
+    string path;
+    # Http message
+    json|xml message;
 |};
 
 # Defines an HTTP output record for requests.
@@ -204,51 +211,44 @@ public isolated class HttpServiceToolKit {
     public isolated function getTools() returns Tool[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${GET}`), httpInput?.parameters);
-        log:printDebug(string `HTTP GET ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response getResult = check self.httpClient->get(path, headers = self.headers);
-        return extractResponsePayload(path, getResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, GET, httpInput, false);
+        http:Response getResult = check self.httpClient->get(httpParameters.path, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, getResult);
     }
 
     private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${POST}`), httpInput?.parameters);
-        log:printDebug(string `HTTP POST ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response postResult = check self.httpClient->post(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(path, postResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, POST, httpInput, true);
+        http:Response postResult = check self.httpClient->post(httpParameters.path, message = httpParameters.message, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, postResult);
     }
 
     private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${DELETE}`), httpInput?.parameters);
-        log:printDebug(string `HTTP DELETE ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response deleteResult = check self.httpClient->delete(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(path, deleteResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, DELETE, httpInput, true);
+        http:Response deleteResult = check self.httpClient->delete(httpParameters.path, message = httpParameters.message, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, deleteResult);
     }
 
     private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PUT}`), httpInput?.parameters);
-        log:printDebug(string `HTTP PUT ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response putResult = check self.httpClient->put(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(path, putResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, PUT, httpInput, true);
+        http:Response putResult = check self.httpClient->put(httpParameters.path, message = httpParameters.message, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, putResult);
     }
 
     private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${PATCH}`), httpInput?.parameters);
-        log:printDebug(string `HTTP PATH ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response patchResult = check self.httpClient->patch(path, message = httpInput?.requestBody, headers = self.headers);
-        return extractResponsePayload(path, patchResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, PATCH, httpInput, true);
+        http:Response patchResult = check self.httpClient->patch(httpParameters.path, message = httpParameters.message, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, patchResult);
     }
 
     private isolated function head(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${HEAD}`), httpInput?.parameters);
-        log:printDebug(string `HTTP HEAD ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response headResult = check self.httpClient->head(path, headers = self.headers);
-        return extractResponsePayload(path, headResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, HEAD, httpInput, false);
+        http:Response headResult = check self.httpClient->head(httpParameters.path, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, headResult);
     }
 
     private isolated function options(HttpInput httpInput) returns HttpOutput|error {
-        string path = check getParamEncodedPath(self.httpTools.get(string `${httpInput.path.toString()}:${OPTIONS}`), httpInput?.parameters);
-        log:printDebug(string `HTTP OPTIONS ${path} ${httpInput?.requestBody.toString()}`);
-        http:Response optionsResult = check self.httpClient->options(path, headers = self.headers);
-        return extractResponsePayload(path, optionsResult);
+        HttpParameters httpParameters = check getHttpParameters(self.httpTools, OPTIONS, httpInput, false);
+        http:Response optionsResult = check self.httpClient->options(httpParameters.path, headers = self.headers);
+        return extractResponsePayload(httpParameters.path, optionsResult);
     }
 }

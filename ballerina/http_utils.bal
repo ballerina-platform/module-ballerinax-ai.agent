@@ -15,8 +15,10 @@
 // under the License.
 import ballerina/http;
 import ballerina/lang.regexp;
+import ballerina/log;
 import ballerina/mime;
 import ballerina/url;
+import ballerina/xmldata;
 
 type QueryParamEncoding record {
     EncodingStyle style = FORM;
@@ -294,3 +296,23 @@ isolated function getContentLength(http:Response response) returns int|error? {
     return int:fromString(contentLengthHeader);
 }
 
+isolated function getRequestMessage(string? mediaType, HttpInput httpInput) returns json|xml|error {
+    json|xml message;
+    if mediaType is string && mediaType.matches(XML_MEDIA) {
+        message = check xmldata:fromJson(httpInput?.requestBody);
+    } else {
+        message = httpInput?.requestBody;
+    }
+    return message;
+}
+
+isolated function getHttpParameters(map<HttpTool> httpTools, string httpMethod, HttpInput httpInput, boolean writeOperation) returns HttpParameters|error {
+    HttpTool httpTool = httpTools.get(string `${httpInput.path.toString()}:${httpMethod}`);
+    string path = check getParamEncodedPath(httpTool, httpInput?.parameters);
+    log:printDebug(string `HTTP ${httpMethod} ${path} ${httpInput?.requestBody.toString()}`);
+    if httpInput?.requestBody is () {
+        return {path: path, message: ()};
+    }
+    json|xml message = check getRequestMessage(httpTool.requestBody?.mediaType, httpInput);
+    return {path: path, message: message};
+}
