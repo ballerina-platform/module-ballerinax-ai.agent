@@ -213,7 +213,7 @@ class OpenApiSpecVisitor {
         return error UnsupportedMediaTypeError("Only json, xml or text content is supported.", availableContentTypes = content.keys());
     }
 
-    private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|error {
+    private isolated function visitRequestBody(RequestBody requestBody) returns RequestBodySchema|OpenApiParsingError|error {
         map<MediaType> content = requestBody.content;
         string mediaType;
         Schema schema;
@@ -224,10 +224,16 @@ class OpenApiSpecVisitor {
                 schema: check self.visitSchema(schema)
             };
         }
-        if schema is Reference {
-            string refName = regexp:split(re `/`, schema.\$ref).pop();
-            schema = {'type: OBJECT, properties: {[refName] : schema}};
+        string? xmlName = schema.'xml?.name;
+        string outerBlockName;
+        if xmlName is string {
+            outerBlockName = xmlName;
+        } else if schema is Reference {
+            outerBlockName = regexp:split(re `/`, schema.\$ref).pop();
+        } else {
+            return error OpenApiParsingError("Error while parsing the OpenAPI specification. The schema should have a name for xml content type.", cause = schema);
         }
+        schema = {'type: OBJECT, properties: {[outerBlockName] : schema}};
         return {
             mediaType,
             schema: check self.visitSchema(schema, true)
