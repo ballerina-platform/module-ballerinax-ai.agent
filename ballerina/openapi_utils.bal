@@ -225,15 +225,15 @@ class OpenApiSpecVisitor {
             };
         }
         string? xmlName = schema.'xml?.name;
-        string refName;
+        string outerBlockName;
         if xmlName is string {
-            refName = xmlName;
+            outerBlockName = xmlName;
         } else if schema is Reference {
-            refName = regexp:split(re `/`, schema.\$ref).pop();
+            outerBlockName = regexp:split(re `/`, schema.\$ref).pop();
         } else {
             return error("Schema should have a name for xml content type.", 'schema = schema);
         }
-        schema = {'type: OBJECT, properties: {[refName] : schema}};
+        schema = {'type: OBJECT, properties: {[outerBlockName] : schema}};
         return {
             mediaType,
             schema: check self.visitSchema(schema, true)
