@@ -224,10 +224,16 @@ class OpenApiSpecVisitor {
                 schema: check self.visitSchema(schema)
             };
         }
-        if schema is Reference {
-            string refName = regexp:split(re `/`, schema.\$ref).pop();
-            schema = {'type: OBJECT, properties: {[refName] : schema}};
+        string? xmlName = schema.'xml?.name;
+        string refName;
+        if xmlName is string {
+            refName = xmlName;
+        } else if schema is Reference {
+            refName = regexp:split(re `/`, schema.\$ref).pop();
+        } else {
+            return error("Schema should have a name for xml content type.", 'schema = schema);
         }
+        schema = {'type: OBJECT, properties: {[refName] : schema}};
         return {
             mediaType,
             schema: check self.visitSchema(schema, true)
