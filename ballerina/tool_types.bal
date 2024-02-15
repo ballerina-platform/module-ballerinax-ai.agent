@@ -52,8 +52,8 @@ public type BaseInputTypeSchema record {|
 # Defines a primitive input field in the schema.
 public type PrimitiveInputSchema record {|
     *BaseInputTypeSchema;
-    # Input data type. Should be one of `STRING`, `INTEGER`, `NUMBER`, `FLOAT`, or `BOOLEAN`.
-    STRING|INTEGER|NUMBER|FLOAT|BOOLEAN 'type;
+    # Input data type. Should be one of `STRING`, `INTEGER`, `NUMBER`, or `BOOLEAN`.
+    STRING|INTEGER|NUMBER|BOOLEAN 'type;
     # Format of the input. This is not applicable for `BOOLEAN` type.
     string format?;
     # Pattern of the input. This is only applicable for `STRING` type.

@@ -433,8 +433,9 @@ class OpenApiSpecVisitor {
     }
 
     private isolated function visitPrimitiveTypeSchema(PrimitiveTypeSchema schema, boolean isXml) returns PrimitiveInputSchema|ObjectInputSchema|error {
+        INTEGER|NUMBER|FLOAT|STRING|BOOLEAN 'type = schema.'type;
         PrimitiveInputSchema inputSchema = {
-            'type: schema.'type
+            'type: 'type is FLOAT ? NUMBER : 'type
         };
 
         if self.additionalInfoFlags.extractDescription {
@@ -460,9 +461,7 @@ class OpenApiSpecVisitor {
             inputSchema.pattern = pattern;
             inputSchema.'enum = schema.'enum;
         }
-        if schema is NumberSchema {
-            inputSchema.'type = FLOAT;
-        }
+
         if isXml {
             string? xmlNamespace = schema.'xml?.namespace;
             string? xmlPrefix = schema.'xml?.prefix;
