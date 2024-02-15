@@ -250,15 +250,15 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                             },
                             suffix: {'type: "string"},
                             max_tokens: {'type: "integer"},
-                            temperature: {'type: "float"},
-                            top_p: {'type: "float"},
+                            temperature: {'type: "number"},
+                            top_p: {'type: "number"},
                             n: {'type: "integer"},
                             'stream: {'type: "boolean"},
                             logprobs: {'type: "integer"},
                             echo: {'type: "boolean"},
                             stop: {oneOf: [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
-                            presence_penalty: {'type: "float"},
-                            frequency_penalty: {'type: "float"},
+                            presence_penalty: {'type: "number"},
+                            frequency_penalty: {'type: "number"},
                             best_of: {'type: "integer"},
                             logit_bias: {'type: "object", properties: {}},
                             user: {'type: "string"}
@@ -289,14 +289,14 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
                                     properties: {role: {'type: "string", 'enum: ["system", "user", "assistant"]}, content: {'type: "string"}, name: {'type: "string"}}
                                 }
                             },
-                            temperature: {'type: "float"},
-                            top_p: {'type: "float"},
+                            temperature: {'type: "number"},
+                            top_p: {'type: "number"},
                             n: {'type: "integer"},
                             'stream: {'type: "boolean"},
                             stop: {"oneOf": [{'type: "string"}, {'type: "array", items: {'type: "string"}}]},
                             max_tokens: {'type: "integer"},
-                            presence_penalty: {'type: "float"},
-                            frequency_penalty: {'type: "float"},
+                            presence_penalty: {'type: "number"},
+                            frequency_penalty: {'type: "number"},
                             logit_bias: {'type: "object", properties: {}},
                             user: {'type: "string"}
                         },
@@ -378,10 +378,10 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                                         "type": "integer"
                                     },
                                     "temperature": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "top_p": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "n": {
                                         "type": "integer"
@@ -417,10 +417,10 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                                         ]
                                     },
                                     "presence_penalty": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "frequency_penalty": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "best_of": {
                                         "type": "integer"
@@ -491,7 +491,7 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                                         }
                                     },
                                     "@temperature": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "top:top_p": {
                                         "type": "object",
@@ -500,7 +500,7 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                                                 "const": "http://openai.com/docs/1.0/parameters"
                                             },
                                             "#content": {
-                                                "type": "float"
+                                                "type": "number"
                                             }
                                         }
                                     },
@@ -527,10 +527,10 @@ function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
                                         "type": "integer"
                                     },
                                     "presence_penalty": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "frequency_penalty": {
-                                        "type": "float"
+                                        "type": "number"
                                     },
                                     "logit_bias": {
                                         "type": "object",
