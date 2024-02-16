@@ -24,4 +24,4 @@ jobs:
         env:
           WORKING_DIR: ./ballerina
           JAVA_HOME: /usr/lib/jvm/default-jvm
-          BALLERINA_CENTRAL_ACCESS_TOKEN: ${{ secrets.BALLERINA_CENTRAL_ACCESS_TOKEN }}
+          BALLERINA_CENTRAL_ACCESS_TOKEN: ${{ secrets.WSO2_ORG_BALLERINA_CENTRAL_ACCESS_TOKEN }}
