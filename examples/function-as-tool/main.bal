@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import ballerina/http;
-import ballerinax/ai.agent;
+import wso2/ai.agent;
 
 configurable string openAIToken = ?;
 configurable string wifiAPIUrl = ?;

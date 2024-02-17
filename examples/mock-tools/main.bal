@@ -1,4 +1,3 @@
-import ballerina/regex;
 // Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
 // WSO2 Inc. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +10,9 @@ import ballerina/regex;
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerinax/ai.agent;
+
+import ballerina/regex;
+import wso2/ai.agent;
 
 configurable string openAIToken = ?;
 
@@ -51,7 +52,7 @@ const string DEFAULT_QUERY = "Who is Leo DiCaprio's girlfriend? What is her curr
 public function main(string query = DEFAULT_QUERY) returns error? {
     agent:Tool searchTool = {
         name: "Search",
-        description: " A search engine. Useful for when you need to answer questions about current events",
+        description: " A search engine. Always use to look up for information.",
         parameters: {
             'properties: {
                 "query": {
@@ -78,6 +79,6 @@ public function main(string query = DEFAULT_QUERY) returns error? {
     };
 
     agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
-    agent:ReActAgent agent = check new (model, searchTool, calculatorTool);
+    agent:FunctionCallAgent agent = check new (model, searchTool, calculatorTool);
     _ = agent:run(agent, query);
 }
