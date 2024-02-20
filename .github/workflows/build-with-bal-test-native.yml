@@ -13,9 +13,9 @@ jobs:
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
-          version: 'latest'
-          java-version: '11'
-          components: 'native-image'
+          java-version: "17"
+          distribution: "graalvm-community"
+          set-java-home: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check GraalVM installation
@@ -30,6 +30,7 @@ jobs:
           version: latest
 
       - name: Run Ballerina tests using the native executable
-        run: bal test --graalvm ./ballerina
-        env:
-          JAVA_HOME: /usr/lib/jvm/default-jvm
+        run: |
+          cd ballerina
+          bal test --graalvm
+        
