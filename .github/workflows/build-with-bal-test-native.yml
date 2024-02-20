@@ -30,4 +30,7 @@ jobs:
           version: latest
 
       - name: Run Ballerina tests using the native executable
-        run: bal test --graalvm ./ballerina
+        run: |
+          cd ballerina
+          bal test --graalvm
+        
