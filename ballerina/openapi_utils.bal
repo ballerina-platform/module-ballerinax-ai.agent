@@ -72,10 +72,10 @@ HttpApiSpecification & readonly|error {
 # + return - A OpenApiSpec object
 public isolated function parseOpenApiSpec(map<json> openApiSpec) returns OpenApiSpec|UnsupportedOpenApiVersion|OpenApiParsingError {
     if !openApiSpec.hasKey("openapi") {
-        return error UnsupportedOpenApiVersion("OpenAPI version is not specified in the specification.");
+        return error UnsupportedOpenApiVersion("Unsupported API definition. Supports specifications with version 3.x.x only.");
     }
     json version = openApiSpec.get("openapi");
-    if version !is string || !version.matches(re `3\.0\..`) {
+    if version !is string || !version.matches(re `3\.(0|1)\..`) {
         return error UnsupportedOpenApiVersion("Unsupported OpenAPI version. Supports specifications with version 3.x.x only.");
     }
     OpenApiSpec|error parseSpec = openApiSpec.cloneWithType();
