@@ -10,7 +10,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Ballerina Build
-        uses: ballerina-platform/ballerina-action@nightly
+        uses: ballerina-platform/ballerina-action@2201.8.6
         with:
           args:
             build
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Ballerina Tests
-        uses: ballerina-platform/ballerina-action@nightly
+        uses: ballerina-platform/ballerina-action@2201.8.6
         with:
           args:
             test --code-coverage

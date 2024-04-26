@@ -2,7 +2,7 @@
 distribution = "2201.8.4"
 org = "wso2"
 name = "ai.agent"
-version = "0.7.6"
+version = "0.7.7"
 license = ["Apache-2.0"]
 authors = ["Ballerina"]
 keywords = ["AI/Agent", "Cost/Freemium"]
