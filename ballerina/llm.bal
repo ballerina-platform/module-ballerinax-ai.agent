@@ -268,10 +268,11 @@ public isolated class ChatGptModel {
         if content is string {
             return content;
         }
-        chat:ChatCompletionRequestAssistantMessage_function_call? 'function = message?.function_call;
-        if 'function is chat:ChatCompletionRequestAssistantMessage_function_call {
+        chat:ChatCompletionRequestAssistantMessage_function_call? function_call = message?.function_call;
+        if function_call is chat:ChatCompletionRequestAssistantMessage_function_call {
             return {
-                ...'function
+                name: function_call.name,
+                arguments: function_call.arguments
             };
         }
         return error LlmInvalidResponseError("Empty response from the model when using function call API");
@@ -366,8 +367,9 @@ public isolated class AzureChatGptModel {
             azure_chat:ChatCompletionFunctionCall? function_call = choices[0].message?.function_call;
             if function_call is azure_chat:ChatCompletionFunctionCall {
                 return {
-                    ...function_call
-                };
+                name: function_call.name,
+                arguments: function_call.arguments
+            };
             }
         }
         return error LlmInvalidResponseError("Empty response from the model when using function call API");
