@@ -332,7 +332,7 @@ By following the four steps below, we can easily configure and run an agent:
 
 ### Step 1 - Import Library
 ```ballerina
-import ballerinax/ai.agent;
+import wso2/ai.agent;
 import ballerinax/googleapis.gmail;
 ```
 
