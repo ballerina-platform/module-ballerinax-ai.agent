@@ -16,7 +16,7 @@
 
 # Function call agent. 
 # This agent uses OpenAI function call API to perform the tool selection.
-public isolated class FunctionCallAgent {
+public isolated distinct client class FunctionCallAgent {
     *BaseAgent;
     # Tool store to be used by the agent
     public final ToolStore toolStore;
@@ -74,6 +74,10 @@ public isolated class FunctionCallAgent {
             description: tool.description,
             parameters: tool.variables
         });
+    }
+
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose);
     }
 }
 

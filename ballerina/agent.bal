@@ -69,7 +69,7 @@ public type ToolOutput record {|
     anydata|error value;
 |};
 
-public type BaseAgent distinct isolated object {
+public type BaseAgent distinct isolated client object {
     public LlmModel model;
     public ToolStore toolStore;
 
@@ -84,6 +84,8 @@ public type BaseAgent distinct isolated object {
     # + progress - Execution progress with the current query and execution history
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError;
+
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
 };
 
 # An iterator to iterate over agent's execution
@@ -223,7 +225,7 @@ public class Executor {
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-public isolated function run(BaseAgent agent, string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];
     string? content = ();
     Iterator iterator = new (agent, query = query, context = context);

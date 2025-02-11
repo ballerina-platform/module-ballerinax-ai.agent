@@ -22,7 +22,7 @@ type ToolInfo readonly & record {|
 |};
 
 # A ReAct Agent that uses ReAct prompt to answer questions by using tools.
-public isolated class ReActAgent {
+public isolated client class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
     # ToolStore instance to store the tools used by the agent
@@ -83,6 +83,10 @@ ${THOUGHT_KEY}`;
             return error LlmError("Invalid LLM model is given.");
         }
         return llmResult;
+    }
+
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose);
     }
 }
 
