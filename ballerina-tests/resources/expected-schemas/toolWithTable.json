@@ -1,0 +1,21 @@
+{
+  "name": "toolWithTable",
+  "description": "toolWithTable",
+  "parameters": {
+    "type": "object",
+    "required": ["users"],
+    "properties": {
+      "users": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["age", "name"],
+          "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer", "format": "int64" }
+          }
+        }
+      }
+    }
+  }
+}
