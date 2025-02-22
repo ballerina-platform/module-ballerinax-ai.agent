@@ -104,7 +104,7 @@ function testHttpToolKitInitialization() {
     if httpToolKit is error {
         test:assertFail("HttpToolKit is not initialized due to an error");
     }
-    Tool[]|error tools = httpToolKit.getTools();
+    ToolConfig[]|error tools = httpToolKit.getTools();
     if tools is error {
         test:assertFail("Error occurred while getting tools from HttpToolKit");
     }
@@ -112,95 +112,108 @@ function testHttpToolKitInitialization() {
 
     test:assertEquals(tools[0].name, "httpGet");
     test:assertEquals(tools[0].description, "test HTTP GET tool");
-    test:assertEquals(tools[0].parameters, {
-        'type: OBJECT,
+    map<json> expectedToolSchema = {
+        'type: "object",
+        required: ["httpInput"],
         properties: {
-            path: {'const: httpTools[0].path},
-            parameters: {
-                'type: OBJECT,
-                required: ["pathParam"],
-                properties: {pathParam: {'type: STRING}}
+            httpInput: {
+                properties: {
+                    path: {'const: "/example-get/{pathParam}"},
+                    parameters: {
+                        'type: "object",
+                        required: ["pathParam"],
+                        properties: {"pathParam": {'type: "string"}}
+                    }
+                },
+                'type: "object"
             }
         }
-    });
+    };
+    test:assertEquals(tools[0].parameters, expectedToolSchema);
 
     test:assertEquals(tools[1].name, "httpPostWithSimpleSchema");
     test:assertEquals(tools[1].description, "test HTTP POST tool with simple schema");
-    test:assertEquals(tools[1].parameters, {
+    expectedToolSchema = {
         'type: "object",
+        required: ["httpInput"],
         properties: {
-            path: {'const: httpTools[1].path},
-            requestBody: {
-                'type: "object",
+            httpInput: {
                 properties: {
-                    attribute1: {'type: "string"},
-                    attribute2: {'type: "integer"},
-                    attribute3: {'type: "array", items: {'type: "string"}}
-                }
+                    path: {'const: "/example-post"},
+                    requestBody: {
+                        'type: "object",
+                        properties: {
+                            attribute1: {'type: "string"},
+                            attribute2: {'type: "integer"},
+                            attribute3: {'type: "array", items: {'type: "string"}}
+                        }
+                    }
+                },
+                'type: "object"
             }
         }
-    });
+    };
+    test:assertEquals(tools[1].parameters, expectedToolSchema);
 
     test:assertEquals(tools[2].name, "httpDeleteWithComplexSchema");
     test:assertEquals(tools[2].description, "test HTTP DELETE tool with complex schema");
-    test:assertEquals(tools[2].parameters, {
+    expectedToolSchema = {
         'type: "object",
+        required: ["httpInput"],
         properties: {
-            path: {'const: httpTools[2].path},
-            requestBody: {
-                'type: "object",
-                properties:
-                {
-                    model: {'type: "string", default: "davinci"},
-                    prompt: {
-                        oneOf: [
-                            {'type: "string", default: "test"},
-                            {'type: "array", items: {'type: "string"}},
-                            {'type: "array", items: {'type: "integer"}},
-                            {
-                                'type: "array",
-                                items: {
-                                    'type: "array",
-                                    items: {'type: "integer"}
-                                }
-                            }
-                        ]
-                    },
-                    suffix: {'type: "string"}
-                }
+            httpInput: {
+                properties: {
+                    path: {'const: "/example-delete"},
+                    requestBody: {
+                        'type: "object",
+                        properties: {
+                            model: {'type: "string", "default": "davinci"},
+                            prompt: {
+                                oneOf: [
+                                    {'type: "string", "default": "test"},
+                                    {'type: "array", items: {'type: "string"}},
+                                    {'type: "array", items: {'type: "integer"}},
+                                    {'type: "array", items: {'type: "array", items: {'type: "integer"}}}
+                                ]
+                            },
+                            suffix: {'type: "string"}
+                        }
+                    }
+                },
+                'type: "object"
             }
         }
-    });
+    };
+    test:assertEquals(tools[2].parameters, expectedToolSchema);
 
     test:assertEquals(tools[3].name, "testDefaultWithNull");
     test:assertEquals(tools[3].description, "test HTTP DELETE tool with complex schema");
-    test:assertEquals(tools[3].parameters, {
+    expectedToolSchema = {
         'type: "object",
+        required: ["httpInput"],
         properties: {
-            path: {'const: httpTools[3].path},
-            requestBody: {
-                'type: "object",
-                properties:
-                {
-                    model: {'type: "string"},
-                    prompt: {
-                        oneOf: [
-                            {'type: "string"},
-                            {'type: "array", items: {'type: "string"}},
-                            {'type: "array", items: {'type: "integer"}},
-                            {
-                                'type: "array",
-                                items: {
-                                    'type: "array",
-                                    items: {'type: "integer"}
-                                }
-                            }
-                        ]
-                    },
-                    suffix: {'type: "string"}
-                }
+            httpInput: {
+                properties: {
+                    path: {'const: "/example-delete"},
+                    requestBody: {
+                        'type: "object",
+                        properties: {
+                            model: {'type: "string"},
+                            prompt: {
+                                oneOf: [
+                                    {'type: "string"},
+                                    {'type: "array", items: {'type: "string"}},
+                                    {'type: "array", items: {'type: "integer"}},
+                                    {'type: "array", items: {'type: "array", items: {'type: "integer"}}}
+                                ]
+                            },
+                            suffix: {'type: "string"}
+                        }
+                    }
+                },
+                'type: "object"
             }
         }
-    });
-
+    };
+    test:assertEquals(tools[3].parameters, expectedToolSchema);
 }

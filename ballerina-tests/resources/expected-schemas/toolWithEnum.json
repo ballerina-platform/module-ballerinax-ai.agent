@@ -1,0 +1,9 @@
+{
+  "name": "toolWithEnum",
+  "description": "toolWithEnum",
+  "parameters": {
+    "type": "object",
+    "required": ["staus"],
+    "properties": { "staus": { "type": "string", "enum": ["OFF", "ON"] } }
+  }
+}

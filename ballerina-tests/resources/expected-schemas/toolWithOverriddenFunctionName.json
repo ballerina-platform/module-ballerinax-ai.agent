@@ -1,0 +1,24 @@
+{
+  "name": "overriddenFunctionName",
+  "description": "Tool descriptoin ",
+  "parameters": {
+    "type": "object",
+    "required": ["person", "salary"],
+    "properties": {
+      "person": {
+        "type": "object",
+        "required": ["age", "name"],
+        "properties": {
+          "name": { "type": "string" },
+          "age": { "type": "integer", "format": "int64" }
+        },
+        "description": "First parameter description"
+      },
+      "salary": {
+        "type": "number",
+        "format": "double",
+        "description": "Second parameter description"
+      }
+    }
+  }
+}

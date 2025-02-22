@@ -1,6 +1,6 @@
-// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.com).
 //
-// WSO2 Inc. licenses this file to you under the Apache License,
+// WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -47,6 +47,8 @@ public type BaseInputTypeSchema record {|
     string description?;
     # Default value of the input
     json default?;
+    # Indicates whether the value can be null.
+    boolean nullable?;
 |};
 
 # Defines a primitive input field in the schema.
@@ -80,6 +82,8 @@ public type AllOfInputSchema record {|
 public type OneOfInputSchema record {|
     # List of possible input types
     JsonSubSchema[] oneOf;
+    # Indicates whether the value can be null.
+    boolean nullable?;
 |};
 
 # Defines a `not` input field in the schema. Follows OpenAPI 3.x specification.
@@ -107,7 +111,7 @@ public type ObjectInputSchema record {|
     # List of required properties
     string[] required?;
     # Schema of the object properties
-    map<JsonSubSchema> properties;
+    map<JsonSubSchema> properties?;
 |};
 
 # Defines a json input schema
@@ -118,7 +122,7 @@ public type JsonSubSchema JsonInputSchema|PrimitiveInputSchema|ConstantValueSche
 
 // tool definitions ----------------------------
 # Defines a tool. This is the only tool type directly understood by the agent. All other tool types are converted to this type using toolkits.
-public type Tool record {|
+public type ToolConfig record {|
     # Name of the tool
     string name;
     # A description of the tool. This is used by the LLMs to understand the behavior of the tool.
@@ -126,6 +130,23 @@ public type Tool record {|
     # Input schema expected by the tool. If the tool doesn't expect any input, this should be null.
     JsonInputSchema? parameters = ();
     # Pointer to the function that should be called when the tool is invoked.
-    isolated function caller;
+    FunctionTool caller;
 |};
 
+# Defines the configuration of the Tool annotation.
+public type ToolAnnotationConfig record {|
+    # The name of the tool. If not provided, defaults to the function pointer name.
+    string name?;
+    # A description of the tool. This is used by LLMs to understand the tool's behavior.  
+    # If not provided, the doc comment used as the description.
+    string description?;
+    # The input schema expected by the tool. If the tool does not expect any input, this should be null.  
+    # If not provided, the input schema is generated automatically. 
+    ObjectInputSchema? parameters?;
+|};
+
+# Represents the annotation of a function tool.
+public annotation ToolAnnotationConfig Tool on function;
+
+# Represents a type alias for an isolated function, representing a function tool.
+public type FunctionTool isolated function;
