@@ -1,0 +1,9 @@
+{
+  "name": "toolWithDefaultParam",
+  "description": "toolWithDefaultParam",
+  "parameters": {
+    "type": "object",
+    "required": [],
+    "properties": { "param": { "type": "string" } }
+  }
+}

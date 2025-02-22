@@ -1,0 +1,9 @@
+[plugin]
+id = "ai-compiler-plugin"
+class = "io.ballerina.lib.ai.plugin.AiCompilerPlugin"
+
+[[dependency]]
+path = "../compiler-plugin/build/libs/ai-compiler-plugin-0.7.8-SNAPSHOT.jar"
+
+[[dependency]]
+path = "../compiler-plugin/build/libs/ballerina-to-openapi-2.2.1-20250221-180600-8db6bba.jar"

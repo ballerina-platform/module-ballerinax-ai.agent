@@ -1,0 +1,9 @@
+{
+  "name": "toolWithByte",
+  "description": "toolWithByte",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "number" } }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "toolWithUnion",
+  "description": "toolWithUnion",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": {
+      "param": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "integer", "format": "int64" },
+          { "type": "number", "format": "float" },
+          { "type": "number", "format": "double" },
+          { "type": "boolean" },
+          { "type": "number" },
+          { "type": "string", "enum": ["OFF", "ON"] },
+          {
+            "type": "object",
+            "required": ["age", "name"],
+            "properties": {
+              "name": { "type": "string" },
+              "age": { "type": "integer", "format": "int64" }
+            }
+          },
+          { "type": "object" },
+          { "type": "object" },
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["age", "name"],
+              "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "integer", "format": "int64" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

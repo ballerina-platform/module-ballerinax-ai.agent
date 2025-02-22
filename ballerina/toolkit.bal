@@ -1,6 +1,6 @@
-// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.com).
 //
-// WSO2 Inc. licenses this file to you under the Apache License,
+// WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 import ballerina/http;
 
 # Supported HTTP methods.
@@ -116,7 +117,7 @@ public type HttpOutput record {|
 public type BaseToolKit distinct object {
     # Useful to retrieve the Tools extracted from the Toolkit.
     # + return - An array of Tools
-    public isolated function getTools() returns Tool[];
+    public isolated function getTools() returns ToolConfig[];
 };
 
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
@@ -124,7 +125,7 @@ public type BaseToolKit distinct object {
 public isolated class HttpServiceToolKit {
     *BaseToolKit;
     private final map<HttpTool> & readonly httpTools;
-    private final Tool[] & readonly tools;
+    private final ToolConfig[] & readonly tools;
     private final map<string|string[]> & readonly headers;
     private final http:Client httpClient;
 
@@ -141,7 +142,7 @@ public isolated class HttpServiceToolKit {
         self.httpTools = map from HttpTool tool in httpTools
             select [string `${tool.path}:${tool.method}`, tool.cloneReadOnly()];
 
-        Tool[] tools = [];
+        ToolConfig[] tools = [];
         foreach HttpTool httpTool in httpTools {
             map<ParameterSchema>? params = httpTool?.parameters;
             RequestBodySchema? requestBody = httpTool?.requestBody;
@@ -199,7 +200,12 @@ public isolated class HttpServiceToolKit {
             tools.push({
                 name: httpTool.name,
                 description: httpTool.description,
-                parameters,
+                parameters: {
+                    properties: {
+                        httpInput: parameters
+                    },
+                    required: ["httpInput"]
+                },
                 caller
             });
             self.tools = tools.cloneReadOnly();
@@ -208,7 +214,7 @@ public isolated class HttpServiceToolKit {
 
     # Useful to retrieve the Tools extracted from the HttpTools.
     # + return - An array of Tools corresponding to the HttpTools
-    public isolated function getTools() returns Tool[] => self.tools;
+    public isolated function getTools() returns ToolConfig[] => self.tools;
 
     private isolated function get(HttpInput httpInput) returns HttpOutput|error {
         HttpParameters httpParameters = check getHttpParameters(self.httpTools, GET, httpInput, false);

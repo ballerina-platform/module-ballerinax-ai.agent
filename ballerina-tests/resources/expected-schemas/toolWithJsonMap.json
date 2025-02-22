@@ -1,0 +1,9 @@
+{
+  "name": "toolWithJsonMap",
+  "description": "toolWithJsonMap",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "object" } }
+  }
+}

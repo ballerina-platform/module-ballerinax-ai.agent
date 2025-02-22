@@ -1,0 +1,9 @@
+{
+  "name": "toolWithString",
+  "description": "toolWithString",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "string" } }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "toolWithJson",
+  "description": "toolWithJson",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "object" } }
+  }
+}
