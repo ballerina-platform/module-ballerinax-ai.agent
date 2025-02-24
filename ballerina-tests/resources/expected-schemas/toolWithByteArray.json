@@ -1,0 +1,11 @@
+{
+  "name": "toolWithByteArray",
+  "description": "toolWithByteArray",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": {
+      "param": { "type": "array", "items": { "type": "number" } }
+    }
+  }
+}

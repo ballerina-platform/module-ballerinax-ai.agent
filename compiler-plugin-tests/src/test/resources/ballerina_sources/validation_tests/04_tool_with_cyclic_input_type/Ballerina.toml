@@ -1,0 +1,13 @@
+[package]
+org = "ballerinax"
+name = "ai_tests"
+version = "0.7.8"
+
+[[dependency]]
+org = "ballerinax"
+name = "ai"
+repository = "local"
+version = "0.7.8"
+
+[build-options]
+observabilityIncluded = true

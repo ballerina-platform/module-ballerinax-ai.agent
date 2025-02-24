@@ -39,6 +39,7 @@ gradle-app.setting
 .project
 .settings
 .vscode
+.idea
 
 # ignore examples auto generated files
 examples/**/Dependencies.toml
@@ -51,3 +52,4 @@ ballerina/sample*
 ballerina/openapi*
 ballerina/schema*
 $(pwd)
+docker.env

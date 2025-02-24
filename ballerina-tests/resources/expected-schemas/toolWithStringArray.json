@@ -1,0 +1,11 @@
+{
+  "name": "toolWithStringArray",
+  "description": "toolWithStringArray",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": {
+      "param": { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

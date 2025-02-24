@@ -1,0 +1,9 @@
+{
+  "name": "toolWithOverriddenParameterSchema",
+  "description": "Tool descriptoin ",
+  "parameters": {
+    "type": "object",
+    "required": ["person"],
+    "properties": { "person": { "type": "string" } }
+  }
+}

@@ -1,0 +1,18 @@
+[package]
+distribution = "2201.11.0"
+org = "ballerinax"
+name = "ai"
+version = "@toml.version@"
+license = ["Apache-2.0"]
+authors = ["Ballerina"]
+keywords = ["AI/Agent", "Cost/Freemium", "Agent", "AI"]
+repository = "https://github.com/ballerina-platform/module-ballerinax-ai.agent"
+
+[platform.java21]
+graalvmCompatible = true
+
+[[platform.java21.dependency]]
+groupId = "io.ballerina.lib"
+artifactId = "ai-native"
+version = "@toml.version@"
+path = "../native/build/libs/ai-native-@project.version@.jar"

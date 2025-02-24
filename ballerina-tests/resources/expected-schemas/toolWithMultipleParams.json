@@ -1,0 +1,76 @@
+{
+  "name": "toolWithMultipleParams",
+  "description": "toolWithMultipleParams",
+  "parameters": {
+    "type": "object",
+    "required": ["a", "b", "c", "d", "e", "f", "g"],
+    "properties": {
+      "a": { "type": "integer", "format": "int64" },
+      "b": { "type": "string" },
+      "c": { "type": "number", "format": "double" },
+      "d": { "type": "number", "format": "float" },
+      "e": {
+        "type": "object",
+        "required": ["age", "name"],
+        "properties": {
+          "name": { "type": "string" },
+          "age": { "type": "integer", "format": "int64" }
+        }
+      },
+      "f": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["age", "name"],
+          "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer", "format": "int64" }
+          }
+        }
+      },
+      "g": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["age", "name"],
+          "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "integer", "format": "int64" }
+          }
+        }
+      },
+      "h": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "integer", "format": "int64" },
+          { "type": "number", "format": "float" },
+          { "type": "number", "format": "double" },
+          { "type": "boolean" },
+          { "type": "number" },
+          { "type": "string", "enum": ["OFF", "ON"] },
+          {
+            "type": "object",
+            "required": ["age", "name"],
+            "properties": {
+              "name": { "type": "string" },
+              "age": { "type": "integer", "format": "int64" }
+            }
+          },
+          { "type": "object" },
+          { "type": "object" },
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["age", "name"],
+              "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "integer", "format": "int64" }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

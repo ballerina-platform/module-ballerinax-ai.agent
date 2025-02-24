@@ -74,21 +74,25 @@ function testResolveSchema() {
 
 @test:Config {}
 function testExecuteSuccessfullOutput() {
-    Tool sendEmailTool = {
+    ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
         parameters: {
             properties: {
-                senderEmail: {'const: "ballerina@email.com"},
-                messageRequest: {
+                'input: {
                     properties: {
-                        to: {
-                            items: {'type: STRING}
-                        },
-                        subject: {'type: STRING},
-                        body: {
-                            'type: STRING,
-                            format: "text/html"
+                        senderEmail: {'const: "ballerina@email.com"},
+                        messageRequest: {
+                            properties: {
+                                to: {
+                                    items: {'type: STRING}
+                                },
+                                subject: {'type: STRING},
+                                body: {
+                                    'type: STRING,
+                                    format: "text/html"
+                                }
+                            }
                         }
                     }
                 }
@@ -99,10 +103,12 @@ function testExecuteSuccessfullOutput() {
     LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
-            "messageRequest": {
-                "to": ["alica@wso2.com"],
-                "subject": "Greetings Alica!",
-                "body": "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+            input: {
+                messageRequest: {
+                    to: ["alica@wso2.com"],
+                    subject: "Greetings Alica!",
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                }
             }
         }
     };
@@ -121,21 +127,25 @@ function testExecuteSuccessfullOutput() {
 
 @test:Config {}
 function testExecuteErrorOutput() {
-    Tool sendEmailTool = {
+    ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
         parameters: {
             properties: {
-                senderEmail: {'const: "test@email.com"},
-                messageRequest: {
+                'input: {
                     properties: {
-                        to: {
-                            items: {'type: STRING}
-                        },
-                        subject: {'type: STRING},
-                        body: {
-                            'type: STRING,
-                            format: "text/html"
+                        senderEmail: {'const: "test@email.com"},
+                        messageRequest: {
+                            properties: {
+                                to: {
+                                    items: {'type: STRING}
+                                },
+                                subject: {'type: STRING},
+                                body: {
+                                    'type: STRING,
+                                    format: "text/html"
+                                }
+                            }
                         }
                     }
                 }
@@ -146,10 +156,12 @@ function testExecuteErrorOutput() {
     LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
-            "messageRequest": {
-                "to": ["alica@wso2.com"],
-                "subject": "Greetings Alica!",
-                "body": "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+            input: {
+                messageRequest: {
+                    to: ["alica@wso2.com"],
+                    subject: "Greetings Alica!",
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                }
             }
         }
     };
@@ -168,21 +180,25 @@ function testExecuteErrorOutput() {
 
 @test:Config {}
 function testExecutionError() {
-    Tool sendEmailTool = {
+    ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
         parameters: {
             properties: {
-                senderEmail: {'const: "ballerina@email.com"},
-                messageRequest: {
+                'input: {
                     properties: {
-                        to: {
-                            items: {'type: STRING}
-                        },
-                        subject: {'type: STRING},
-                        body: {
-                            'type: STRING,
-                            format: "text/html"
+                        senderEmail: {'const: "ballerina@email.com"},
+                        messageRequest: {
+                            properties: {
+                                to: {
+                                    items: {'type: STRING}
+                                },
+                                subject: {'type: STRING},
+                                body: {
+                                    'type: STRING,
+                                    format: "text/html"
+                                }
+                            }
                         }
                     }
                 }
@@ -193,10 +209,12 @@ function testExecutionError() {
     LlmToolResponse sendMailInput = {
         name: "Send_mail",
         arguments: {
-            "messageRequest": {
-                "to": "alica@wso2.com", // errornous generation
-                "subject": "Greetings Alica!",
-                "body": "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+            input: {
+                messageRequest: {
+                    to: "alica@wso2.com", // errornous generation
+                    subject: "Greetings Alica!",
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                }
             }
         }
     };
@@ -208,4 +226,31 @@ function testExecutionError() {
     if output !is error {
         test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
     }
+}
+
+@test:Config {}
+function testToolWithDefaultParameters() returns error? {
+    ToolConfig testToolConfig = {
+        name: "testTool",
+        description: "testTool",
+        parameters: {
+            properties: {
+                a: {'type: STRING},
+                b: {'type: STRING},
+                c: {'type: STRING}
+            },
+            required: ["a"]
+        },
+        caller: testTool
+    };
+    LlmToolResponse testToolInput = {
+        name: "testTool",
+        arguments: {
+            a: "required",
+            c: "override"
+        }
+    };
+    ToolStore toolStore = check new (testToolConfig);
+    ToolOutput output = check toolStore.execute(testToolInput);
+    test:assertEquals(output.value, "required default-one override");
 }
