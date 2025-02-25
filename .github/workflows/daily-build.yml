@@ -2,42 +2,13 @@ name: Daily build
 
 on:
   schedule:
-    - cron: '30 2 * * *'
+    - cron: "30 2 * * *"
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      # Build the ballerina project
-      - name: Ballerina Build
-        uses: ballerina-platform/ballerina-action/@2201.8.6
-        with:
-          args:
-            pack
-        env:
-          WORKING_DIR: ./ballerina
-          JAVA_HOME: /usr/lib/jvm/default-jvm
-      - name: Ballerina Tests
-        uses: ballerina-platform/ballerina-action/@2201.8.6
-        with:
-          args:
-            test --code-coverage
-        env:
-          WORKING_DIR: ./ballerina
-          JAVA_HOME: /usr/lib/jvm/default-jvm
-      # Read the ballerina test results
-      - name: Read Ballerina Test Results
-        id: test_results
-        run: |
-          content=`cat ./ballerina/target/report/test_results.json`                
-          content="${content//'%'/'%25'}"
-          content="${content//$'\n'/'%0A'}"
-          content="${content//$'\r'/'%0D'}"
-          echo "::set-output name=testResultsJson::$content"
-      # Print the code coverage information
-      - name: Code Coverage
-        run: |
-          echo "Covered Code Lines : ${{fromJson(steps.test_results.outputs.testResultsJson).coveredLines}}"
-          echo "Total Code Lines : $(expr ${{fromJson(steps.test_results.outputs.testResultsJson).missedLines}} + ${{fromJson(steps.test_results.outputs.testResultsJson).coveredLines}})"
-          echo "Code Coverage Percentage : ${{fromJson(steps.test_results.outputs.testResultsJson).coveragePercentage}}"
+  call_workflow:
+    name: Run Daily Build Workflow
+    if: ${{ github.repository_owner == 'ballerina-platform' }}
+    uses: ballerina-platform/ballerina-library/.github/workflows/daily-build-connector-template.yml@main
+    secrets: inherit
+    with:
+      repo-name: module-ballerinax-ai.agent
