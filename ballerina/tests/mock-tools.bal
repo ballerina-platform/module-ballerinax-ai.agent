@@ -60,7 +60,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Search\"," +
                     "\"action_input\": {" +
-                        "\"query\": \"Leo DiCaprio girlfriend\"" +
+                        "\"params\": {" +
+                            "\"query\": \"Leo DiCaprio girlfriend\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
@@ -72,7 +74,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Search\"," +
                     "\"action_input\": {" +
-                        "\"query\": \"Camila Morrone age\"" +
+                        "\"params\": {" +
+                            "\"query\": \"Camila Morrone age\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
@@ -86,7 +90,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Calculator\"," +
                     "\"action_input\": {" +
-                        "\"expression\": \"25 ^ 0.43\"" +
+                        "\"params\": {" +
+                            "\"expression\": \"25 ^ 0.43\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
@@ -96,4 +102,13 @@ public client class MockLLM {
         }
         return error("Unexpected prompt to MockLLM");
     }
+}
+
+isolated function testTool(string a, string b = "default-one", string c = "default-two") returns string {
+    return string `${a} ${b} ${c}`;
+}
+
+isolated function testToolPanic(string data) returns string {
+    error e = error(data);
+    panic (e);
 }

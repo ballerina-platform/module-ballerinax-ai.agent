@@ -1,0 +1,13 @@
+[package]
+org = "ballerinax"
+name = "ai_tests"
+version = "@toml.version@"
+
+[[dependency]]
+org = "ballerinax"
+name = "ai.agent"
+version = "@toml.version@"
+repository = "local"
+
+[build-options]
+observabilityIncluded = true

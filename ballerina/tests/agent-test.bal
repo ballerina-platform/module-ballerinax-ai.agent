@@ -1,22 +1,30 @@
 import ballerina/test;
 
-Tool searchTool = {
+ToolConfig searchTool = {
     name: "Search",
     description: " A search engine. Useful for when you need to answer questions about current events",
     parameters: {
         properties: {
-            query: {'type: "string", description: "The search query"}
+            params: {
+                properties: {
+                    query: {'type: "string", description: "The search query"}
+                }
+            }
         }
     },
     caller: searchToolMock
 };
 
-Tool calculatorTool = {
+ToolConfig calculatorTool = {
     name: "Calculator",
     description: "Useful for when you need to answer questions about math.",
     parameters: {
         properties: {
-            expression: {'type: "string", description: "The mathematical expression to evaluate"}
+            params: {
+                properties: {
+                    expression: {'type: "string", description: "The mathematical expression to evaluate"}
+                }
+            }
         }
     },
     caller: calculatorToolMock
@@ -26,7 +34,7 @@ Gpt3Model model = test:mock(Gpt3Model, new MockLLM());
 
 @test:Config {}
 function testReActAgentInitialization() {
-    ReActAgent|error agent = new (model, searchTool, calculatorTool);
+    ReActAgent|error agent = new (model, [searchTool, calculatorTool]);
     if agent is error {
         test:assertFail("Agent creation is unsuccessful");
     }
@@ -42,12 +50,12 @@ Calculator: ${{"description": calculatorTool.description, "inputSchema": calcula
 
 @test:Config {}
 function testInitializedPrompt() returns error? {
-    ReActAgent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, [searchTool, calculatorTool]);
 
     string ExpectedPrompt = string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
 
-Search: {"description":" A search engine. Useful for when you need to answer questions about current events","inputSchema":{"type":"object","properties":{"query":{"type":"string","description":"The search query"}}}}
-Calculator: {"description":"Useful for when you need to answer questions about math.","inputSchema":{"type":"object","properties":{"expression":{"type":"string","description":"The mathematical expression to evaluate"}}}}
+Search: {"description":" A search engine. Useful for when you need to answer questions about current events","inputSchema":{"type":"object","properties":{"params":{"type":"object","properties":{"query":{"type":"string","description":"The search query"}}}}}}
+Calculator: {"description":"Useful for when you need to answer questions about math.","inputSchema":{"type":"object","properties":{"params":{"type":"object","properties":{"expression":{"type":"string","description":"The mathematical expression to evaluate"}}}}}}
 
 Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
 
@@ -88,7 +96,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
 @test:Config {}
 function testAgentExecutorRun() returns error? {
-    ReActAgent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     Executor agentExecutor = new (agent, query = query);
     record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}? result = agentExecutor.next();

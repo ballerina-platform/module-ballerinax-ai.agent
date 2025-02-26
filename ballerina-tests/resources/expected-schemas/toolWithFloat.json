@@ -1,0 +1,9 @@
+{
+  "name": "toolWithFloat",
+  "description": "toolWithFloat",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "number", "format": "float" } }
+  }
+}

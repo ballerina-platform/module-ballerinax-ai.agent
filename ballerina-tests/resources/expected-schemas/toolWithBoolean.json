@@ -1,0 +1,9 @@
+{
+  "name": "toolWithBoolean",
+  "description": "toolWithBoolean",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "boolean" } }
+  }
+}

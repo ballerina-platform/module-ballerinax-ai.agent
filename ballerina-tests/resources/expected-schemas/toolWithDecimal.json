@@ -1,0 +1,9 @@
+{
+  "name": "toolWithDecimal",
+  "description": "toolWithDecimal",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "number", "format": "double" } }
+  }
+}
