@@ -107,3 +107,8 @@ public client class MockLLM {
 isolated function testTool(string a, string b = "default-one", string c = "default-two") returns string {
     return string `${a} ${b} ${c}`;
 }
+
+isolated function testToolPanic(string data) returns string {
+    error e = error(data);
+    panic (e);
+}

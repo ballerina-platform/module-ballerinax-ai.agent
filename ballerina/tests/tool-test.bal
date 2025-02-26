@@ -179,7 +179,7 @@ function testExecuteErrorOutput() {
 }
 
 @test:Config {}
-function testExecutionError() {
+function testExecutionError() returns error? {
     ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
@@ -222,9 +222,9 @@ function testExecutionError() {
     if toolStore is error {
         test:assertFail("failed to create tool store: " + toolStore.message());
     }
-    ToolOutput|error output = toolStore.execute(sendMailInput);
-    if output !is error {
-        test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
+    ToolOutput output = check toolStore.execute(sendMailInput);
+    if output.value !is error {
+        test:assertFail("tool execution should return an error, yet it is succesfull");
     }
 }
 
@@ -253,4 +253,37 @@ function testToolWithDefaultParameters() returns error? {
     ToolStore toolStore = check new (testToolConfig);
     ToolOutput output = check toolStore.execute(testToolInput);
     test:assertEquals(output.value, "required default-one override");
+}
+
+@test:Config {}
+function testExecutionPanicError() returns error? {
+    ToolConfig sendEmailTool = {
+        name: "testToolPanic",
+        description: "testToolPanic",
+        parameters: {
+            properties: {
+                data: {'type: STRING}
+            },
+            required: ["data"]
+        },
+        caller: testToolPanic
+    };
+    LlmToolResponse sendMailInput = {
+        name: "testToolPanic",
+        arguments: {
+            input: {
+                messageRequest: {
+                    data: "test"
+                }
+            }
+        }
+    };
+    ToolStore|error toolStore = new (sendEmailTool);
+    if toolStore is error {
+        test:assertFail("failed to create tool store: " + toolStore.message());
+    }
+    ToolOutput|error output = toolStore.execute(sendMailInput);
+    if output !is error {
+        test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
+    }
 }

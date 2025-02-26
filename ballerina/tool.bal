@@ -17,6 +17,10 @@
 import ballerina/lang.regexp;
 import ballerina/log;
 
+type ToolExecutionResult record {|
+    any|error result;
+|};
+
 # This is the tool used by LLMs during reasoning.
 # This tool is same as the Tool record, but it has a clear separation between the variables that should be generated with the help of the LLMs and the constants that are defined by the users. 
 public type AgentTool record {|
@@ -78,38 +82,50 @@ public isolated class ToolStore {
     isolated function execute(LlmToolResponse action) returns ToolOutput|LlmInvalidGenerationError|ToolExecutionError {
         string name = action.name;
         map<json>? inputs = action.arguments;
-
         if !self.tools.hasKey(name) {
-            return error ToolNotFoundError("Cannot find the tool.", toolName = name, instruction = string `Tool "${name}" does not exists. Use a tool from the list: ${self.tools.keys().toString()}}`);
+            return error ToolNotFoundError("Cannot find the tool.", toolName = name,
+                instruction = string `Tool "${name}" does not exists.`
+                + string ` Use a tool from the list: ${self.tools.keys().toString()}}`);
         }
-
         map<json>|error inputValues = mergeInputs(inputs, self.tools.get(name).constants);
         if inputValues is error {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = name, inputs = inputs ?: (), instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
+            string instruction = string `Tool "${name}"  execution failed due to invalid inputs provided.` +
+                string ` Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`;
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = name,
+                inputs = inputs ?: (), instruction = instruction);
         }
         isolated function caller = self.tools.get(name).caller;
-        any|error observation;
-        do {
-            anydata[]|error inputArgs = getInputArgumentsOfFunction(caller, inputValues);
-            if inputArgs is error {
-                observation = inputArgs;
-            } else {
-                observation = check trap function:call(caller, ...inputArgs);
-            }
-        } on fail error e {
-            return {value: e};
+        ToolExecutionResult|error execution = trap callFunction(caller, inputValues);
+        if execution is error {
+            return error ToolExecutionError("Tool execution failed.", execution, toolName = name,
+                inputs = inputValues.length() == 0 ? {} : inputValues);
         }
+        any|error observation = execution.result;
         if observation is anydata {
             return {value: observation};
         }
         if observation !is error {
-            return error ToolInvalidOutputError("Tool returns an invalid output. Expected anydata or error.", outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
+            return error ToolInvalidOutputError("Tool returns an invalid output. Expected anydata or error.",
+                outputType = typeof observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
         }
         if observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
-            return error ToolInvalidInputError("Tool is provided with invalid inputs.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues, instruction = string `Tool "${name}"  execution failed due to invalid inputs provided. Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`);
+            string instruction = string `Tool "${name}"  execution failed due to invalid inputs provided.`
+                + string ` Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`;
+            return error ToolInvalidInputError("Tool is provided with invalid inputs.",
+                observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues,
+                instruction = instruction);
         }
-        return error ToolExecutionError("Tool execution failed.", observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues);
+        return {value: observation};
     }
+}
+
+isolated function callFunction(FunctionTool tool, map<json> llmToolInput) returns ToolExecutionResult {
+    anydata[]|error inputArgs = getInputArgumentsOfFunction(tool, llmToolInput);
+    if inputArgs is error {
+        return {result: inputArgs};
+    }
+    any|error result = function:call(tool, ...inputArgs);
+    return {result};
 }
 
 isolated function getInputArgumentsOfFunction(FunctionTool tool, map<json> inputValues) returns anydata[]|error {
