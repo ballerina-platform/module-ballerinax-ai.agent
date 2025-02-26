@@ -124,10 +124,10 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         // Handle the following cases separately to preserve line numbers.
         // Otherwise, other compiler errors may have altered line numbers, leading to confusion.
         if (targetNode.annotValue().isEmpty()) {
-            // Handle the case where the annotation is empty (e.g., @ai:Tool).
+            // Handle the case where the annotation is empty (e.g., @agent:Tool).
             return handleAnnotationWithoutMappingConstructor(targetNode, config);
         }
-        // Handle the case where the annotation has existing values (e.g., @ai:Tool{...}).
+        // Handle the case where the annotation has existing values (e.g., @agent:Tool{...}).
         return handleAnnotationWithMappingConstructor(targetNode, config);
     }
 

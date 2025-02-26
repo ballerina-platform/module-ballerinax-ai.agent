@@ -5,7 +5,7 @@ version = "@toml.version@"
 
 [[dependency]]
 org = "ballerinax"
-name = "ai"
+name = "ai.agent"
 repository = "local"
 version = "@toml.version@"
 

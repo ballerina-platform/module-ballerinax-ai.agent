@@ -14,74 +14,74 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai;
+import ballerinax/ai.agent;
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithString(string param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithInt(int param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithFloat(float param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithDecimal(decimal param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithByte(byte param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithBoolean(boolean param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithJson(json param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithJsonMap(map<json> param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithStringArray(string[] param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithByteArray(byte[] param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithRecord(User user) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithTable(table<User> users) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithEnum(Status staus) => ();
 
 // The generated schema should not have `param` as required field
-@ai:Tool
+@agent:Tool
 isolated function toolWithDefaultParam(string param = "default") => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithUnion(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithTypeAlias(Data data) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithIncludedRecord(*Person person) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithMultipleParams(int a, string b, decimal c, float d, User e,
         table<User> f, User[] g, Data h = ()) => ();
 
 # Tool description 
 # + person - First parameter description
 # + salary - Second parameter description
-@ai:Tool
+@agent:Tool
 isolated function toolWithDocumentation(Person person, decimal salary) => ();
 
 # Tool description 
 # + person - First parameter description
 # + salary - Second parameter description
-@ai:Tool {
+@agent:Tool {
     name: "overriddenFunctionName"
 }
 isolated function toolWithOverriddenFunctionName(Person person, decimal salary) => ();
@@ -89,7 +89,7 @@ isolated function toolWithOverriddenFunctionName(Person person, decimal salary) 
 # Tool description 
 # + person - First parameter description
 # + salary - Second parameter description
-@ai:Tool {
+@agent:Tool {
     description: "overridden description"
 }
 isolated function toolWithOverriddenDescription(Person person, decimal salary) => ();
@@ -97,7 +97,7 @@ isolated function toolWithOverriddenDescription(Person person, decimal salary) =
 # Tool description 
 # + person - First parameter description
 # + salary - Second parameter description
-@ai:Tool {
+@agent:Tool {
     parameters: {
         properties: {
             person: {'type: "string"}
@@ -110,7 +110,7 @@ isolated function toolWithOverriddenParameterSchema(Person person, decimal salar
 # Tool description 
 # + person - First parameter description
 # + salary - Second parameter description
-@ai:Tool {
+@agent:Tool {
     parameters: {
         properties: {
             person: {'type: "string"}

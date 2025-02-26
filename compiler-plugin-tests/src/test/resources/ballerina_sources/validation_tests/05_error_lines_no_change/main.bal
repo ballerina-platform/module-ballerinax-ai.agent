@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai;
+import ballerinax/ai.agent;
 
 enum Status {
     ON,
@@ -28,31 +28,31 @@ type User record {|
 
 # Tool description
 # + param - parameter description
-@ai:Tool
+@agent:Tool
 isolated function toolOne(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {}
+@agent:Tool {}
 isolated function toolTwo(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@agent:Tool {
 
 }
 isolated function toolThree(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@agent:Tool {
     name: "toolFourNewName"
 }
 isolated function toolFour(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@agent:Tool {
     name: "toolFiveNewName",
     parameters: {
         properties: {
@@ -63,5 +63,5 @@ isolated function toolFour(string|int|float|decimal|boolean|byte|Status|User|jso
 }
 isolated function toolFive(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithAny(string name, any data) => ();

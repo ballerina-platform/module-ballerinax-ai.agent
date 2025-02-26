@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai;
+import ballerinax/ai.agent;
 
 type XML xml;
 
@@ -22,7 +22,7 @@ type Record record {|
     XML 'field;
 |};
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithXml(xml one, XML two, map<XML> three, map<Record> four,
         Record five, table<Record> six, string|Record seven) {
 }

@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai;
+import ballerinax/ai.agent;
 
 type User record {|
     Friend[] friends;
@@ -22,6 +22,6 @@ type User record {|
 
 type Friend User;
 
-@ai:Tool
+@agent:Tool
 isolated function toolCyclicInput(User user) {
 }

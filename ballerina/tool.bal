@@ -50,7 +50,7 @@ public isolated class ToolStore {
                 typedesc<FunctionTool> typedescriptor = typeof tool;
                 ToolAnnotationConfig? config = typedescriptor.@Tool;
                 if config is () {
-                    return error("The function '" + getFunctionName(tool) + "' must be annotated with `@ai:Tool`.");
+                    return error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
                 }
                 ToolConfig toolConfig = {
                     name: check config?.name.ensureType(),

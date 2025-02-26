@@ -75,11 +75,11 @@ release {
 }
 
 task build {
-    dependsOn(':ai-compiler-plugin:build')
-    dependsOn(':ai-native:build')
-    dependsOn(':ai-ballerina:build')
-    dependsOn(':ai-ballerina-tests:test')
-    dependsOn(':ai-compiler-plugin-tests:test')
+    dependsOn(':ai.agent-compiler-plugin:build')
+    dependsOn(':ai.agent-native:build')
+    dependsOn(':ai.agent-ballerina:build')
+    dependsOn(':ai.agent-ballerina-tests:test')
+    dependsOn(':ai.agent-compiler-plugin-tests:test')
 }
 
 subprojects {

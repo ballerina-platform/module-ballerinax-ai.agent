@@ -14,13 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai;
+import ballerinax/ai.agent;
 
 class Data {
     public int age = 12;
 }
 
-@ai:Tool
+@agent:Tool
 isolated function toolWithAny(string name, Data data, map<any> anyMap) {
 
 }

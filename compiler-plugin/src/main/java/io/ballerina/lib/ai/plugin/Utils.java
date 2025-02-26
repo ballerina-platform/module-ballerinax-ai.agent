@@ -34,7 +34,7 @@ import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
 public class Utils {
     public static final String TOOL_ANNOTATION_NAME = "Tool";
     public static final String BALLERINAX_ORG = "ballerinax";
-    public static final String AI_PACKAGE_NAME = "ai";
+    public static final String AI_AGENT_PACKAGE_NAME = "ai.agent";
 
     private Utils() {
     }
@@ -48,7 +48,7 @@ public class Utils {
 
     public static boolean isAgentModuleSymbol(Symbol symbol) {
         return symbol.getModule().isPresent()
-                && AI_PACKAGE_NAME.equals(symbol.getModule().get().id().moduleName())
+                && AI_AGENT_PACKAGE_NAME.equals(symbol.getModule().get().id().moduleName())
                 && BALLERINAX_ORG.equals(symbol.getModule().get().id().orgName());
     }
 

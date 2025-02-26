@@ -23,7 +23,7 @@ plugins {
 
 description = 'Ballerina - AI Package Tests'
 
-def packageName = "ai"
+def packageName = "ai.agent"
 def packageOrg = "ballerinax"
 def tomlVersion = stripBallerinaExtensionVersion("${project.version}")
 def ballerinaTomlFilePlaceHolder = new File("${project.rootDir}/build-config/resources/BallerinaTest.toml")

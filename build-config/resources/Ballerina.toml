@@ -1,7 +1,7 @@
 [package]
 distribution = "2201.11.0"
 org = "ballerinax"
-name = "ai"
+name = "ai.agent"
 version = "@toml.version@"
 license = ["Apache-2.0"]
 authors = ["Ballerina"]
@@ -13,6 +13,6 @@ graalvmCompatible = true
 
 [[platform.java21.dependency]]
 groupId = "io.ballerina.lib"
-artifactId = "ai-native"
+artifactId = "ai.agent-native"
 version = "@toml.version@"
-path = "../native/build/libs/ai-native-@project.version@.jar"
+path = "../native/build/libs/ai.agent-native-@project.version@.jar"
