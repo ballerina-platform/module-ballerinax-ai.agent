@@ -35,7 +35,7 @@ public isolated client class ReActAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)... tools) returns error? {
+    public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));

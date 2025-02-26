@@ -27,7 +27,7 @@ public isolated distinct client class FunctionCallAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)... tools) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }

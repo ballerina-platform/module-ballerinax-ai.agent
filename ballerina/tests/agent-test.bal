@@ -34,7 +34,7 @@ Gpt3Model model = test:mock(Gpt3Model, new MockLLM());
 
 @test:Config {}
 function testReActAgentInitialization() {
-    ReActAgent|error agent = new (model, searchTool, calculatorTool);
+    ReActAgent|error agent = new (model, [searchTool, calculatorTool]);
     if agent is error {
         test:assertFail("Agent creation is unsuccessful");
     }
@@ -50,7 +50,7 @@ Calculator: ${{"description": calculatorTool.description, "inputSchema": calcula
 
 @test:Config {}
 function testInitializedPrompt() returns error? {
-    ReActAgent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, [searchTool, calculatorTool]);
 
     string ExpectedPrompt = string `System: Respond to the human as helpfully and accurately as possible. You have access to the following tools:
 
@@ -96,7 +96,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
 @test:Config {}
 function testAgentExecutorRun() returns error? {
-    ReActAgent agent = check new (model, searchTool, calculatorTool);
+    ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     Executor agentExecutor = new (agent, query = query);
     record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}? result = agentExecutor.next();
