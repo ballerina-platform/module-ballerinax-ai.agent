@@ -97,23 +97,4 @@ public class Utils {
     public static String addDoubleQuotes(String functionName) {
         return "\"" + functionName + "\"";
     }
-
-    public static String removeLastNewline(String input) {
-        if (input == null || input.isEmpty()) {
-            return input;
-        }
-        if (input.endsWith("\r\n")) {
-            return input.substring(0, input.length() - 2);
-        } else if (input.endsWith("\n")) {
-            return input.substring(0, input.length() - 1);
-        }
-        return input;
-    }
-
-    public static boolean endsWithNewline(String input) {
-        if (input == null || input.isEmpty()) {
-            return false;
-        }
-        return input.endsWith(System.lineSeparator());
-    }
 }
