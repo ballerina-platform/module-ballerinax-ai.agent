@@ -200,6 +200,9 @@ scope = "testOnly"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
+modules = [
+	{org = "ballerina", packageName = "lang.regexp", moduleName = "lang.regexp"}
+]
 
 [[package]]
 org = "ballerina"
@@ -392,6 +395,7 @@ name = "ai_tests"
 version = "0.7.8"
 dependencies = [
 	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
 	{org = "ballerinax", name = "ai.agent"}
