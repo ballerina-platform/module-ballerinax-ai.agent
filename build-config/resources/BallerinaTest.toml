@@ -6,8 +6,8 @@ version = "@toml.version@"
 [[dependency]]
 org = "ballerinax"
 name = "ai.agent"
-repository = "local"
 version = "@toml.version@"
+repository = "local"
 
 [build-options]
 observabilityIncluded = true
