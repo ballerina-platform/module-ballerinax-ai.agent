@@ -381,7 +381,9 @@ dependencies = [
 	{org = "ballerina", name = "xmldata"},
 	{org = "ballerina", name = "yaml"},
 	{org = "ballerinax", name = "azure.openai.chat"},
-	{org = "ballerinax", name = "openai.chat"}
+	{org = "ballerinax", name = "azure.openai.text"},
+	{org = "ballerinax", name = "openai.chat"},
+	{org = "ballerinax", name = "openai.text"}
 ]
 modules = [
 	{org = "ballerinax", packageName = "ai.agent", moduleName = "ai.agent"}
@@ -416,6 +418,17 @@ dependencies = [
 
 [[package]]
 org = "ballerinax"
+name = "azure.openai.text"
+version = "1.0.3"
+scope = "testOnly"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "url"},
+	{org = "ballerinai", name = "observe"}
+]
+
+[[package]]
+org = "ballerinax"
 name = "openai.chat"
 version = "3.0.0"
 scope = "testOnly"
@@ -424,6 +437,18 @@ dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "log"},
 	{org = "ballerina", name = "os"},
+	{org = "ballerina", name = "url"},
+	{org = "ballerinai", name = "observe"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "openai.text"
+version = "1.0.5"
+scope = "testOnly"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "url"},
 	{org = "ballerinai", name = "observe"}
 ]
