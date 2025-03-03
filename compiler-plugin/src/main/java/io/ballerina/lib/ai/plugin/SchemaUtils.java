@@ -114,16 +114,19 @@ public class SchemaUtils {
 
         List<Schema> allOf = schema.getAllOf();
         if (allOf != null) {
+            schema.setType(null);
             allOf.forEach(SchemaUtils::modifySchema);
         }
 
         List<Schema> anyOf = schema.getAnyOf();
         if (anyOf != null) {
+            schema.setType(null);
             anyOf.forEach(SchemaUtils::modifySchema);
         }
 
         List<Schema> oneOf = schema.getOneOf();
         if (oneOf != null) {
+            schema.setType(null);
             oneOf.forEach(SchemaUtils::modifySchema);
         }
 
