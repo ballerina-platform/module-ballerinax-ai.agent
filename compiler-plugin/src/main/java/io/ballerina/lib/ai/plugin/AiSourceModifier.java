@@ -164,9 +164,10 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
 
     private String generateConfigMappingConstructor(ToolAnnotationConfig config, String openBraceSource,
                                                     String closeBraceSource) {
+        String name = config.name().replaceAll("\\R", " ");
         return openBraceSource + String.format("name:%s,description:%s,parameters:%s",
-                config.name(),
-                config.description() != null ? config.description() : config.name(),
+                name,
+                config.description() != null ? config.description().replaceAll("\\R", " ") : name,
                 config.parameterSchema()) + closeBraceSource;
     }
 
