@@ -48,6 +48,8 @@ public type ExecutionError record {|
     json llmResponse;
     # Error caused during the execution
     LlmInvalidGenerationError|ToolExecutionError 'error;
+    # Observation on the caused error as additional instruction to the LLM
+    string observation;
 |};
 
 # An chat response by the LLM
@@ -73,6 +75,7 @@ public type ToolOutput record {|
 public type BaseAgent distinct isolated client object {
     public Model model;
     public ToolStore toolStore;
+    public Memory memory;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -172,7 +175,8 @@ public class Executor {
                 }
                 executionResult = {
                     llmResponse,
-                    'error: output
+                    'error: output,
+                    observation: observation.toString()
                 };
             } else {
                 anydata|error value = output.value;
@@ -186,7 +190,8 @@ public class Executor {
             observation = "Tool extraction failed due to invalid JSON_BLOB. Retry with correct JSON_BLOB.";
             executionResult = {
                 llmResponse,
-                'error: parseLlmResponse
+                'error: parseLlmResponse,
+                observation: observation.toString()
             };
         }
         self.update({
@@ -227,60 +232,77 @@ public class Executor {
 # + verbose - If true, then print the reasoning steps (default: true)
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
 public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-    (ExecutionResult|ExecutionError)[] steps = [];
-    string? content = ();
-    Iterator iterator = new (agent, query = query, context = context);
-    int iter = 0;
+    lock {
+        Memory memory = agent.memory;
+        (ExecutionResult|ExecutionError)[] steps = [];
+        string? content = ();
+        Iterator iterator = new (agent, query = query, context = context);
+        int iter = 0;
 
-    foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
-        if iter == maxIter {
-            break;
-        }
-        if step is Error {
-            error? cause = step.cause();
-            log:printError("Error occured while executing the agent", step, cause = cause !is () ? cause.toString() : "");
-            break;
-        }
-        if step is LlmChatResponse {
-            content = step.content;
-            if verbose {
-                io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
+        ChatUserMessage userMessage = {role: USER, content: query};
+        ChatSystemMessage systemMessage = {role: SYSTEM, content: context.toString()};
+        updateMemory(memory, userMessage);
+        updateMemory(memory, systemMessage);
+
+        foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
+            if iter == maxIter {
+                break;
             }
-            break;
-        }
-        iter += 1;
-        if verbose {
-            io:println(string `${"\n\n"}Agent Iteration ${iter.toString()}`);
-            if step is ExecutionResult {
-                LlmToolResponse tool = step.tool;
-                io:println(string `Action:
-${BACKTICKS}
-{
-    ${ACTION_NAME_KEY}: ${tool.name},
-    ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}
-}
-${BACKTICKS}`);
-                anydata|error observation = step?.observation;
-                if observation is error {
-                    io:println(string `${OBSERVATION_KEY} (Error): ${observation.toString()}`);
-                } else if observation !is () {
-                    io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
+            if step is Error {
+                error? cause = step.cause();
+                log:printError("Error occured while executing the agent", step, cause = cause !is () ? cause.toString() : "");
+                break;
+            }
+            if step is LlmChatResponse {
+                content = step.content;
+                if verbose {
+                    io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
                 }
-            } else {
-                error? cause = step.'error.cause();
-                io:println(string `LLM Generation Error: 
-${BACKTICKS}
-{
-    message: ${step.'error.message()},
-    cause: ${(cause is error ? cause.message() : "Unspecified")},
-    llmResponse: ${step.llmResponse.toString()}
-}
-${BACKTICKS}`);
+                if agent is ReActAgent {
+                    json finalAnswer = {action: "Final Answer", action_input: step.content};
+                    ChatAssistantMessage assistantMessage = {role: ASSISTANT, content: string `${BACKTICKS}${finalAnswer.toJsonString()}${BACKTICKS}\"`};
+                    updateMemory(memory, assistantMessage);
+                    break;
+                }
+                ChatAssistantMessage assistantMessage = {role: "assistant", content: step.content};
+                updateMemory(memory, assistantMessage);
+                break;
             }
-        }
-        steps.push(step);
+            iter += 1;
+            if verbose {
+                io:println(string `${"\n\n"}Agent Iteration ${iter.toString()}`);
+                if step is ExecutionResult {
+                    LlmToolResponse tool = step.tool;
+                    io:println(string `Action:
+    ${BACKTICKS}
+    {
+        ${ACTION_NAME_KEY}: ${tool.name},
+        ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}
     }
-    return {steps, answer: content};
+    ${BACKTICKS}`);
+                    anydata|error observation = step?.observation;
+                    if observation is error {
+                        io:println(string `${OBSERVATION_KEY} (Error): ${observation.toString()}`);
+                    } else if observation !is () {
+                        io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
+                    }
+                } else {
+                    error? cause = step.'error.cause();
+                    io:println(string `LLM Generation Error: 
+    ${BACKTICKS}
+    {
+        message: ${step.'error.message()},
+        cause: ${(cause is error ? cause.message() : "Unspecified")},
+        llmResponse: ${step.llmResponse.toString()}
+    }
+    ${BACKTICKS}`);
+                }
+            }
+            updateExecutionResultInMemory(memory, step);
+            steps.push(step);
+        }
+        return {steps, answer: content};
+    }
 }
 
 isolated function getObservationString(anydata|error observation) returns string {
@@ -305,3 +327,23 @@ isolated function getObservationString(anydata|error observation) returns string
 # + agent - Agent instance
 # + return - Array of tools registered with the agent
 public isolated function getTools(BaseAgent agent) returns AgentTool[] => agent.toolStore.tools.toArray();
+
+public isolated function updateMemory(Memory memory, ChatMessage message) {
+    error? updationStation = memory.update(message);
+    if (updationStation is error) {
+        log:printError("Error occured while updating the memory", updationStation);
+    }
+}
+
+isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|LlmChatResponse|ExecutionError|Error step) {
+    if step is ExecutionResult {
+        LlmToolResponse tool = step.tool;
+        anydata|error observation = step?.observation;
+
+        ChatAssistantMessage assistantMessage = {role: ASSISTANT, function_call: {name: tool.name, arguments: tool.arguments.toJsonString()}};
+        updateMemory(memory, assistantMessage);
+
+        ChatFunctionMessage functionMessage = {role: FUNCTION, name: tool.name, content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()};
+        updateMemory(memory, functionMessage);
+    }
+}

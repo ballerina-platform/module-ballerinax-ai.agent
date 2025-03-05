@@ -45,6 +45,8 @@ public type AgentConfiguration record {|
     int maxIter = 5;
     # Specifies whether verbose logging is enabled.
     boolean verbose = false;
+    # The memory used by the agent to store and manage conversation history.
+    Memory memory = new MessageWindowChatMemory();
 |};
 
 # Represents an agent.
@@ -61,8 +63,8 @@ public isolated distinct client class Agent {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
         self.systemPrompt = config.systemPrompt.cloneReadOnly();
-        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools)
-            : check new FunctionCallAgent(config.model, config.tools);
+        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memory)
+            : check new FunctionCallAgent(config.model, config.tools, config.memory);
     }
 
     # Executes the agent for a given user query.
