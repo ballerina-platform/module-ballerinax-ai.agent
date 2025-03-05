@@ -21,13 +21,13 @@ public isolated distinct client class FunctionCallAgent {
     # Tool store to be used by the agent
     public final ToolStore toolStore;
     # LLM model instance (should be a function call model)
-    public final FunctionCallLlmModel model;
+    public final Model model;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }
@@ -67,16 +67,25 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        return self.model.functionCall(messages,
+        ChatAssistantMessage response = check self.model->chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
+        return response.content is string ? response.content : response?.function_call;
     }
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+    # Execute the agent for a given user's query.
+    #
+    # + query - Natural langauge commands to the agent  
+    # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
+    # + context - Context values to be used by the agent to execute the task
+    # + verbose - If true, then print the reasoning steps (default: true)
+    # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) 
+        returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
         return run(self, query, maxIter, context, verbose);
     }
 }
@@ -100,7 +109,7 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
         if functionCall is error {
-            panic error("Badly formated history for function call agent", llmResponse = step.llmResponse);
+            panic error Error("Badly formated history for function call agent", llmResponse = step.llmResponse);
         }
 
         messages.push({

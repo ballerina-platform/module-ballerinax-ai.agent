@@ -92,9 +92,7 @@ public class Utils {
             return null;
         }
         return env.getRuntime().callFunction(functionPointer.getType().getPackage(),
-                parameter.defaultFunctionName,
-                null,
-                previousPositionalArgs
+                parameter.defaultFunctionName, null, previousPositionalArgs
         );
     }
 }

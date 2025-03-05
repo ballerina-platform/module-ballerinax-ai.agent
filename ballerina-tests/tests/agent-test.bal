@@ -21,13 +21,13 @@ import ballerinax/ai.agent;
 function testAgentToolExecution() returns error? {
     // Currenlty we can't initilize the agent at the module level
     // due to the following issue: https://github.com/ballerina-platform/ballerina-lang/issues/33594
-    final MockLlm model = new;
-    final agent:ReActAgent agent = check new (model, tools = [sum, mutiply]);
+    agent:Agent agent = check new (model = model,
+        systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
+        tools = [sum, mutiply], agentType = agent:REACT_AGENT
+    );
+    string result = check agent->run("What is the sum of the following numbers 78 90 45 23 8?");
+    test:assertEquals(result, "Answer is: 244.0");
 
-
-    var result = agent->run("What is the sum of the following numbers 78 90 45 23 8?", verbose = false);
-    test:assertEquals(result.answer, "Answer is: 244.0");
-
-    result = agent->run("What is the product of 78 and 90?", verbose = false);
-    test:assertEquals(result.answer, "Answer is: 7020");
+    result = check agent->run("What is the product of 78 and 90?");
+    test:assertEquals(result, "Answer is: 7020");
 }
