@@ -1,0 +1,9 @@
+{
+  "name": "toolWithInt",
+  "description": "toolWithInt",
+  "parameters": {
+    "type": "object",
+    "required": ["param"],
+    "properties": { "param": { "type": "integer", "format": "int64" } }
+  }
+}

@@ -1,6 +1,6 @@
-// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.com).
 //
-// WSO2 Inc. licenses this file to you under the Apache License,
+// WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;
@@ -116,28 +117,28 @@ public type FunctionCall record {|
 
 # Extendable LLM model object that can be used for completion tasks.
 # Useful to initialize the agents.
-public type LlmModel distinct isolated object {
+public type LlmModel distinct isolated client object {
 };
 
 # Extendable LLM model object for completion models.
-public type CompletionLlmModel distinct isolated object {
+public type CompletionLlmModel distinct isolated client object {
     *LlmModel;
     public isolated function complete(string prompt, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for chat LLM models
-public type ChatLlmModel distinct isolated object {
+public type ChatLlmModel distinct isolated client object {
     *LlmModel;
     public isolated function chatComplete(ChatMessage[] messages, string? stop = ()) returns string|LlmError;
 };
 
 # Extendable LLM model object for LLM models with function call API
-public type FunctionCallLlmModel distinct isolated object {
+public type FunctionCallLlmModel distinct isolated client object {
     *LlmModel;
     public isolated function functionCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns string|FunctionCall|LlmError;
 };
 
-public isolated class Gpt3Model {
+public isolated client class Gpt3Model {
     *CompletionLlmModel;
     final text:Client llmClient;
     public final CompletionModelConfig modelConfig;
@@ -170,7 +171,7 @@ public isolated class Gpt3Model {
     }
 }
 
-public isolated class AzureGpt3Model {
+public isolated client class AzureGpt3Model {
     *CompletionLlmModel;
     final azure_text:Client llmClient;
     public final CompletionModelConfig modelConfig;
@@ -211,7 +212,7 @@ public isolated class AzureGpt3Model {
     }
 }
 
-public isolated class ChatGptModel {
+public isolated client class ChatGptModel {
     *FunctionCallLlmModel;
     *ChatLlmModel;
     final chat:Client llmClient;
@@ -279,7 +280,7 @@ public isolated class ChatGptModel {
     }
 }
 
-public isolated class AzureChatGptModel {
+public isolated client class AzureChatGptModel {
     *FunctionCallLlmModel;
     *ChatLlmModel;
     final azure_chat:Client llmClient;

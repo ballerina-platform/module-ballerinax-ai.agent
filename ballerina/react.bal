@@ -1,6 +1,6 @@
-// Copyright (c) 2023 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+// Copyright (c) 2023 WSO2 LLC (http://www.wso2.com).
 //
-// WSO2 Inc. licenses this file to you under the Apache License,
+// WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 import ballerina/lang.regexp;
 import ballerina/log;
 
@@ -22,7 +23,7 @@ type ToolInfo readonly & record {|
 |};
 
 # A ReAct Agent that uses ReAct prompt to answer questions by using tools.
-public isolated class ReActAgent {
+public isolated client class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
     # ToolStore instance to store the tools used by the agent
@@ -34,7 +35,7 @@ public isolated class ReActAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|Tool)... tools) returns error? {
+    public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
@@ -83,6 +84,10 @@ ${THOUGHT_KEY}`;
             return error LlmError("Invalid LLM model is given.");
         }
         return llmResult;
+    }
+
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose);
     }
 }
 

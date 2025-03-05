@@ -1,6 +1,6 @@
-// Copyright (c) 2024 WSO2 LLC (http://www.wso2.org) All Rights Reserved.
+// Copyright (c) 2024 WSO2 LLC (http://www.wso2.com).
 //
-// WSO2 Inc. licenses this file to you under the Apache License,
+// WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 
 # Function call agent. 
 # This agent uses OpenAI function call API to perform the tool selection.
-public isolated class FunctionCallAgent {
+public isolated distinct client class FunctionCallAgent {
     *BaseAgent;
     # Tool store to be used by the agent
     public final ToolStore toolStore;
@@ -27,7 +27,7 @@ public isolated class FunctionCallAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|Tool)... tools) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }
@@ -74,6 +74,10 @@ public isolated class FunctionCallAgent {
             description: tool.description,
             parameters: tool.variables
         });
+    }
+
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose);
     }
 }
 
