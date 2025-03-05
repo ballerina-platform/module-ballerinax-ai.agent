@@ -97,3 +97,7 @@ isolated function getChatAssistantMessage(string content) returns agent:ChatAssi
 }
 
 final MockLlm model = new;
+final agent:Agent agent = check new (model = model,
+    systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
+    tools = [sum, mutiply], agentType = agent:REACT_AGENT
+);

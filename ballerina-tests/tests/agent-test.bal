@@ -15,16 +15,9 @@
 // under the License.
 
 import ballerina/test;
-import ballerinax/ai.agent;
 
 @test:Config
 function testAgentToolExecution() returns error? {
-    // Currenlty we can't initilize the agent at the module level
-    // due to the following issue: https://github.com/ballerina-platform/ballerina-lang/issues/33594
-    agent:Agent agent = check new (model = model,
-        systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-        tools = [sum, mutiply], agentType = agent:REACT_AGENT
-    );
     string result = check agent->run("What is the sum of the following numbers 78 90 45 23 8?");
     test:assertEquals(result, "Answer is: 244.0");
 

@@ -19,15 +19,23 @@
 package io.ballerina.lib.ai.plugin;
 
 import io.ballerina.compiler.syntax.tree.AnnotationNode;
+import io.ballerina.compiler.syntax.tree.ModuleVariableDeclarationNode;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Maintains a mapping between annotation nodes and their configurations.
  */
 class ModifierContext {
     private final Map<AnnotationNode, ToolAnnotationConfig> annotationConfigMap = new HashMap<>();
+    private final Set<ModuleVariableDeclarationNode> moduleLevelAgentDeclaration = new HashSet<>();
+
+    void add(ModuleVariableDeclarationNode node) {
+        moduleLevelAgentDeclaration.add(node);
+    }
 
     void add(AnnotationNode node, ToolAnnotationConfig config) {
         annotationConfigMap.put(node, config);
@@ -35,6 +43,10 @@ class ModifierContext {
 
     Map<AnnotationNode, ToolAnnotationConfig> getAnnotationConfigMap() {
         return annotationConfigMap;
+    }
+
+    Set<ModuleVariableDeclarationNode> getModuleLevelAgentDeclarations() {
+        return moduleLevelAgentDeclaration;
     }
 }
 
