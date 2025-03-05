@@ -15,7 +15,6 @@
 // under the License.
 
 // model default parameters 
-const GPT3_MODEL_NAME = "text-davinci-003";
 const GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
 const OBSERVATION_KEY = "Observation";
 const DEFAULT_MAX_TOKEN_COUNT = 512;

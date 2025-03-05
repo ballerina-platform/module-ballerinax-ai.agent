@@ -40,19 +40,26 @@ public type AdditionInfoFlags record {|
 # + filePath - Path to the OpenAPI specification file (should be JSON or YAML)
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
-public isolated function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags) returns
-HttpApiSpecification & readonly|error {
-    map<json> openApiSpec;
-    if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
-        openApiSpec = check yaml:readFile(filePath).ensureType();
+public isolated function extractToolsFromOpenApiSpecFile(string filePath, *AdditionInfoFlags additionInfoFlags)
+returns HttpApiSpecification & readonly|Error {
+    if !filePath.endsWith(".yaml") && !filePath.endsWith(".yml") && !filePath.endsWith(".json") {
+        return error Error("Unsupported file type. Supported file types are .json, .yaml or .yml");
     }
-    else if filePath.endsWith(".json") {
-        openApiSpec = check io:fileReadJson(filePath).ensureType();
-    }
-    else {
-        return error("Unsupported file type. Supported file types are .json, .yaml or .yml");
-    }
+    map<json> openApiSpec = check readOpenApiSpec(filePath);
     return extractToolsFromOpenApiJsonSpec(openApiSpec, additionInfoFlags);
+}
+
+isolated function readOpenApiSpec(string filePath) returns map<json>|Error {
+    map<json>|error openApiSpec;
+    if filePath.endsWith(".yaml") || filePath.endsWith(".yml") {
+        openApiSpec = yaml:readFile(filePath).ensureType();
+    } else {
+        openApiSpec = io:fileReadJson(filePath).ensureType();
+    }
+    if openApiSpec is error {
+        return error Error(openApiSpec.message(), openApiSpec);
+    }
+    return openApiSpec;
 }
 
 # Extracts the Http tools from the given OpenAPI specification as a JSON 
@@ -61,10 +68,14 @@ HttpApiSpecification & readonly|error {
 # + additionInfoFlags - Flags to extract additional information from the OpenAPI specification
 # + return - A record with the list of extracted tools and the service URL (if available)
 public isolated function extractToolsFromOpenApiJsonSpec(map<json> openApiSpec, *AdditionInfoFlags additionInfoFlags) returns
-HttpApiSpecification & readonly|error {
+HttpApiSpecification & readonly|Error {
     OpenApiSpec spec = check parseOpenApiSpec(openApiSpec);
     OpenApiSpecVisitor visitor = new (additionInfoFlags);
-    return check visitor.visit(spec).cloneReadOnly();
+    HttpApiSpecification & readonly|error httpApiSpecification = visitor.visit(spec).cloneReadOnly();
+    if httpApiSpecification is error {
+        return error Error(httpApiSpecification.message(), httpApiSpecification.cause(), detail = httpApiSpecification.detail());
+    }
+    return httpApiSpecification;
 }
 
 # Parses the given OpenAPI specification as a JSON to a OpenApiSpec object.

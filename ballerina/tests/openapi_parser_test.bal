@@ -104,7 +104,7 @@ function testOpenApiParser() returns error? {
         if filePath.endsWith("openapi (29).json") && parseSpec is UnsupportedOpenApiVersion {
             continue;
         }
-        if parseSpec is error {
+        if parseSpec is OpenApiParsingError {
             test:assertFail(string `Failed to parse the OpenAPI at '${filePath}' due to: ${parseSpec.toString()}`);
         }
     }

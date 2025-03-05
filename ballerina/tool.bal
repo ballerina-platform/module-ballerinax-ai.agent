@@ -44,24 +44,14 @@ public isolated class ToolStore {
     #
     # + tools - A list of tools that are available to the LLM
     # + return - An error if the tool is already registered
-    public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns error? {
+    public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns Error? {
         if tools.length() == 0 {
-            return error("Initialization failed.", cause = "No tools provided to the agent.");
+            return error Error("Initialization failed.", cause = "No tools provided to the agent.");
         }
         ToolConfig[] toolList = [];
         foreach BaseToolKit|ToolConfig|FunctionTool tool in tools {
             if tool is FunctionTool {
-                typedesc<FunctionTool> typedescriptor = typeof tool;
-                ToolAnnotationConfig? config = typedescriptor.@Tool;
-                if config is () {
-                    return error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
-                }
-                ToolConfig toolConfig = {
-                    name: check config?.name.ensureType(),
-                    description: check config?.description.ensureType(),
-                    parameters: check config?.parameters.ensureType(),
-                    caller: tool
-                };
+                ToolConfig toolConfig = check getToolConfig(tool);
                 toolList.push(toolConfig);
             } else if tool is BaseToolKit {
                 ToolConfig[] toolsFromToolKit = tool.getTools(); // TODO remove this after Ballerina fixes nullpointer exception
@@ -119,6 +109,24 @@ public isolated class ToolStore {
     }
 }
 
+isolated function getToolConfig(FunctionTool tool) returns ToolConfig|Error {
+    typedesc<FunctionTool> typedescriptor = typeof tool;
+    ToolAnnotationConfig? config = typedescriptor.@Tool;
+    if config is () {
+        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
+    }
+    do {
+        return {
+            name: check config?.name.ensureType(),
+            description: check config?.description.ensureType(),
+            parameters: check config?.parameters.ensureType(),
+            caller: tool
+        };
+    } on fail error e {
+        return error Error("Unable to register the function '" + getFunctionName(tool) + "' as agent tool", e);
+    }
+}
+
 isolated function callFunction(FunctionTool tool, map<json> llmToolInput) returns ToolExecutionResult {
     anydata[]|error inputArgs = getInputArgumentsOfFunction(tool, llmToolInput);
     if inputArgs is error {
@@ -141,11 +149,11 @@ isolated function getInputArgumentsOfFunction(FunctionTool tool, map<json> input
     return argsWithDefaultValues.toArray().cloneReadOnly();
 }
 
-isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] tools) returns error? {
+isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] tools) returns Error? {
     foreach ToolConfig tool in tools {
         string name = tool.name;
         if name.toLowerAscii().matches(FINAL_ANSWER_REGEX) {
-            return error(string ` Tool name '${name}' is reserved for the 'Final answer'.`);
+            return error Error(string ` Tool name '${name}' is reserved for the 'Final answer'.`);
         }
         if !name.matches(re `^[a-zA-Z0-9_-]{1,64}$`) {
             log:printWarn(string `Tool name '${name}' contains invalid characters. Only alphanumeric, underscore and hyphen are allowed.`);
@@ -155,10 +163,13 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] t
             name = regexp:replaceAll(re `[^a-zA-Z0-9_-]`, name, "_");
         }
         if toolMap.hasKey(name) {
-            return error("Duplicated tools. Tool name should be unique.", toolName = name);
+            return error Error("Duplicated tools. Tool name should be unique.", toolName = name);
         }
 
-        JsonInputSchema? variables = check tool.parameters.cloneWithType();
+        JsonInputSchema|error? variables = tool.parameters.cloneWithType();
+        if variables is error {
+            return error Error("Unable to regesiter tool", variables);
+        }
         map<json> constants = {};
 
         if variables is JsonInputSchema {

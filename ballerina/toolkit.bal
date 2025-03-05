@@ -136,9 +136,13 @@ public isolated class HttpServiceToolKit {
     # + clientConfig - The http client configuration associated to the tools
     # + headers - The http headers to be used in the requests
     # + returns - error if the initialization fails
-    public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, map<string|string[]> headers = {}) returns error? {
+    public isolated function init(string serviceUrl, HttpTool[] httpTools, http:ClientConfiguration clientConfig = {}, map<string|string[]> headers = {}) returns Error? {
         self.headers = headers.cloneReadOnly();
-        self.httpClient = check new (serviceUrl, clientConfig);
+        http:Client|http:Error httpClient = new (serviceUrl, clientConfig);
+        if httpClient is http:Error {
+            return error Error("Failed to initialize HttpServiceToolKit", httpClient);
+        }
+        self.httpClient = httpClient;
         self.httpTools = map from HttpTool tool in httpTools
             select [string `${tool.path}:${tool.method}`, tool.cloneReadOnly()];
 
@@ -194,7 +198,7 @@ public isolated class HttpServiceToolKit {
                     caller = self.options;
                 }
                 _ => {
-                    return error("invalid http type: " + httpTool.method.toString());
+                    return error Error("invalid http type: " + httpTool.method.toString());
                 }
             }
             tools.push({
@@ -216,45 +220,80 @@ public isolated class HttpServiceToolKit {
     # + return - An array of Tools corresponding to the HttpTools
     public isolated function getTools() returns ToolConfig[] => self.tools;
 
-    private isolated function get(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, GET, httpInput, false);
-        http:Response getResult = check self.httpClient->get(httpParameters.path, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, getResult);
+    private isolated function get(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, GET, httpInput, false);
+            http:Response getResult = check self.httpClient->get(httpParameters.path, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, getResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function post(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, POST, httpInput, true);
-        http:Response postResult = check self.httpClient->post(httpParameters.path, message = httpParameters.message, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, postResult);
+    private isolated function post(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, POST, httpInput, true);
+            http:Response postResult = check self.httpClient->post(httpParameters.path, message = httpParameters.message, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, postResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function delete(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, DELETE, httpInput, true);
-        http:Response deleteResult = check self.httpClient->delete(httpParameters.path, message = httpParameters.message, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, deleteResult);
+    private isolated function delete(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, DELETE, httpInput, true);
+            http:Response deleteResult = check self.httpClient->delete(httpParameters.path, message = httpParameters.message, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, deleteResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function put(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, PUT, httpInput, true);
-        http:Response putResult = check self.httpClient->put(httpParameters.path, message = httpParameters.message, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, putResult);
+    private isolated function put(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, PUT, httpInput, true);
+            http:Response putResult = check self.httpClient->put(httpParameters.path, message = httpParameters.message, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, putResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function patch(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, PATCH, httpInput, true);
-        http:Response patchResult = check self.httpClient->patch(httpParameters.path, message = httpParameters.message, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, patchResult);
+    private isolated function patch(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, PATCH, httpInput, true);
+            http:Response patchResult = check self.httpClient->patch(httpParameters.path, message = httpParameters.message, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, patchResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function head(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, HEAD, httpInput, false);
-        http:Response headResult = check self.httpClient->head(httpParameters.path, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, headResult);
+    private isolated function head(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, HEAD, httpInput, false);
+            http:Response headResult = check self.httpClient->head(httpParameters.path, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, headResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
 
-    private isolated function options(HttpInput httpInput) returns HttpOutput|error {
-        HttpParameters httpParameters = check getHttpParameters(self.httpTools, OPTIONS, httpInput, false);
-        http:Response optionsResult = check self.httpClient->options(httpParameters.path, headers = self.headers);
-        return extractResponsePayload(httpParameters.path, optionsResult);
+    private isolated function options(HttpInput httpInput) returns HttpOutput|Error {
+        do {
+            HttpParameters httpParameters = check getHttpParameters(self.httpTools, OPTIONS, httpInput, false);
+            http:Response optionsResult = check self.httpClient->options(httpParameters.path, headers = self.headers);
+            return extractResponsePayload(httpParameters.path, optionsResult);
+        } on fail error e {
+            return handleHttpResourceDespatchError(e);
+        }
     }
+}
+
+isolated function handleHttpResourceDespatchError(error e) returns Error {
+    if e is Error {
+        return e;
+    }
+    return error Error(e.message(), e);
 }

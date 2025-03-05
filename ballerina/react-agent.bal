@@ -29,13 +29,13 @@ public isolated client class ReActAgent {
     # ToolStore instance to store the tools used by the agent
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final CompletionLlmModel|ChatLlmModel model;
+    public final Model model;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(CompletionLlmModel|ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
@@ -46,7 +46,9 @@ public isolated client class ReActAgent {
     #
     # + llmResponse - Raw LLM response
     # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
-    public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
+    public isolated function parseLlmResponse(json llmResponse)
+        returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError =>
+        parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
 
     # Use LLM to decide the next tool/step based on the ReAct prompting.
     #
@@ -61,32 +63,23 @@ public isolated client class ReActAgent {
 Question: ${progress.query}
 ${constructHistoryPrompt(progress.history)}
 ${THOUGHT_KEY}`;
-        return check self.generate(reactPrompt);
+        return check self.generate([{role: USER, content: reactPrompt}]);
     }
 
-    # Generate ReAct response for the given prompt.
+    isolated function generate(ChatMessage[] messages) returns json|LlmError {
+        ChatAssistantMessage response = check self.model->chat(messages, stop = OBSERVATION_KEY);
+        return response.content is string ? response.content : response?.function_call;
+    }
+
+    # Execute the agent for a given user's query.
     #
-    # + prompt - ReAct prompt to decide the next tool
-    # + return - ReAct response
-    isolated function generate(string prompt) returns string|LlmError {
-        string|LlmError llmResult;
-        CompletionLlmModel|ChatLlmModel model = self.model;
-        if model is CompletionLlmModel {
-            llmResult = model.complete(prompt, stop = OBSERVATION_KEY);
-        } else if model is ChatLlmModel { // TODO should be removed once the Ballerina issues is fixed
-            llmResult = model.chatComplete([
-                {
-                    role: USER,
-                    content: prompt
-                }
-            ], stop = OBSERVATION_KEY);
-        } else {
-            return error LlmError("Invalid LLM model is given.");
-        }
-        return llmResult;
-    }
-
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+    # + query - Natural langauge commands to the agent  
+    # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
+    # + context - Context values to be used by the agent to execute the task
+    # + verbose - If true, then print the reasoning steps (default: true)
+    # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true)
+        returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
         return run(self, query, maxIter, context, verbose);
     }
 }

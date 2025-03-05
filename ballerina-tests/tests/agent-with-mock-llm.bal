@@ -64,27 +64,40 @@ isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
-isolated client class MockLlm {
-    *agent:CompletionLlmModel;
+isolated client distinct class MockLlm {
+    *agent:Model;
 
-    public isolated function complete(string prompt, string? stop) returns string|agent:LlmError {
+    isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
+        returns agent:ChatAssistantMessage|agent:LlmError {
+        agent:ChatMessage lastMessage = messages.pop();
+        string prompt = lastMessage is agent:ChatUserMessage ? lastMessage.content : "";
         string query = re `Begin!`.split(prompt)[1];
         if (query.includes("Answer is:")) {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
-            return string `Answer is:  ${toolCall.toJsonString()}`;
+            return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
         }
         if (query.toLowerAscii().includes("sum") || query.toLowerAscii().includes("add")) {
             decimal[] numbers = getDecimals(getNumbers(query));
             MockLlmToolCall toolCall = {action: "sum", action_input: {numbers}};
-            return string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`;
+            return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
         if (query.toLowerAscii().includes("mult") || query.toLowerAscii().includes("prod")) {
             string[] numbers = getNumbers(query);
             int a = getInt(numbers.shift());
             int b = getInt(numbers.shift());
             MockLlmToolCall toolCall = {action: "mutiply", action_input: {a, b}};
-            return string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`;
+            return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
-        return "I can't understand";
+        return error agent:LlmError("I can't understand");
     }
 }
+
+isolated function getChatAssistantMessage(string content) returns agent:ChatAssistantMessage {
+    return {role: agent:ASSISTANT, content};
+}
+
+final MockLlm model = new;
+final agent:Agent agent = check new (model = model,
+    systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
+    tools = [sum, mutiply], agentType = agent:REACT_AGENT
+);

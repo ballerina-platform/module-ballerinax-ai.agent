@@ -209,9 +209,9 @@ function testExtractToolsFromWifiOpenAPISpecJSONFile() returns error? {
 @test:Config {}
 function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
     string wifiSpecPath = "tests/resources/openapi/openai-spec.json";
-    HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
+    HttpApiSpecification|Error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
-    if apiSpec is error {
+    if apiSpec is Error {
         test:assertFail("Visitor fails with the error");
     }
     HttpTool[] tools = apiSpec.tools;
@@ -311,9 +311,9 @@ function testExtractToolsFromOpenAPISpecJSONFile2() returns error? {
 @test:Config {}
 function testExtractToolsFromOpenAPISpecJSONFile3() returns error? {
     string wifiSpecPath = "tests/resources/openapi/openai-spec-with-xml-schema.json";
-    HttpApiSpecification|error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
+    HttpApiSpecification|Error apiSpec = extractToolsFromOpenApiSpecFile(wifiSpecPath);
 
-    if apiSpec is error {
+    if apiSpec is Error {
         test:assertFail("Visitor fails with the error");
     }
     HttpTool[] tools = apiSpec.tools;

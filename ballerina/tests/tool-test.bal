@@ -73,7 +73,7 @@ function testResolveSchema() {
 }
 
 @test:Config {}
-function testExecuteSuccessfullOutput() {
+function testExecuteSuccessfullOutput() returns error? {
     ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
@@ -112,21 +112,15 @@ function testExecuteSuccessfullOutput() {
             }
         }
     };
-    ToolStore|error toolStore = new (sendEmailTool);
-    if toolStore is error {
-        test:assertFail("failed to create tool store: " + toolStore.message());
-    }
-    ToolOutput|error output = toolStore.execute(sendMailInput);
-    if output is error {
-        test:assertFail("failed to execute tool: " + output.message());
-    }
+    ToolStore toolStore = check new (sendEmailTool);
+    ToolOutput output = check toolStore.execute(sendMailInput);
     if output.value is error {
         test:assertFail("tool execution output is an error");
     }
 }
 
 @test:Config {}
-function testExecuteErrorOutput() {
+function testExecuteErrorOutput() returns error? {
     ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
@@ -165,14 +159,8 @@ function testExecuteErrorOutput() {
             }
         }
     };
-    ToolStore|error toolStore = new (sendEmailTool);
-    if toolStore is error {
-        test:assertFail("failed to create tool store: " + toolStore.message());
-    }
-    ToolOutput|error output = toolStore.execute(sendMailInput);
-    if output is error {
-        test:assertFail("failed to execute tool: " + output.message());
-    }
+    ToolStore toolStore = check new (sendEmailTool);
+    ToolOutput output = check toolStore.execute(sendMailInput);
     if output.value !is error {
         test:assertFail("tool execution output is not an error");
     }
@@ -218,10 +206,7 @@ function testExecutionError() returns error? {
             }
         }
     };
-    ToolStore|error toolStore = new (sendEmailTool);
-    if toolStore is error {
-        test:assertFail("failed to create tool store: " + toolStore.message());
-    }
+    ToolStore toolStore = check new (sendEmailTool);
     ToolOutput output = check toolStore.execute(sendMailInput);
     if output.value !is error {
         test:assertFail("tool execution should return an error, yet it is succesfull");
@@ -278,12 +263,9 @@ function testExecutionPanicError() returns error? {
             }
         }
     };
-    ToolStore|error toolStore = new (sendEmailTool);
-    if toolStore is error {
-        test:assertFail("failed to create tool store: " + toolStore.message());
-    }
-    ToolOutput|error output = toolStore.execute(sendMailInput);
-    if output !is error {
+    ToolStore toolStore = check new (sendEmailTool);
+    ToolOutput|Error output = toolStore.execute(sendMailInput);
+    if output !is Error {
         test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
     }
 }

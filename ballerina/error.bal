@@ -14,8 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+# Defines the common error type for the module.
+public type Error distinct error;
+
 # Any error occurred during parsing OpenAPI specification is classified under this error type.
-public type OpenApiParsingError distinct error;
+public type OpenApiParsingError distinct Error;
 
 # Stackoverflow errors due to lenthy OpenAPI specification or cyclic references in the specification.
 public type ParsingStackOverflowError distinct OpenApiParsingError;
@@ -39,7 +42,7 @@ public type UnsupportedMediaTypeError distinct OpenApiParsingError;
 public type InvalidParameterDefinition distinct OpenApiParsingError;
 
 # Any error occurred during LLM generation is classified under this error type.
-public type LlmError distinct error;
+public type LlmError distinct Error;
 
 # Errors occurred due to unexpected responses from the LLM.
 public type LlmInvalidResponseError distinct LlmError;
@@ -51,16 +54,16 @@ public type LlmInvalidGenerationError distinct LlmError;
 public type LlmConnectionError distinct LlmError;
 
 # Errors occurred due to termination of the Agent's execution.
-public type TaskCompletedError distinct error;
+public type TaskCompletedError distinct Error;
 
 # Errors occurred due while running HTTP service toolkit.
-public type HttpServiceToolKitError distinct error;
+public type HttpServiceToolKitError distinct Error;
 
 # Any error occurred during parsing HTTP response is classified under this error type.
 public type HttpResponseParsingError distinct HttpServiceToolKitError;
 
 # Errors during tool execution.
-public type ToolExecutionError distinct error;
+public type ToolExecutionError distinct Error;
 
 # Error during unexpected output by the tool
 public type ToolInvalidOutputError distinct ToolExecutionError;
@@ -74,3 +77,5 @@ public type ToolInvalidInputError distinct LlmInvalidGenerationError;
 # Errors occurred due to missing mandotary path or query parameters.
 public type MissingHttpParameterError distinct ToolInvalidInputError;
 
+# Represents an error that occurs when the maximum number of iterations has been exceeded.
+public type MaxIterationExceededError distinct (Error & error<record{|(ExecutionResult|ExecutionError)[] steps;|}>);
