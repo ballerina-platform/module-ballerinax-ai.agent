@@ -30,14 +30,17 @@ public isolated client class ReActAgent {
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
     public final Model model;
+    # The memory associated with the agent.
+    public final Memory memory;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
@@ -55,17 +58,45 @@ public isolated client class ReActAgent {
     # + progress - Execution progress with the current query and execution history
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
-        map<json>|string? context = progress.context;
-        string contextPrompt = context is () ? "" : string `${"\n\n"}You can use these information if needed: ${context.toString()}$`;
+        ChatMessage[] messages = [
+            {role: USER, content: progress.query}
+        ];
 
-        string reactPrompt = string `${self.instructionPrompt}${contextPrompt}
-        
-Question: ${progress.query}
-${constructHistoryPrompt(progress.history)}
-${THOUGHT_KEY}`;
-        return check self.generate([{role: USER, content: reactPrompt}]);
+        // add the context as the first message
+        messages.unshift({
+            role: SYSTEM,
+            content: string `${self.instructionPrompt} You can use these information if needed: ${progress.context.toString()}`
+        });
+
+        // include the history
+        foreach ExecutionStep step in progress.history {
+            LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);
+            if res is LlmInvalidGenerationError {
+                messages.push({role: ASSISTANT, content: step.llmResponse.toJsonString()});
+            } else if res is LlmChatResponse {
+                messages.push({
+                    role: ASSISTANT,
+                    content: res.content
+                });
+            } else if res is LlmToolResponse {
+                messages.push(
+                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString()}},
+                {role: FUNCTION, name: res.name, content: getObservationString(step.observation)}
+                );
+            }
+        }
+
+        ChatMessage[]|error additionalMessages = self.memory.get();
+        if additionalMessages is error {
+            log:printError("Failed to get chat messages from memory", additionalMessages);
+        } else {
+            messages.unshift(...additionalMessages);
+        }
+        return self.generate(messages);
     }
 
+    # + messages - Chat history to be processed by the ReAct agent
+    # + return - The processed chat history
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
         ChatAssistantMessage response = check self.model->chat(messages, stop = OBSERVATION_KEY);
         return response.content is string ? response.content : response?.function_call;

@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/log;
+
 # Function call agent. 
 # This agent uses OpenAI function call API to perform the tool selection.
 public isolated distinct client class FunctionCallAgent {
@@ -22,14 +24,18 @@ public isolated distinct client class FunctionCallAgent {
     public final ToolStore toolStore;
     # LLM model instance (should be a function call model)
     public final Model model;
+    # The memory associated with the agent.
+    public final Memory memory;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    # + memory - The memory associated with the agent.
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -67,6 +73,13 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
+        ChatMessage[]|error additionalMessages = self.memory.get();
+        if additionalMessages is error {
+            log:printError("Failed to get chat messages from memory", additionalMessages);
+        } else {
+            messages.unshift(...additionalMessages);
+        }
+
         ChatAssistantMessage response = check self.model->chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
@@ -84,7 +97,7 @@ public isolated distinct client class FunctionCallAgent {
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) 
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true)
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
         return run(self, query, maxIter, context, verbose);
     }
@@ -99,12 +112,11 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
         }
     ];
     // add the context as the first message
-    if progress.context !is () {
-        messages.unshift({
-            role: SYSTEM,
-            content: string `You can use these information if needed: ${progress.context.toString()}`
-        });
-    }
+    messages.unshift({
+        role: SYSTEM,
+        content: string `You can use these information if needed: ${progress.context.toString()}`
+    });
+
     // include the history
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
