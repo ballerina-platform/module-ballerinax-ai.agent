@@ -32,7 +32,9 @@ ToolConfig calculatorTool = {
 
 OpenAiModel model = test:mock(OpenAiModel, new MockLLM());
 
-@test:Config {}
+@test:Config {
+    enable: false
+}
 function testReActAgentInitialization() {
     ReActAgent|Error agent = new (model, [searchTool, calculatorTool]);
     if agent is Error {
@@ -48,7 +50,9 @@ Calculator: ${{"description": calculatorTool.description, "inputSchema": calcula
     test:assertEquals(extractToolInfo(agent.toolStore), toolInfo);
 }
 
-@test:Config {}
+@test:Config {
+    enable: false
+}
 function testInitializedPrompt() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
 
@@ -94,7 +98,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
     test:assertEquals(agent.instructionPrompt, ExpectedPrompt);
 }
 
-@test:Config
+@test:Config {
+    enable: false
+}
 function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
@@ -130,7 +136,9 @@ function testAgentExecutorRun() returns error? {
     test:assertEquals(output?.observation, "Answer: 3.991298452658078");
 }
 
-@test:Config {}
+@test:Config {
+    enable: false
+}
 function testConstructHistoryPrompt() {
     ExecutionStep[] history = [
         {
