@@ -340,7 +340,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai.agent"
-version = "0.7.9"
+version = "0.7.10"
 dependencies = [
 	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "http"},
@@ -362,7 +362,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.7.9"
+version = "0.7.10"
 dependencies = [
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "lang.regexp"},
