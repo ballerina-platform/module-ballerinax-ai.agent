@@ -24,7 +24,7 @@ public isolated client class ChatClient {
     #
     # + serviceUrl - The base URL of the chat service.
     # + clientConfig - Configuration options for the chat client.
-    # + return - An `error?` if the client initialization fails.
+    # + return - An `error` if the client initialization fails otherwise nil.
     public function init(string serviceUrl, *ChatClientConfiguration clientConfig) returns error? {
         http:ClientConfiguration clientConfigData = {...clientConfig};
         self.httpClient = check new(serviceUrl, clientConfigData);
