@@ -14,9 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/jballerina.java;
+import ballerinax/ai.agent;
 
-isolated function invokeOnChatMessageFunction(any event, string eventFunction, service object {} serviceObj) 
-    returns ChatRespMessage|error = @java:Method {
-        'class: "io.ballerina.lib.ai.NativeHttpToChatServiceAdaptor"
-} external;
+listener agent:Listener chatListener = new ();
+
+service agent:ChatService on chatListener {
+    remote function onChatMessage(agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
+        return {
+            message: request.sessionId + ": " + request.message
+        };
+    }
+}
+

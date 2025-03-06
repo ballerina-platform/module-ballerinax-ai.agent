@@ -20,13 +20,13 @@ package io.ballerina.lib.ai;
 
 import io.ballerina.runtime.api.Environment;
 import io.ballerina.runtime.api.Module;
-import io.ballerina.runtime.api.creators.ErrorCreator;
 import io.ballerina.runtime.api.types.Type;
 import io.ballerina.runtime.api.values.BError;
 
-import java.util.concurrent.CompletableFuture;
-
 public final class ModuleUtils {
+    private static final String PACKAGE_ORG = "ballerinax";
+    private static final String PACKAGE_NAME = "ai.agent";
+
     private static Module module;
 
     private ModuleUtils() {
@@ -42,33 +42,11 @@ public final class ModuleUtils {
         module = env.getCurrentModule();
     }
 
-    public static void notifySuccess(CompletableFuture<Object> future, Object result) {
-        if (result instanceof BError error) {
-            if (!isModuleDefinedError(error)) {
-                error.printStackTrace();
-            }
-        }
-        future.complete(result);
-    }
-
-    public static Object getResult(CompletableFuture<Object> balFuture) {
-        try {
-            return balFuture.get();
-        } catch (BError error) {
-            throw error;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw ErrorCreator.createError(e);
-        } catch (Throwable throwable) {
-            throw ErrorCreator.createError(throwable);
-        }
-    }
-
-    private static boolean isModuleDefinedError(BError error) {
+    static boolean isModuleDefinedError(BError error) {
         Type errorType = error.getType();
         Module packageDetails = errorType.getPackage();
         String orgName = packageDetails.getOrg();
         String packageName = packageDetails.getName();
-        return Constants.PACKAGE_ORG.equals(orgName) && Constants.PACKAGE_NAME.equals(packageName);
+        return PACKAGE_ORG.equals(orgName) && PACKAGE_NAME.equals(packageName);
     }
 }

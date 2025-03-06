@@ -37,8 +37,8 @@ public class NativeHttpToChatServiceAdaptor {
             CompletableFuture<Object> balFuture = new CompletableFuture<>();
             try {
                 Object result = env.getRuntime().callMethod(serviceObj, eventFunction.getValue(), null, args);
-                ModuleUtils.notifySuccess(balFuture, result);
-                return ModuleUtils.getResult(balFuture);
+                Utils.notifySuccess(balFuture, result);
+                return Utils.getResult(balFuture);
             } catch (BError bError) {
                 BString errorMessage = fromString("service method invocation failed: " + bError.getErrorMessage());
                 return ErrorCreator.createError(errorMessage, bError);

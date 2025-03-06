@@ -16,7 +16,7 @@
 
 import ballerina/http;
 
-# Description.
+# A server listener for handling chat service requests.
 public class Listener {
     private http:Listener httpListener;
     private DispatcherService dispatcherService;
@@ -29,6 +29,7 @@ public class Listener {
         }
         self.dispatcherService = new DispatcherService();
     }
+
     public isolated function attach(ChatService chatService, string[]|string? name = ()) returns error? {
         check self.httpListener.attach(self.dispatcherService, name);
         self.dispatcherService.addServiceRef(chatService);

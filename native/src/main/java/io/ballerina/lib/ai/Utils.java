@@ -19,6 +19,7 @@
 package io.ballerina.lib.ai;
 
 import io.ballerina.runtime.api.Environment;
+import io.ballerina.runtime.api.creators.ErrorCreator;
 import io.ballerina.runtime.api.creators.TypeCreator;
 import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.types.FunctionType;
@@ -29,6 +30,7 @@ import io.ballerina.runtime.api.types.RecordType;
 import io.ballerina.runtime.api.types.ReferenceType;
 import io.ballerina.runtime.api.types.Type;
 import io.ballerina.runtime.api.utils.StringUtils;
+import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BFunctionPointer;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
@@ -36,6 +38,9 @@ import io.ballerina.runtime.api.values.BTypedesc;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.concurrent.CompletableFuture;
+
+import static io.ballerina.lib.ai.ModuleUtils.isModuleDefinedError;
 
 public class Utils {
     @SuppressWarnings("unused")
@@ -94,5 +99,27 @@ public class Utils {
         return env.getRuntime().callFunction(functionPointer.getType().getPackage(),
                 parameter.defaultFunctionName, null, previousPositionalArgs
         );
+    }
+
+    public static void notifySuccess(CompletableFuture<Object> future, Object result) {
+        if (result instanceof BError error) {
+            if (!isModuleDefinedError(error)) {
+                error.printStackTrace();
+            }
+        }
+        future.complete(result);
+    }
+
+    public static Object getResult(CompletableFuture<Object> balFuture) {
+        try {
+            return balFuture.get();
+        } catch (BError error) {
+            throw error;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw ErrorCreator.createError(e);
+        } catch (Throwable throwable) {
+            throw ErrorCreator.createError(throwable);
+        }
     }
 }

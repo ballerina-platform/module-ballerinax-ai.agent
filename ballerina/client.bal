@@ -16,13 +16,24 @@
 
 import ballerina/http;
 
+# A client class for interacting with a chat service.
 public isolated client class ChatClient {
     private final http:Client httpClient;
 
-    function init(string url) returns error? {
-        self.httpClient = check new(url);
+    # Initializes the `ChatClient` with the provided service URL and configuration.
+    #
+    # + serviceUrl - The base URL of the chat service.
+    # + clientConfig - Configuration options for the chat client.
+    # + return - An `error?` if the client initialization fails.
+    public function init(string serviceUrl, *ChatClientConfiguration clientConfig) returns error? {
+        http:ClientConfiguration clientConfigData = {...clientConfig};
+        self.httpClient = check new(serviceUrl, clientConfigData);
     }
 
+    # Handles incoming chat messages by sending a request to the chat service.
+    #
+    # + request - The chat request message to be sent.
+    # + return - A `ChatRespMessage` containing the response from the chat service, or an `error` if the request fails.
     isolated remote function onChatMessage(ChatReqMessage request) returns ChatRespMessage|error {
         return self.httpClient->/chatMessage.post(request);
     }
