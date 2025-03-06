@@ -20,8 +20,13 @@ package io.ballerina.lib.ai;
 
 import io.ballerina.runtime.api.Environment;
 import io.ballerina.runtime.api.Module;
+import io.ballerina.runtime.api.types.Type;
+import io.ballerina.runtime.api.values.BError;
 
 public final class ModuleUtils {
+    private static final String PACKAGE_ORG = "ballerinax";
+    private static final String PACKAGE_NAME = "ai.agent";
+
     private static Module module;
 
     private ModuleUtils() {
@@ -35,5 +40,13 @@ public final class ModuleUtils {
     @SuppressWarnings("unused")
     public static void setModule(Environment env) {
         module = env.getCurrentModule();
+    }
+
+    static boolean isModuleDefinedError(BError error) {
+        Type errorType = error.getType();
+        Module packageDetails = errorType.getPackage();
+        String orgName = packageDetails.getOrg();
+        String packageName = packageDetails.getName();
+        return PACKAGE_ORG.equals(orgName) && PACKAGE_NAME.equals(packageName);
     }
 }

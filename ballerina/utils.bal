@@ -43,3 +43,8 @@ isolated function getArgsWithDefaultValues(FunctionTool toolFunction, map<anydat
 returns map<anydata> = @java:Method {
     'class: "io.ballerina.lib.ai.Utils"
 } external;
+
+isolated function invokeOnChatMessageFunction(any event, string eventFunction, service object {} serviceObj) 
+    returns ChatRespMessage|error = @java:Method {
+        'class: "io.ballerina.lib.ai.NativeHttpToChatServiceAdaptor"
+} external;
