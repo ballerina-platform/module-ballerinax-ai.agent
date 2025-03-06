@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/http;
 import ballerina/lang.regexp;
 import ballerina/log;
 
@@ -91,6 +92,9 @@ public isolated class ToolStore {
                 inputs = inputValues.length() == 0 ? {} : inputValues);
         }
         any|error observation = execution.result;
+        if observation is http:Response {
+            observation = observation.getStatusCodeRecord();
+        }
         if observation is anydata {
             return {value: observation};
         }

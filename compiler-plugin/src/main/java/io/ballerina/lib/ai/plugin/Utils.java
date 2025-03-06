@@ -32,9 +32,12 @@ import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
  * Util class for the compiler plugin.
  */
 public class Utils {
-    public static final String TOOL_ANNOTATION_NAME = "Tool";
     public static final String BALLERINAX_ORG = "ballerinax";
-    public static final String AI_AGENT_PACKAGE_NAME = "ai.agent";
+    private static final String BALLERINA_ORG = "ballerina";
+    private static final String TOOL_ANNOTATION_NAME = "Tool";
+    private static final String AI_AGENT_PACKAGE_NAME = "ai.agent";
+    private static final String HTTP_PACKAGE_NAME = "http";
+    private static final String HTTP_RESPONSE_OBJECT_NAME = "Response";
 
     private Utils() {
     }
@@ -52,6 +55,12 @@ public class Utils {
                 && BALLERINAX_ORG.equals(symbol.getModule().get().id().orgName());
     }
 
+    public static boolean isHttpModuleSymbol(Symbol symbol) {
+        return symbol.getModule().isPresent()
+                && HTTP_PACKAGE_NAME.equals(symbol.getModule().get().id().moduleName())
+                && BALLERINA_ORG.equals(symbol.getModule().get().id().orgName());
+    }
+
     public static boolean isAnydataType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
         return typeSymbol.subtypeOf(context.semanticModel().types().ANYDATA);
     }
@@ -60,15 +69,20 @@ public class Utils {
         return typeSymbol.subtypeOf(context.semanticModel().types().ERROR);
     }
 
-    public static boolean isAnydataOrErrorType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
+    public static boolean isAnydataOrErrorTypeOrHttpResponse(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
         if (typeSymbol.typeKind() == TypeDescKind.TYPE_REFERENCE) {
             TypeReferenceTypeSymbol typeReferenceTypeSymbol = (TypeReferenceTypeSymbol) typeSymbol;
-            return isAnydataOrErrorType(typeReferenceTypeSymbol.typeDescriptor(), context);
+            if (HTTP_RESPONSE_OBJECT_NAME.equals(typeReferenceTypeSymbol.definition().getName().orElse("<unknown>"))
+                    && Utils.isHttpModuleSymbol(typeReferenceTypeSymbol)) {
+                return true;
+            }
+            return isAnydataOrErrorTypeOrHttpResponse(typeReferenceTypeSymbol.typeDescriptor(), context);
         }
         if (typeSymbol.typeKind() == TypeDescKind.UNION) {
             UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) typeSymbol;
             return unionTypeSymbol.memberTypeDescriptors()
-                    .stream().map(member -> isAnydataOrErrorType(member, context)).reduce((a, b) -> a && b)
+                    .stream().map(member -> isAnydataOrErrorTypeOrHttpResponse(member, context))
+                    .reduce((a, b) -> a && b)
                     .orElse(false);
         }
         return isAnydataType(typeSymbol, context) || isErrorType(typeSymbol, context);
