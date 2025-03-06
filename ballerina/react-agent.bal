@@ -78,11 +78,10 @@ public isolated client class ReActAgent {
                     role: ASSISTANT,
                     content: res.content
                 });
-            } else if res is LlmToolResponse {
+            } else {
                 messages.push(
                 {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString()}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation)}
-                );
+                {role: FUNCTION, name: res.name, content: getObservationString(step.observation)});
             }
         }
 
