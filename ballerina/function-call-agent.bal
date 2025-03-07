@@ -25,14 +25,15 @@ public isolated distinct client class FunctionCallAgent {
     # LLM model instance (should be a function call model)
     public final Model model;
     # The memory associated with the agent.
-    public final Memory memory;
+    public final Memory|MemoryManager memory;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     # + memory - The memory associated with the agent.
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory()) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
+            Memory|MemoryManager memory = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.memory = memory;
@@ -70,11 +71,13 @@ public isolated distinct client class FunctionCallAgent {
     # Use LLM to decide the next tool/step based on the function calling APIs.
     #
     # + progress - Execution progress with the current query and execution history
+    # + memoryId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
-    public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
+    public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        ChatMessage[]|error additionalMessages = self.memory.get();
-        if additionalMessages is error {
+        Memory|MemoryError memory = getMemory(self.memory, memoryId);
+        ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
+        if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);
         } else {
             messages.unshift(...additionalMessages);
@@ -97,9 +100,10 @@ public isolated distinct client class FunctionCallAgent {
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true)
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true,
+            string memoryId = DEFAULT_MEMORY_ID)
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose);
+        return run(self, query, maxIter, context, verbose, memoryId);
     }
 }
 
