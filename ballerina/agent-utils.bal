@@ -75,7 +75,7 @@ public type ToolOutput record {|
 public type BaseAgent distinct isolated client object {
     public Model model;
     public ToolStore toolStore;
-    public Memory|MemoryManager memory;
+    public MemoryManager memoryManager;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -240,7 +240,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         string memoryId = DEFAULT_MEMORY_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     lock {
         (ExecutionResult|ExecutionError)[] steps = [];
-        Memory|MemoryError memory = getMemory(agent.memory, memoryId);
+        Memory|MemoryError memory = agent.memoryManager.getMemory(memoryId);
         if memory is Error {
             ExecutionError memoryExecutionError = {observation: "Unable to obtain memory", 'error: memory, llmResponse: ()};
             return {steps: [memoryExecutionError]};

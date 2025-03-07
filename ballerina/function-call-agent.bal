@@ -25,7 +25,7 @@ public isolated distinct client class FunctionCallAgent {
     # LLM model instance (should be a function call model)
     public final Model model;
     # The memory associated with the agent.
-    public final Memory|MemoryManager memory;
+    public final MemoryManager memoryManager;
 
     # Initialize an Agent.
     #
@@ -33,10 +33,10 @@ public isolated distinct client class FunctionCallAgent {
     # + tools - Tools to be used by the agent
     # + memory - The memory associated with the agent.
     public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            Memory|MemoryManager memory = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+            MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memory = memory;
+        self.memoryManager = memoryManager;
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -75,7 +75,7 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        Memory|MemoryError memory = getMemory(self.memory, memoryId);
+        Memory|MemoryError memory = self.memoryManager.getMemory(memoryId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
         if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);

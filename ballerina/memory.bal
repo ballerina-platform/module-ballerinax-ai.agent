@@ -102,14 +102,3 @@ public isolated class DefaultMessageWindowChatMemoryManager {
         }
     }
 }
-
-isolated function getMemory(Memory|MemoryManager memory, string memoryId = "default") returns Memory|MemoryError {
-    if memory is Memory {
-        return memory;
-    } 
-    if memory is MemoryManager {
-        return memory.getMemory(memoryId);
-    }
-    // This error is returned because type narrowing does not apply in this case
-    return error MemoryError("Invalid memory type");
-}
