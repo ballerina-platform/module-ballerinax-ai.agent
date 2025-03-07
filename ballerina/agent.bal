@@ -46,7 +46,7 @@ public type AgentConfiguration record {|
     # Specifies whether verbose logging is enabled.
     boolean verbose = false;
     # The memory used by the agent to store and manage conversation history.
-    Memory memory = new MessageWindowChatMemory();
+    MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager();
 |};
 
 # Represents an agent.
@@ -63,22 +63,36 @@ public isolated distinct client class Agent {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
         self.systemPrompt = config.systemPrompt.cloneReadOnly();
-        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memory)
-            : check new FunctionCallAgent(config.model, config.tools, config.memory);
+        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memoryManager)
+            : check new FunctionCallAgent(config.model, config.tools, config.memoryManager);
     }
 
     # Executes the agent for a given user query.
     #
     # + query - Natural language command for the agent.
+    # + memoryId - The ID associated with the agent memory
     # + return - The agent's response or an error.
-    isolated remote function run(string query) returns string|Error {
-        var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose);
+    isolated remote function run(string query, string memoryId = DEFAULT_MEMORY_ID) returns string|Error {
+        var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose, memoryId);
         string? answer = result.answer;
         if answer is string {
             return answer;
         }
+        check validateExecutionSteps(result.steps);
         return error MaxIterationExceededError("Maximum iteration limit exceeded while processing the query.",
             steps = result.steps);
+    }
+}
+
+// Validates whether the execution steps contain only one memory error.
+// If there is exactly one memory error, it is returned; otherwise, null is returned.
+isolated function validateExecutionSteps((ExecutionResult|ExecutionError)[] steps) returns MemoryError? {
+    if steps.length() != 1 {
+        return;
+    }
+    ExecutionResult|ExecutionError step = steps.pop();
+    if step is ExecutionError && step.'error is MemoryError {
+        return <MemoryError>step.'error;
     }
 }
 

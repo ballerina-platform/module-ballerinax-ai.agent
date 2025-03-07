@@ -28,6 +28,7 @@ const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
+const DEFAULT_MEMORY_ID = "memoryId";
 
 final string:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;
 
