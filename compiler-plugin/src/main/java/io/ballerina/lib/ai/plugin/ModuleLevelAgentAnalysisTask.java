@@ -31,14 +31,17 @@ import io.ballerina.compiler.syntax.tree.SeparatedNodeList;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.compiler.syntax.tree.Token;
 import io.ballerina.compiler.syntax.tree.TypeDescriptorNode;
+import io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic;
 import io.ballerina.projects.DocumentId;
 import io.ballerina.projects.plugins.AnalysisTask;
 import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
+import io.ballerina.tools.diagnostics.Diagnostic;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static io.ballerina.lib.ai.plugin.Utils.BALLERINAX_ORG;
+import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.AGENT_MUST_BE_FINAL;
 
 /**
  * Analyzes a Ballerina AI Agent defined at module level.
@@ -74,7 +77,19 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
                 || moduleVariableDeclarationNode.initializer().isEmpty()) {
             return;
         }
+        validateAgentFinalQualifier(context, moduleVariableDeclarationNode);
         addToModifierContext(context, moduleVariableDeclarationNode);
+    }
+
+    private void validateAgentFinalQualifier(SyntaxNodeAnalysisContext context,
+                                             ModuleVariableDeclarationNode moduleVariableDeclarationNode) {
+        boolean hasFinalKeyword = moduleVariableDeclarationNode.qualifiers().stream()
+                .anyMatch(qualifier -> SyntaxKind.FINAL_KEYWORD.stringValue().equals(qualifier.text()));
+        if (!hasFinalKeyword) {
+            Diagnostic diagnostic = CompilationDiagnostic.getDiagnostic(AGENT_MUST_BE_FINAL,
+                    moduleVariableDeclarationNode.location());
+            context.reportDiagnostic(diagnostic);
+        }
     }
 
     private void addToModifierContext(SyntaxNodeAnalysisContext context,
@@ -96,8 +111,7 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
                                 && orgNameOpt.isPresent()
                                 && orgNameOpt.get().orgName().text().equals(BALLERINAX_ORG)
                                 && moduleName.get(1).text().contains(AGENT_MODULE_NAME);
-                    })
-                    .findFirst();
+                    }).findFirst();
 
             if (agentModuleImport.isEmpty() || agentModuleImport.get().prefix().isEmpty()) {
                 return AGENT_MODULE_NAME;

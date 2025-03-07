@@ -29,7 +29,8 @@ public enum DiagnosticMessage {
     ERROR_103("the function ''{0}'' has a parameter ''{1}'' that includes the type xml," +
             " either as its type or within its fields, which is not supported by the tool."),
     ERROR_104("the return type of the function ''{0}'' is not a subtype of `anydata|http:Response|error`." +
-            " The tool must return a value of type `anydata`.");
+            " The tool must return a value of type `anydata`."),
+    ERROR_105("Agent must be marked as 'final'.");
 
     private final String message;
 

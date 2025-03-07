@@ -35,6 +35,7 @@ import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.Iterator;
 
+import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.AGENT_MUST_BE_FINAL;
 import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.INVALID_RETURN_TYPE_IN_TOOL;
 import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA;
 import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION;
@@ -150,6 +151,18 @@ public class AiToolValidationTest {
         Diagnostic diagnostic = diagnosticIterator.next();
         String message = getErrorMessage(PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA, "toolWithAny", "data");
         assertErrorMessage(diagnostic, message, 67, 48);
+    }
+
+    @Test
+    public void testModuleLevelAgentWithoutFinalQualifier() {
+        String packagePath = "06_module_level_agent_without_final_qualifier";
+        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
+        Assert.assertEquals(diagnosticResult.errorCount(), 1);
+
+        Iterator<Diagnostic> diagnosticIterator = diagnosticResult.errors().iterator();
+        Diagnostic diagnostic = diagnosticIterator.next();
+        String message = getErrorMessage(AGENT_MUST_BE_FINAL);
+        assertErrorMessage(diagnostic, message, 100, 1);
     }
 
     private DiagnosticResult getDiagnosticResult(String path) {

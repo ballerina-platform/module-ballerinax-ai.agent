@@ -33,7 +33,8 @@ public enum CompilationDiagnostic {
     UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION(DiagnosticMessage.ERROR_101, DiagnosticCode.AI_101, ERROR),
     PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA(DiagnosticMessage.ERROR_102, DiagnosticCode.AI_102, ERROR),
     XML_PARAMETER_NOT_SUPPORTED_BY_TOOL(DiagnosticMessage.ERROR_103, DiagnosticCode.AI_103, ERROR),
-    INVALID_RETURN_TYPE_IN_TOOL(DiagnosticMessage.ERROR_104, DiagnosticCode.AI_104, ERROR);
+    INVALID_RETURN_TYPE_IN_TOOL(DiagnosticMessage.ERROR_104, DiagnosticCode.AI_104, ERROR),
+    AGENT_MUST_BE_FINAL(DiagnosticMessage.ERROR_105, DiagnosticCode.AI_105, ERROR);
 
     private final String diagnostic;
     private final String diagnosticCode;
