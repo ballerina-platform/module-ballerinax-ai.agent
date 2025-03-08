@@ -16,13 +16,14 @@
 
 import ballerina/test;
 
-@test:Config {
-    enable: false
-}
+@test:Config
 function testAgentToolExecution() returns error? {
     string result = check agent->run("What is the sum of the following numbers 78 90 45 23 8?");
     test:assertEquals(result, "Answer is: 244.0");
 
     result = check agent->run("What is the product of 78 and 90?");
     test:assertEquals(result, "Answer is: 7020");
+
+    result = check agent->run("Search for 'random'");
+    test:assertEquals(result, "Answer is: No result found on doc for 'random'");
 }
