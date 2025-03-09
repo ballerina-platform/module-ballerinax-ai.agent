@@ -342,6 +342,7 @@ org = "ballerinax"
 name = "ai.agent"
 version = "0.7.11"
 dependencies = [
+	{org = "ballerina", name = "data.jsondata"},
 	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
