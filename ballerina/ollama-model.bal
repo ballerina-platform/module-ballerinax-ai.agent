@@ -17,6 +17,7 @@
 import ballerina/data.jsondata;
 import ballerina/http;
 
+// Configs obtained from: https://github.com/ollama/ollama/blob/main/docs/modelfile.md#parameter
 # Represents the model parameters for Ollama text generation.
 # These parameters control the behavior and output of the model.
 public type OllamaModelParameters record {|
@@ -105,15 +106,25 @@ type OllamaFunction record {
 
 const OLLAMA_TOOL_ROLE = "tool";
 const OLLAMA_FUNCTION_TYPE = "function";
+const OLLAMA_DEFAULT_SERVICE_URL = "http://localhost:11434";
 
+# Represents a client for interacting with an Ollama models.
 public isolated client class OllamaModel {
     *Model;
     private final http:Client ollamaClient;
     private final string modelType;
     private final readonly & map<json> modleParameters;
 
-    public isolated function init(string serviceUrl, string modelType, *OllamaModelParameters modleParameters,
-            *ConnectionConfig connectionConfig) returns Error? {
+
+    # Initializes the client with the given connection configuration and model configuration.
+    #
+    # + modelType - The Ollama model name
+    # + serviceUrl - The base URL for the Ollama service endpoint
+    # + modleParameters- Additional model parameters
+    # + connectionConfig - Connection Configuration for OpenAI chat client
+    # + return - `nil` on success, otherwise an `Error`. 
+    public isolated function init(string modelType, string serviceUrl = OLLAMA_DEFAULT_SERVICE_URL,
+            *OllamaModelParameters modleParameters, *ConnectionConfig connectionConfig) returns Error? {
         http:ClientConfiguration clientConfig = {...connectionConfig};
         http:Client|error ollamaClient = new (serviceUrl, clientConfig);
         if ollamaClient is error {
@@ -124,6 +135,12 @@ public isolated client class OllamaModel {
         self.modelType = modelType;
     }
 
+    # Sends a chat request to the Ollama model with the given messages and tools.
+    #
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion
+    # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
         returns ChatAssistantMessage[]|LlmError {
         // Ollama chat completion API reference: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion
@@ -144,7 +161,7 @@ public isolated client class OllamaModel {
             return message;
         });
 
-        map<json> options = self.modleParameters.clone();
+        map<json> options = {...self.modleParameters};
         options["stop"] = stop;
 
         return {
