@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/log;
+
 # Supported input types by the Tool schemas.
 public enum InputType {
     STRING = "string",
@@ -156,7 +158,25 @@ public type ToolAnnotationConfig record {|
 |};
 
 # Represents the annotation of a function tool.
-public annotation ToolAnnotationConfig Tool on function;
+public annotation ToolAnnotationConfig Tool on function, object function;
 
 # Represents a type alias for an isolated function, representing a function tool.
 public type FunctionTool isolated function;
+
+# Generates a array of `ToolConfig` from the given list of function pointers.
+# 
+# + tools - Array of function pointers annotated with `@agent:Tool` annotation
+# + return - Array of `agent:ToolConfig` instances
+public isolated function getToolConfigs(FunctionTool[] tools) returns ToolConfig[] {
+    ToolConfig[] toolConfigs = [];
+    foreach FunctionTool tool in tools {
+        ToolConfig|Error toolConfig = getToolConfig(tool);
+        if toolConfig is Error {
+            log:printWarn("Failed to create 'agent:ToolConfig' for function '" 
+                + getFunctionName(tool) + "'. Skipping this tool.", 'error = toolConfig);
+        } else {
+            toolConfigs.push(toolConfig);
+        }
+    }
+    return toolConfigs;
+}

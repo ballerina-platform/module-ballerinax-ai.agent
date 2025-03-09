@@ -26,6 +26,9 @@ const OPENAPI_COMPONENTS_KEY = "components";
 const OPENAPI_PATTERN_DATE = "yyyy-MM-dd";
 const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 
+// openai
+const OPENAI_SERVICE_URL = "https://api.openai.com/v1";
+
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";

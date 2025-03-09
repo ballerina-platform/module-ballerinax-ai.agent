@@ -19,6 +19,7 @@
 package io.ballerina.lib.ai.plugin;
 
 import io.ballerina.compiler.syntax.tree.AnnotationNode;
+import io.ballerina.compiler.syntax.tree.ClassDefinitionNode;
 import io.ballerina.compiler.syntax.tree.FunctionDefinitionNode;
 import io.ballerina.compiler.syntax.tree.MappingConstructorExpressionNode;
 import io.ballerina.compiler.syntax.tree.MappingFieldNode;
@@ -56,8 +57,7 @@ import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_BRACE_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.COLON_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.COMMA_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.EQUAL_TOKEN;
-import static io.ballerina.compiler.syntax.tree.SyntaxKind.FUNCTION_DEFINITION;
-import static io.ballerina.compiler.syntax.tree.SyntaxKind.MODULE_VAR_DECL;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.OBJECT_METHOD_DEFINITION;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_BRACE_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.QUALIFIED_NAME_REFERENCE;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.SEMICOLON_TOKEN;
@@ -104,8 +104,8 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     }
 
     private List<ModuleMemberDeclarationNode> getModifiedModuleMembers(NodeList<ModuleMemberDeclarationNode> members,
-            ModifierContext modifierContext,
-            DocumentId documentId) {
+                                                                       ModifierContext modifierContext,
+                                                                       DocumentId documentId) {
         Map<AnnotationNode, AnnotationNode> modifiedAnnotations = getModifiedAnnotations(modifierContext);
         Set<ModuleVariableDeclarationNode> agentDeclarations = modifierContext.getModuleLevelAgentDeclarations();
         List<ModuleMemberDeclarationNode> modifiedMembers = new ArrayList<>();
@@ -279,13 +279,34 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     private ModuleMemberDeclarationNode getModifiedModuleMember(ModuleMemberDeclarationNode member,
                                                                 Map<AnnotationNode, AnnotationNode> modifiedAnnotations,
                                                                 Set<ModuleVariableDeclarationNode> agentDeclarations) {
-        if (member.kind() == FUNCTION_DEFINITION) {
-            return modifyFunction((FunctionDefinitionNode) member, modifiedAnnotations);
+        return switch (member.kind()) {
+            case FUNCTION_DEFINITION -> modifyFunction((FunctionDefinitionNode) member, modifiedAnnotations);
+            case MODULE_VAR_DECL -> modifyVariableDeclaration((ModuleVariableDeclarationNode) member,
+                    agentDeclarations);
+            case CLASS_DEFINITION -> modifyClassDefinition((ClassDefinitionNode) member, modifiedAnnotations);
+            default -> member;
+        };
+    }
+
+    private ModuleMemberDeclarationNode modifyClassDefinition(ClassDefinitionNode classDefinitionNode,
+                                                              Map<AnnotationNode, AnnotationNode> modifiedAnnotations) {
+        NodeList<Node> members = classDefinitionNode.members();
+        ArrayList<Node> modifiedMembers = new ArrayList<>();
+
+        for (Node member : members) {
+            if (member.kind() == OBJECT_METHOD_DEFINITION) {
+                FunctionDefinitionNode methodDeclarationNode = (FunctionDefinitionNode) member;
+                if (methodDeclarationNode.metadata().isPresent()) {
+                    MetadataNode modifiedMetadata = modifyMetadata(methodDeclarationNode.metadata().get(),
+                            modifiedAnnotations);
+                    methodDeclarationNode = methodDeclarationNode.modify().withMetadata(modifiedMetadata).apply();
+                }
+                modifiedMembers.add(methodDeclarationNode);
+            } else {
+                modifiedMembers.add(member);
+            }
         }
-        if (member.kind() == MODULE_VAR_DECL) {
-            return modifyVariableDeclaration((ModuleVariableDeclarationNode) member, agentDeclarations);
-        }
-        return member;
+        return classDefinitionNode.modify().withMembers(NodeFactory.createNodeList(modifiedMembers)).apply();
     }
 
     private ModuleMemberDeclarationNode modifyVariableDeclaration(
