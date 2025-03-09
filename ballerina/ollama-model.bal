@@ -162,7 +162,9 @@ public isolated client class OllamaModel {
         });
 
         map<json> options = {...self.modleParameters};
-        options["stop"] = stop;
+        if stop is string {
+            options["stop"] = [stop];
+        }
 
         return {
             model: self.modelType,
