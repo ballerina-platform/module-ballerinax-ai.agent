@@ -83,14 +83,17 @@ public isolated distinct client class FunctionCallAgent {
             messages.unshift(...additionalMessages);
         }
 
-        ChatAssistantMessage response = check self.model->chat(messages,
+        // TODO: Improve handling of multiple tool calls returned by the LLM.  
+        // Currently, tool calls are executed sequentially in separate chat responses.  
+        // Update the logic to execute all tool calls together and return a single response.
+        ChatAssistantMessage[] response = check self.model->chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
-        return response.content is string ? response.content : response?.function_call;
+        return response[0].content is string ? response[0].content : response[0]?.function_call;
     }
 
     # Execute the agent for a given user's query.
@@ -99,6 +102,7 @@ public isolated distinct client class FunctionCallAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
+    # + memoryId - The ID associated with the agent memory
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true,
             string memoryId = DEFAULT_MEMORY_ID)

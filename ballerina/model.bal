@@ -165,7 +165,7 @@ public type FunctionCall record {|
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
-        returns ChatAssistantMessage|LlmError;
+        returns ChatAssistantMessage[]|LlmError;
 };
 
 # OpenAiModel is a client class that provides an interface for interacting with OpenAI language models.
@@ -223,7 +223,7 @@ public isolated client class OpenAiModel {
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
-        returns ChatAssistantMessage|LlmError {
+        returns ChatAssistantMessage[]|LlmError {
         chat:CreateChatCompletionRequest request = {model: self.modelType, stop, messages};
         if tools.length() > 0 {
             request.functions = tools;
@@ -232,17 +232,23 @@ public isolated client class OpenAiModel {
         if response is error {
             return error LlmConnectionError("Error while connecting to the model", response);
         }
-        chat:ChatCompletionResponseMessage? message = response.choices[0].message;
-        string? content = message?.content;
-        if content is string {
-            return {role: ASSISTANT, content};
+        chat:CreateChatCompletionResponse_choices[] choices = response.choices;
+        ChatAssistantMessage[] chatAssistantMessages = [];
+        foreach chat:CreateChatCompletionResponse_choices choice in choices {
+            chat:ChatCompletionResponseMessage? message = choice.message;
+            string? content = message?.content;
+            if content is string {
+                chatAssistantMessages.push({role: ASSISTANT, content});
+            }
+            chat:ChatCompletionRequestAssistantMessage_function_call? function_call = message?.function_call;
+            if function_call is chat:ChatCompletionRequestAssistantMessage_function_call {
+                chatAssistantMessages.push({role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}});
+            }
         }
-        chat:ChatCompletionRequestAssistantMessage_function_call? function_call = message?.function_call;
-        if function_call is chat:ChatCompletionRequestAssistantMessage_function_call {
-            return {role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}};
-        }
-        return error LlmInvalidResponseError("Empty response from the model when using function call API");
+        return chatAssistantMessages.length() > 0 ? chatAssistantMessages
+            : error LlmInvalidResponseError("Empty response from the model when using function call API");
     }
+
 }
 
 # AzureOpenAiModel is a client class that provides an interface for interacting with Azure-hosted OpenAI language models.
@@ -303,7 +309,7 @@ public isolated client class AzureOpenAiModel {
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage[]|LlmError {
         azure_chat:CreateChatCompletionRequest request = {stop, messages};
         if tools.length() > 0 {
             request.functions = tools;
@@ -321,19 +327,25 @@ public isolated client class AzureOpenAiModel {
             string finish_reason?;
             anydata...;
         |}[]? choices = response.choices;
-        if choices !is () {
-            // check whether the model response is text
-            string? content = choices[0].message?.content;
-            if content is string {
-                return {role: ASSISTANT, content};
-            }
 
-            // check whether the model response is a function call
-            azure_chat:ChatCompletionFunctionCall? function_call = choices[0].message?.function_call;
-            if function_call is azure_chat:ChatCompletionFunctionCall {
-                return {role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}};
+        LlmInvalidResponseError invalidResponseError = error LlmInvalidResponseError("Empty response from the model when using function call API");
+        if choices is () {
+            return invalidResponseError;
+        }
+        ChatAssistantMessage[] chatAssistantMessages = [];
+        foreach var choice in choices {
+            azure_chat:ChatCompletionResponseMessage? message = choice.message;
+            string? content = message?.content;
+            if content is string {
+                // check whether the model response is text
+                chatAssistantMessages.push({role: ASSISTANT, content});
+            }
+            azure_chat:ChatCompletionFunctionCall? function_call = message?.function_call;
+            if function_call is chat:ChatCompletionRequestAssistantMessage_function_call {
+                chatAssistantMessages.push({role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}});
             }
         }
-        return error LlmInvalidResponseError("Empty response from the model when using function call API");
+        return chatAssistantMessages.length() > 0 ? chatAssistantMessages
+            : invalidResponseError;
     }
 }

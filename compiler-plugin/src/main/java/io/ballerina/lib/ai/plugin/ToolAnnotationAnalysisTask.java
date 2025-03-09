@@ -158,15 +158,19 @@ class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisConte
 
     private Optional<FunctionSymbol> getFunctionSymbol(FunctionDefinitionNode functionDefinitionNode) {
         Optional<Symbol> functionSymbol = context.semanticModel().symbol(functionDefinitionNode);
-        return functionSymbol.filter(symbol -> symbol.kind() == SymbolKind.FUNCTION).map(FunctionSymbol.class::cast);
+        return functionSymbol.filter(symbol -> symbol.kind() == SymbolKind.FUNCTION
+                || symbol.kind() == SymbolKind.METHOD).map(FunctionSymbol.class::cast);
     }
 
     private Optional<FunctionDefinitionNode> getFunctionDefinitionNode(AnnotationNode annotationNode) {
-        NonTerminalNode possibleFunctionNode = annotationNode.parent().parent();
-        if (possibleFunctionNode.kind() != SyntaxKind.FUNCTION_DEFINITION) {
+        NonTerminalNode possibleFunctionOrMethodNode = annotationNode.parent().parent();
+        // TODO: Add additional validations, such as ensuring the method is not a remote or resource method, 
+        // and verifying that it is an isolated method.
+        if (possibleFunctionOrMethodNode.kind() != SyntaxKind.FUNCTION_DEFINITION
+                && possibleFunctionOrMethodNode.kind() != SyntaxKind.OBJECT_METHOD_DEFINITION) {
             return Optional.empty();
         }
-        return Optional.of((FunctionDefinitionNode) possibleFunctionNode);
+        return Optional.of((FunctionDefinitionNode) possibleFunctionOrMethodNode);
     }
 
     private ToolAnnotationConfig createAnnotationConfig(AnnotationNode annotationNode,
