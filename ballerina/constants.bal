@@ -19,6 +19,7 @@ const GPT3_5_MODEL_NAME = "gpt-3.5-turbo";
 const OBSERVATION_KEY = "Observation";
 const DEFAULT_MAX_TOKEN_COUNT = 512;
 const DEFAULT_TEMPERATURE = 0.7d;
+const MISTRAL_SMALL_MODEL = "mistral-small-latest";
 
 // openapi
 const OPENAPI_COMPONENTS_KEY = "components";

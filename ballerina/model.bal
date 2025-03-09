@@ -16,6 +16,9 @@
 
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/openai.chat;
+import aakifahamed/mistral_ai;
+import ballerina/uuid;
+import ballerina/lang.regexp;
 
 // TODO: change the configs to extend the config record from the respective clients.
 // requirs using never prompt?; never stop? to prevent setting those during initialization
@@ -37,6 +40,10 @@ public type ChatModelConfig readonly & record {|
     decimal temperature = DEFAULT_TEMPERATURE;
 |};
 
+public type MistralModelConfig readonly & record {|
+    string model = MISTRAL_SMALL_MODEL;
+    decimal temperature = DEFAULT_TEMPERATURE;
+|};
 # User chat message record.
 public type ChatUserMessage record {|
     # Role of the message
@@ -81,6 +88,8 @@ public type ChatFunctionMessage record {|
     string? content = ();
     # Name of the function when the message is a function call
     string name;
+
+    string id?;
 |};
 
 public type ChatMessage ChatUserMessage|ChatSystemMessage|ChatAssistantMessage|ChatFunctionMessage;
@@ -101,6 +110,8 @@ public type FunctionCall record {|
     string name;
     # Arguments of the function
     string arguments;
+
+    string id?;
 |};
 
 # Represents an extendable client for interacting with an AI model.
@@ -191,6 +202,7 @@ public isolated client class AzureOpenAiModel {
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
+
         azure_chat:CreateChatCompletionRequest request = {...self.modelConfig, stop, messages};
         if tools.length() > 0 {
             request.functions = tools;
@@ -225,3 +237,148 @@ public isolated client class AzureOpenAiModel {
     }
 }
 
+public isolated client class MistralAiModel {
+    *Model;
+    final mistral_ai:Client llmClient;
+    private final MistralModelConfig modelConfig;
+
+    public isolated function init(mistral_ai:ConnectionConfig connectionConfig, MistralModelConfig modelConfig = {}) returns Error? {
+        mistral_ai:Client|error llmClient = new (connectionConfig);
+        if llmClient is error {
+            return error Error("Failed to initialize MistralAiModel", llmClient);
+        }
+        self.llmClient = llmClient;
+        self.modelConfig = modelConfig;
+    }
+
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
+
+        (mistral_ai:AssistantMessage|mistral_ai:SystemMessage|mistral_ai:UserMessage|mistral_ai:ToolMessage)[] mistralMessages = [];
+        
+        foreach ChatMessage message in messages {
+            if(message is ChatUserMessage) {
+                mistral_ai:UserMessage|error usermessage = message.cloneWithType();
+                if usermessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", usermessage);
+                } 
+                mistralMessages.push(usermessage);
+            }else if(message is ChatSystemMessage) {
+                mistral_ai:SystemMessage|error systemMessage =  message.cloneWithType();
+                if systemMessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", systemMessage);
+                } 
+                mistralMessages.push(systemMessage);
+            }else if(message is ChatAssistantMessage) {
+                // mistral_ai:AssistantMessage|error assistantMessage = message.cloneWithType();
+                mistral_ai:FunctionCall functionCall = {
+                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
+                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "": ""
+                };
+                mistral_ai:ToolCall[] toolCall = [{'function: functionCall,id: message.function_call?.id ?: self.generateToolId()}];
+                mistral_ai:AssistantMessage mistralAssistantMessage = {
+                    role: ASSISTANT,
+                    content: message.content,
+                    toolCalls: toolCall
+                };
+                mistralMessages.push(mistralAssistantMessage);
+            }else if(message is ChatFunctionMessage) {
+                // mistral_ai:ToolMessage|error toolMessage = message.cloneWithType();
+                mistral_ai:ToolMessage mistralToolMessage = {
+                    role: "tool",
+                    content: message.content,
+                    toolCallId: message.id?:self.generateToolId()
+                };
+                mistralMessages.push(mistralToolMessage);
+            }
+        }
+
+        mistral_ai:ChatCompletionRequest request = {...self.modelConfig, stop, messages: mistralMessages};
+
+        if tools.length() > 0 {
+            // mistral_ai:Function[]|error mistralFunctions =  tools.ensureType();
+
+            mistral_ai:Function[] mistralFunctions = [];
+            foreach ChatCompletionFunctions toolFunction in tools {
+                mistral_ai:Function mistralFunction = {
+                    name: toolFunction.name, 
+                    description: toolFunction.description, 
+                    strict: false,
+                    parameters: toolFunction.parameters ?: {}
+                };
+                mistralFunctions.push(mistralFunction);
+            }
+            
+
+            mistral_ai:Tool[] mistralTools = [];  
+            foreach mistral_ai:Function mistralfunction in mistralFunctions {
+                mistral_ai:Tool mistralTool = {'function: mistralfunction};
+                mistralTools.push(mistralTool);
+            }
+            request.tools = mistralTools;
+        }
+        
+        mistral_ai:ChatCompletionResponse|error response = self.llmClient->/v1/chat/completions.post(request);
+        
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
+
+        mistral_ai:AssistantMessage message;
+
+        mistral_ai:ChatCompletionChoice[]? choices = response.choices;
+        if choices !is () {
+            message = choices[0].message;
+            string|mistral_ai:ContentChunk[]? content = message?.content;
+            if content is string && content.length() > 0 {
+                return {role: ASSISTANT, content};
+            } else if(message?.toolCalls !is ()){
+                mistral_ai:ToolCall[]? toolCall = message?.toolCalls;
+                if toolCall !is () {
+                    mistral_ai:ToolCall mistralTool = toolCall[0];
+                    FunctionCall functionCall = {name: mistralTool.'function.name, id: mistralTool.id,arguments: mistralTool.'function.arguments.toString()};
+                    return {role: ASSISTANT, function_call: functionCall};
+                }
+            }else if(content is mistral_ai:TextChunk[]) {
+                string contentString = "";
+                foreach mistral_ai:ContentChunk chunk in content {
+                    contentString = contentString + chunk.text;
+                }
+                return {role: ASSISTANT, content: contentString};
+            }else if(content is ()){
+                return error LlmError("Empty response from the model when using function call API", cause=content);
+            } else if (content is mistral_ai:ImageURLChunk[] | mistral_ai:DocumentURLChunk[] | mistral_ai:ReferenceChunk[]) {
+                return error LlmError("Unsupported content type", cause=content);
+            }
+            
+            
+            // mistral_ai:ToolCall[]? toolCall = message?.toolCalls;
+
+            // if toolCall is mistral_ai:ToolCall[] {
+            //     mistral_ai:FunctionCall functionCall = toolCall[0].'function;
+            //     string fucntionName = functionCall.name;
+            //     string arguments = functionCall.arguments.toString();
+            //     return {role: ASSISTANT, function_call: {name: fucntionName, arguments: arguments}};
+            // }
+        }
+
+        return error LlmInvalidResponseError("Empty response from the model when using function call API");  
+    }
+
+    private isolated function generateToolId() returns string {
+        string randomToolID = "";
+        string randomId = uuid:createRandomUuid();
+        regexp:RegExp alphanumericPattern = re `[a-zA-Z0-9]`;
+        int iterationCount = 0;
+
+        foreach string character in randomId {
+            if(alphanumericPattern.isFullMatch(character)) {
+                randomToolID = randomToolID + character;
+                iterationCount = iterationCount + 1;
+            }
+            if(iterationCount == 9) {
+                break;
+            }
+        }
+        return randomToolID;
+    }
+}
