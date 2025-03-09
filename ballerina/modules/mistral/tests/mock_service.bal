@@ -16,7 +16,6 @@ service / on new http:Listener(9090) {
             message: message
         };
 
-        // Mock response
         ChatCompletionResponse response = {
             id: "cmpl-e5cc70bb28c444948073e77776eb30ef",
             model: "gpt-4o-mini-2024-07-18",

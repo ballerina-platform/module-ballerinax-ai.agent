@@ -40,8 +40,4 @@ isolated function testChatCompletion() returns error? {
         string|ContentChunk[]? content = message?.content;
         test:assertEquals(content, "Test message received! How can I assist you today?");
     }
-    
-    // test:assertTrue(response.choices.length() > 0, msg = "Expected at least one completion choice");
-    // string? content = response.choices[0].message.content;
-    // test:assertTrue(content !is (), msg = "Expected content in the completion response");
 }
