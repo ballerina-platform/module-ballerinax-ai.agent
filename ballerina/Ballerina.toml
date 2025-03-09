@@ -16,9 +16,3 @@ groupId = "io.ballerina.lib"
 artifactId = "ai.agent-native"
 version = "0.7.11"
 path = "../native/build/libs/ai.agent-native-0.7.11-SNAPSHOT.jar"
-
-[[dependency]]
-org="aakifahamed"
-name = "mistral_ai"
-version = "0.1.0"
-repository="local"

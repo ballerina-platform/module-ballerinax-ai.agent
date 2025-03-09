@@ -60,16 +60,7 @@ public isolated client class ReActAgent {
     # + memoryId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
-        //ChatMessage[] messages = [{role: USER, content: progress.query}];
-
-        // add the context as the first message
-        // messages.unshift({
-        //     role: SYSTEM,
-        //     content: string `${self.instructionPrompt} You can use these information if needed: ${progress.context.toString()}`
-        // });
-
         ChatMessage[] messages = [];
-
         // include the history
         foreach ExecutionStep step in progress.history {
             LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);

@@ -118,24 +118,7 @@ public isolated distinct client class FunctionCallAgent {
 }
 
 isolated function createFunctionCallMessages(ExecutionProgress progress) returns ChatMessage[] {
-    // add the question
-    // ChatMessage[] messages = [
-    //     {
-    //         role: USER,
-    //         content: progress.query
-    //     }
-    // ];
-
     ChatMessage[] messages = [];
-
-
-
-    // add the context as the first message
-    // messages.unshift({
-    //     role: SYSTEM,
-    //     content: string `You can use these information if needed: ${progress.context.toString()}`
-    // });
-
     // include the history
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();

@@ -17,9 +17,10 @@
 import ballerina/http;
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/openai.chat;
-import aakifahamed/mistral_ai;
+//import aakifahamed/mistral_ai;
 import ballerina/uuid;
 import ballerina/lang.regexp;
+import ai.agent.mistral as mistral;
 
 // TODO: change the configs to extend the config record from the respective clients.
 // requirs using never prompt?; never stop? to prevent setting those during initialization
@@ -360,13 +361,20 @@ public isolated client class AzureOpenAiModel {
             : invalidResponseError;
     }
 }
+
+# MistralAiModel is a client class that provides an interface for interacting with Mistral AI language models.
 public isolated client class MistralAiModel {
     *Model;
-    final mistral_ai:Client llmClient;
+    final mistral:Client llmClient;
     private final MistralModelConfig modelConfig;
 
-    public isolated function init(mistral_ai:ConnectionConfig connectionConfig, MistralModelConfig modelConfig = {}) returns Error? {
-        mistral_ai:Client|error llmClient = new (connectionConfig);
+    # Initializes the Mistral AI model with the given connection configuration and model configuration.
+    #
+    # + connectionConfig - Connection Configuration for Mistral AI client
+    # + modelConfig - Model configuration for Mistral AI (default is an empty record)
+    # + return - Error if the model initialization fails
+    public isolated function init(mistral:ConnectionConfig connectionConfig, MistralModelConfig modelConfig = {}) returns Error? {
+        mistral:Client|error llmClient = new (connectionConfig);
         if llmClient is error {
             return error Error("Failed to initialize MistralAiModel", llmClient);
         }
@@ -374,39 +382,43 @@ public isolated client class MistralAiModel {
         self.modelConfig = modelConfig;
     }
 
-    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
+    # Uses function call API to determine next function to be called
+    #
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion
+    # + return - Function to be called, chat response or an error in-case of failures
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage[]|LlmError {
 
-        (mistral_ai:AssistantMessage|mistral_ai:SystemMessage|mistral_ai:UserMessage|mistral_ai:ToolMessage)[] mistralMessages = [];
+        (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages = [];
         
         foreach ChatMessage message in messages {
             if(message is ChatUserMessage) {
-                mistral_ai:UserMessage|error usermessage = message.cloneWithType();
+                mistral:UserMessage|error usermessage = message.cloneWithType();
                 if usermessage is error {
                     return error LlmError("Failed to convert user message to MistralMessage", usermessage);
                 } 
                 mistralMessages.push(usermessage);
             }else if(message is ChatSystemMessage) {
-                mistral_ai:SystemMessage|error systemMessage =  message.cloneWithType();
+                mistral:SystemMessage|error systemMessage =  message.cloneWithType();
                 if systemMessage is error {
                     return error LlmError("Failed to convert user message to MistralMessage", systemMessage);
                 } 
                 mistralMessages.push(systemMessage);
             }else if(message is ChatAssistantMessage) {
-                // mistral_ai:AssistantMessage|error assistantMessage = message.cloneWithType();
-                mistral_ai:FunctionCall functionCall = {
+                mistral:FunctionCall functionCall = {
                     name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
                     arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "": ""
                 };
-                mistral_ai:ToolCall[] toolCall = [{'function: functionCall,id: message.function_call?.id ?: self.generateToolId()}];
-                mistral_ai:AssistantMessage mistralAssistantMessage = {
+                mistral:ToolCall[] toolCall = [{'function: functionCall,id: message.function_call?.id ?: self.generateToolId()}];
+                mistral:AssistantMessage mistralAssistantMessage = {
                     role: ASSISTANT,
                     content: message.content,
                     toolCalls: toolCall
                 };
                 mistralMessages.push(mistralAssistantMessage);
             }else if(message is ChatFunctionMessage) {
-                // mistral_ai:ToolMessage|error toolMessage = message.cloneWithType();
-                mistral_ai:ToolMessage mistralToolMessage = {
+                mistral:ToolMessage mistralToolMessage = {
                     role: "tool",
                     content: message.content,
                     toolCallId: message.id?:self.generateToolId()
@@ -414,15 +426,14 @@ public isolated client class MistralAiModel {
                 mistralMessages.push(mistralToolMessage);
             }
         }
-
-        mistral_ai:ChatCompletionRequest request = {...self.modelConfig, stop, messages: mistralMessages};
+        mistral:ChatCompletionRequest request = {...self.modelConfig, stop, messages: mistralMessages};
 
         if tools.length() > 0 {
             // mistral_ai:Function[]|error mistralFunctions =  tools.ensureType();
 
-            mistral_ai:Function[] mistralFunctions = [];
+            mistral:Function[] mistralFunctions = [];
             foreach ChatCompletionFunctions toolFunction in tools {
-                mistral_ai:Function mistralFunction = {
+                mistral:Function mistralFunction = {
                     name: toolFunction.name, 
                     description: toolFunction.description, 
                     strict: false,
@@ -430,63 +441,55 @@ public isolated client class MistralAiModel {
                 };
                 mistralFunctions.push(mistralFunction);
             }
-            
-
-            mistral_ai:Tool[] mistralTools = [];  
-            foreach mistral_ai:Function mistralfunction in mistralFunctions {
-                mistral_ai:Tool mistralTool = {'function: mistralfunction};
+        
+            mistral:Tool[] mistralTools = [];  
+            foreach mistral:Function mistralfunction in mistralFunctions {
+                mistral:Tool mistralTool = {'function: mistralfunction};
                 mistralTools.push(mistralTool);
             }
             request.tools = mistralTools;
         }
         
-        mistral_ai:ChatCompletionResponse|error response = self.llmClient->/v1/chat/completions.post(request);
+        mistral:ChatCompletionResponse|error response = self.llmClient->/v1/chat/completions.post(request);
         
         if response is error {
             return error LlmConnectionError("Error while connecting to the model", response);
         }
 
-        mistral_ai:AssistantMessage message;
-
-        mistral_ai:ChatCompletionChoice[]? choices = response.choices;
+        mistral:AssistantMessage message;
+        mistral:ChatCompletionChoice[]? choices = response.choices;
         if choices !is () {
             message = choices[0].message;
-            string|mistral_ai:ContentChunk[]? content = message?.content;
+            string|mistral:ContentChunk[]? content = message?.content;
             if content is string && content.length() > 0 {
-                return {role: ASSISTANT, content};
+                return [{role: ASSISTANT, content}];
             } else if(message?.toolCalls !is ()){
-                mistral_ai:ToolCall[]? toolCall = message?.toolCalls;
+                ChatAssistantMessage[] mistralTools = [];
+                mistral:ToolCall[]? toolCall = message?.toolCalls;
                 if toolCall !is () {
-                    mistral_ai:ToolCall mistralTool = toolCall[0];
-                    FunctionCall functionCall = {name: mistralTool.'function.name, id: mistralTool.id,arguments: mistralTool.'function.arguments.toString()};
-                    return {role: ASSISTANT, function_call: functionCall};
+                    foreach mistral:ToolCall toolcall in toolCall {
+                        FunctionCall functionCall = {name: toolcall.'function.name, id: toolcall.id,arguments: toolcall.'function.arguments.toString()};
+                        mistralTools.push({role: ASSISTANT, function_call: functionCall});
+                    }
                 }
-            }else if(content is mistral_ai:TextChunk[]) {
+            }else if(content is mistral:TextChunk[]) {
                 string contentString = "";
-                foreach mistral_ai:ContentChunk chunk in content {
+                foreach mistral:ContentChunk chunk in content {
                     contentString = contentString + chunk.text;
                 }
-                return {role: ASSISTANT, content: contentString};
+                return [{role: ASSISTANT, content: contentString}];
             }else if(content is ()){
                 return error LlmError("Empty response from the model when using function call API", cause=content);
-            } else if (content is mistral_ai:ImageURLChunk[] | mistral_ai:DocumentURLChunk[] | mistral_ai:ReferenceChunk[]) {
+            } else if (content is mistral:ImageURLChunk[] | mistral:DocumentURLChunk[] | mistral:ReferenceChunk[]) {
                 return error LlmError("Unsupported content type", cause=content);
-            }
-            
-            
-            // mistral_ai:ToolCall[]? toolCall = message?.toolCalls;
-
-            // if toolCall is mistral_ai:ToolCall[] {
-            //     mistral_ai:FunctionCall functionCall = toolCall[0].'function;
-            //     string fucntionName = functionCall.name;
-            //     string arguments = functionCall.arguments.toString();
-            //     return {role: ASSISTANT, function_call: {name: fucntionName, arguments: arguments}};
-            // }
+            }   
         }
-
         return error LlmInvalidResponseError("Empty response from the model when using function call API");  
     }
 
+    # Generates a random tool ID.
+    #
+    # + return - A random tool ID string
     private isolated function generateToolId() returns string {
         string randomToolID = "";
         string randomId = uuid:createRandomUuid();
