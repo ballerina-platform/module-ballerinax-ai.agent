@@ -115,12 +115,11 @@ public isolated client class OllamaModel {
     private final string modelType;
     private final readonly & map<json> modleParameters;
 
-
     # Initializes the client with the given connection configuration and model configuration.
     #
     # + modelType - The Ollama model name
     # + serviceUrl - The base URL for the Ollama service endpoint
-    # + modleParameters- Additional model parameters
+    # + modleParameters - Additional model parameters
     # + connectionConfig - Connection Configuration for OpenAI chat client
     # + return - `nil` on success, otherwise an `Error`. 
     public isolated function init(string modelType, string serviceUrl = OLLAMA_DEFAULT_SERVICE_URL,
@@ -166,13 +165,16 @@ public isolated client class OllamaModel {
             options["stop"] = [stop];
         }
 
-        return {
+        map<json> payload = {
             model: self.modelType,
             messages: transformedMessages,
             'stream: false,
-            tools: tools.'map(tool => {'type: OLLAMA_FUNCTION_TYPE, 'function: tool}),
             options
         };
+        if tools.length() > 0 {
+            payload["tools"] = tools.'map(tool => {'type: OLLAMA_FUNCTION_TYPE, 'function: tool});
+        }
+        return payload;
     }
 
     private isolated function mapOllamaResponseToAssistantMessages(OllamaResponse response)
