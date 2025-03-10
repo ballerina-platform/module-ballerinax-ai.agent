@@ -16,9 +16,7 @@
 
 import ballerina/test;
 
-@test:Config {
-    enable: false
-}
+@test:Config {}
 function testAgentToolExecution() returns error? {
     string result = check agent->run("What is the sum of the following numbers 78 90 45 23 8?");
     test:assertEquals(result, "Answer is: 244.0");

@@ -1,4 +1,3 @@
-import ballerina/io;
 import ballerina/lang.regexp;
 
 type SearchParams record {|
@@ -50,20 +49,59 @@ public client class MockLLM {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop)
         returns ChatAssistantMessage[]|LlmError {
         ChatMessage lastMessage = messages.pop();
-        string prompt = lastMessage is ChatUserMessage ? lastMessage.content : "";
-        if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {
-            int queryLevel = regexp:findAll(re `observation`, prompt.toLowerAscii()).length();
-            io:println(queryLevel, prompt);
-            string content = check getChatAssistantMessageContent(queryLevel);
-            return [{role: ASSISTANT, content}];
+        string? query = lastMessage.content;
+
+        if query == () {
+            return error LlmError("Prompt is empty");
         }
+
+        if (query.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?")) {
+            int queryLevel = 2;
+            string|LlmError responseContent = getChatAssistantMessageContent(queryLevel);
+            if responseContent is string {
+                return [{role: ASSISTANT, content: responseContent}];
+            }
+        }
+
+        if (query.includes("Camila Morrone")) {
+            int queryLevel = 3;
+            string|LlmError responseContent = getChatAssistantMessageContent(queryLevel);
+            if responseContent is string {
+                return [{role: ASSISTANT, content: responseContent}];
+            }
+        }
+
+        if (query.includes("25 years")) {
+            int queryLevel = 4;
+            string|LlmError responseContent = getChatAssistantMessageContent(queryLevel);
+            if responseContent is string {
+                return [{role: ASSISTANT, content: responseContent}];
+            }
+        }
+
+        if (query.includes("3.991298452658078")) {
+            int querylevel = 1;
+            string|LlmError responseContent = getChatAssistantMessageContent(querylevel);
+            if responseContent is string {
+                return [{role: ASSISTANT, content: responseContent}];
+            }
+        }
+
         return error LlmError("Unexpected prompt to MockLLM");
     }
 }
 
 isolated function getChatAssistantMessageContent(int queryLevel) returns string|LlmError {
     match queryLevel {
-        3 => {
+        1 => {
+            return "```" +
+                "{" +
+                    "\"action\": \"Final Answer\"," +
+                    "\"action_input\": \"As of my last update, Leonardo DiCaprio was rumored to be dating Gigi Hadid. If she is currently 28 years old, raising her age to the power of 0.43 results in approximately 0.0.\"" +
+                "}" +
+                "```";
+        }
+        2 => {
             return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
                 "Action:" +
                 "```" +
@@ -77,8 +115,8 @@ isolated function getChatAssistantMessageContent(int queryLevel) returns string|
                 "}" +
                 "```";
         }
-        4 => {
-            return " I need to find out Camila Morrone's age" +
+        3 => {
+            return "I need to find out Camila Morrone's age" +
                 "Action:" +
                 "```" +
                 "{" +
@@ -92,7 +130,7 @@ isolated function getChatAssistantMessageContent(int queryLevel) returns string|
                 "```";
 
         }
-        5 => {
+        4 => {
             {
                 return " I now need to calculate the age raised to the 0.43 power" +
                 "Action:" +

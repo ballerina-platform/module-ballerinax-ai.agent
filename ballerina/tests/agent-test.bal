@@ -32,9 +32,7 @@ ToolConfig calculatorTool = {
 
 OpenAiModel model = test:mock(OpenAiModel, new MockLLM());
 
-@test:Config {
-    enable: false
-}
+@test:Config {}
 function testReActAgentInitialization() {
     ReActAgent|Error agent = new (model, [searchTool, calculatorTool]);
     if agent is Error {
@@ -46,13 +44,10 @@ function testReActAgentInitialization() {
         "toolIntro": string `Search: ${{"description": searchTool.description, "inputSchema": searchTool.parameters}.toString()}
 Calculator: ${{"description": calculatorTool.description, "inputSchema": calculatorTool.parameters}.toString()}`
     };
-
     test:assertEquals(extractToolInfo(agent.toolStore), toolInfo);
 }
 
-@test:Config {
-    enable: false
-}
+@test:Config {}
 function testInitializedPrompt() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
 
@@ -94,17 +89,14 @@ ${"```"}
 ${"```"}
 
 Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Action:${"```"}$JSON_BLOB${"```"}then Observation:.`;
-
     test:assertEquals(agent.instructionPrompt, ExpectedPrompt);
 }
 
-@test:Config {
-    enable: false
-}
+@test:Config {}
 function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    Executor agentExecutor = new (agent, DEFAULT_MEMORY_ID, query = query);
+    Executor agentExecutor = new (agent, query = query, memoryId = "test124");
     record {|ExecutionResult|LlmChatResponse|ExecutionError|Error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
@@ -134,93 +126,6 @@ function testAgentExecutorRun() returns error? {
         test:assertFail("AgentExecutor.next returns an error during third iteration");
     }
     test:assertEquals(output?.observation, "Answer: 3.991298452658078");
-}
-
-@test:Config {
-    enable: false
-}
-function testConstructHistoryPrompt() {
-    ExecutionStep[] history = [
-        {
-            llmResponse: string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
-Action:
-{
-  "tool": "Create wifi",
-  "tool_input": {
-    "path": "/guest-wifi-accounts",
-    "requestBody": {
-      "email": "johnny@wso2.com",
-      "username": "newGuest",
-      "password": "jh123"
-    }
-  }
-}`,
-            observation: "Successfully added the wifi account"
-        },
-        {
-
-            llmResponse: string `Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
-Action:
-{
-  "tool": "List wifi",
-  "tool_input": {
-    "path": "/guest-wifi-accounts/johnny@wso2.com"
-  }
-}`,
-            observation: ["freeWifi.guestOf.johnny", "newGuest.guestOf.johnny"]
-        },
-        {
-            llmResponse: string `Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
-Action:
-{
-  "tool": "Send mail",
-  "tool_input": {
-    "recipient": "alica@wso2.com",
-    "subject": "Available Wifi Accounts",
-    "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
-  }
-}`,
-            observation: error("Error while sending the email(ballerinax/googleapis.gmail)GmailError")
-        }
-    ];
-
-    string thoughtHistory = constructHistoryPrompt(history);
-    test:assertEquals(thoughtHistory, string `Thought: I need to use the "Create wifi" tool to create a new guest wifi account with the given username and password. 
-Action:
-{
-  "tool": "Create wifi",
-  "tool_input": {
-    "path": "/guest-wifi-accounts",
-    "requestBody": {
-      "email": "johnny@wso2.com",
-      "username": "newGuest",
-      "password": "jh123"
-    }
-  }
-}
-Observation: Successfully added the wifi account
-Thought: Next, I need to use the "List wifi" tool to get the available list of wifi accounts for the given email.
-Action:
-{
-  "tool": "List wifi",
-  "tool_input": {
-    "path": "/guest-wifi-accounts/johnny@wso2.com"
-  }
-}
-Observation: ["freeWifi.guestOf.johnny","newGuest.guestOf.johnny"]
-Thought: Finally, I need to use the "Send mail" tool to send the list of available wifi accounts to the given email address.
-Action:
-{
-  "tool": "Send mail",
-  "tool_input": {
-    "recipient": "alica@wso2.com",
-    "subject": "Available Wifi Accounts",
-    "messageBody": "Here are the available wifi accounts: ['newGuest.guestOf.johnny','newGuest.guestOf.johnny']"
-  }
-}
-Observation: Error occured while trying to execute the tool: {"message":"Error while sending the email(ballerinax/googleapis.gmail)GmailError"}
-`);
-
 }
 
 @test:Config {}
