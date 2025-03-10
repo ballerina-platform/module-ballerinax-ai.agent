@@ -251,13 +251,13 @@ public isolated client class OpenAiModel {
 
     # Initializes the OpenAI model with the given connection configuration and model configuration.
     #
-    # + apiKey - The authentication API key for OpenAI chat  
-    # + modelType - The OpenAI model name as constant from OPEN_AI_MODEL_NAMES enum  
-    # + serviceUrl - The base URL for the OpenAI service endpoint  
-    # + maxTokens - The maximum number of tokens to generate in the response  
-    # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Connection Configuration for OpenAI chat client
-    # + return - Error if the model initialization fails
+    # + apiKey - The API key used for authentication with the OpenAI service.
+    # + modelType - The OpenAI model to use for generating responses.
+    # + serviceUrl - The base URL of the OpenAI service endpoint.
+    # + maxTokens - The maximum number of tokens allowed in the response.
+    # + temperature - Controls the randomness of the model's output.
+    # + connectionConfig - Additional connection Configuration for OpenAI chat client.
+    # + return - Returns an error if the model initialization fails, otherwise returns `nil`.
     public isolated function init(string apiKey, OPEN_AI_MODEL_NAMES modelType, string serviceUrl = OPENAI_SERVICE_URL,
             int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
         chat:ClientHttp1Settings?|error http1Settings = connectionConfig?.http1Settings.cloneWithType();
@@ -335,14 +335,14 @@ public isolated client class AzureOpenAiModel {
 
     # Initializes the Azure OpenAI model with the given connection configuration and model configuration.
     #
-    # + serviceUrl - The base URL for the Azure OpenAI service endpoint  
-    # + apiKey - The authentication API key for Azure OpenAI services  
-    # + deploymentId - The deployment identifier for the specific model deployment in Azure  
-    # + apiVersion - The Azure OpenAI API version to use for requests (e.g., "2023-05-15")  
-    # + maxTokens - The maximum number of tokens to generate in the response  
-    # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Optional connection configuration parameters (defaults to basic auth with apiKey)
-    # + return - Error if the model initialization fails
+    # + serviceUrl - The base URL of the Azure OpenAI service endpoint.
+    # + apiKey - The API key used for authentication with the Azure OpenAI service.
+    # + deploymentId - The identifier for the specific model deployment.
+    # + apiVersion - The Azure OpenAI API version to use for requests.
+    # + maxTokens - The maximum number of tokens to generate in the response.
+    # + temperature - Controls the randomness of the model's output.
+    # + connectionConfig - Additional connection Configuration for Azure OpenAI chat client.
+    # + return - Returns an error if the model initialization fails, otherwise returns `nil`.
     public isolated function init(string serviceUrl, string apiKey, string deploymentId, string apiVersion,
             int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE,
             *ConnectionConfig connectionConfig) returns Error? {
@@ -436,14 +436,14 @@ public isolated client class ClaudeModel {
 
     # Initializes the Claude model with the given connection configuration and model configuration.
     #
-    # + apiKey - The authentication API key for Claude services  
-    # + modelType - The Claude model name as constant from CLAUDE_MODEL_NAMES enum  
-    # + apiVersion - The Claude API version to use for requests (e.g., "2023-06-01")  
-    # + serviceUrl - The base URL for the Claude service endpoint  
-    # + maxTokens - The maximum number of tokens to generate in the response 
-    # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Connection Configuration for Claude API client
-    # + return - Error if the model initialization fails
+    # + apiKey - The API key used for authentication with the Claude service.  
+    # + modelType - The Claude model to use for generating responses.  
+    # + apiVersion - The Claude API version to use for requests.  
+    # + serviceUrl - The base URL of the Claude service endpoint.  
+    # + maxTokens - The maximum number of tokens to generate in the response. 
+    # + temperature - Controls the randomness of the model's output. 
+    # + connectionConfig - Additional connection Configuration for Claude chat client.
+    # + return - Returns an error if the model initialization fails, otherwise returns `nil`.
     public isolated function init(string apiKey, CLAUDE_MODEL_NAMES modelType, string apiVersion,
             string serviceUrl = CLAUDE_SERVICE_URL, int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
             decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
