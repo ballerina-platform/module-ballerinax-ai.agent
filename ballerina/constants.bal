@@ -28,6 +28,9 @@ const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 // openai
 const OPENAI_SERVICE_URL = "https://api.openai.com/v1";
 
+// claude
+const CLAUDE_SERVICE_URL = "https://api.anthropic.com/v1";
+
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
