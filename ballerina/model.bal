@@ -164,6 +164,11 @@ public type FunctionCall record {|
 
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
+    # Sends a chat request to the model with the given messages and tools.
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion
+    # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
         returns ChatAssistantMessage[]|LlmError;
 };
@@ -171,7 +176,7 @@ public type Model distinct isolated client object {
 # OpenAiModel is a client class that provides an interface for interacting with OpenAI language models.
 public isolated client class OpenAiModel {
     *Model;
-    final chat:Client llmClient;
+    private final chat:Client llmClient;
     private final string modelType;
 
     # Initializes the OpenAI model with the given connection configuration and model configuration.
@@ -216,7 +221,7 @@ public isolated client class OpenAiModel {
         self.modelType = modelType;
     }
 
-    # Uses function call API to determine next function to be called
+    # Sends a chat request to the OpenAI model with the given messages and tools.
     #
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
@@ -254,7 +259,7 @@ public isolated client class OpenAiModel {
 # AzureOpenAiModel is a client class that provides an interface for interacting with Azure-hosted OpenAI language models.
 public isolated client class AzureOpenAiModel {
     *Model;
-    final azure_chat:Client llmClient;
+    private final azure_chat:Client llmClient;
     private final string deploymentId;
     private final string apiVersion;
 
@@ -303,7 +308,7 @@ public isolated client class AzureOpenAiModel {
         self.apiVersion = apiVersion;
     }
 
-    # Uses function call API to determine next function to be called
+    # Sends a chat request to the OpenAI model with the given messages and tools.
     #
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call

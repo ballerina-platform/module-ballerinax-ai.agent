@@ -70,11 +70,16 @@ isolated client distinct class MockLlm {
     isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
         returns agent:ChatAssistantMessage[]|agent:LlmError {
         agent:ChatMessage lastMessage = messages.pop();
-        string prompt = lastMessage is agent:ChatUserMessage ? lastMessage.content : "";
-        string query = re `Begin!`.split(prompt)[1];
+        string query = lastMessage is agent:ChatUserMessage|agent:ChatFunctionMessage ? lastMessage.content ?: "" : "";
         if (query.includes("Answer is:")) {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
             return getChatAssistantMessages(string `Answer is:  ${toolCall.toJsonString()})`);
+        }
+        if (query.toLowerAscii().includes("search")) {
+            regexp:Span? span = re `'.*'`.find(query);
+            string searchQuery = span is () ? "No search query" : span.substring();
+            MockLlmToolCall toolCall = {action: "searchDoc", action_input: {searchQuery}};
+            return getChatAssistantMessages(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
         }
         if (query.toLowerAscii().includes("sum") || query.toLowerAscii().includes("add")) {
             decimal[] numbers = getDecimals(getNumbers(query));
@@ -99,5 +104,18 @@ isolated function getChatAssistantMessages(string content) returns agent:ChatAss
 final MockLlm model = new;
 final agent:Agent agent = check new (model = model,
     systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-    tools = [sum, mutiply], agentType = agent:REACT_AGENT
+    tools = [sum, mutiply, new SearchToolKit()], agentType = agent:REACT_AGENT
 );
+
+isolated class SearchToolKit {
+    *agent:BaseToolKit;
+
+    public isolated function getTools() returns agent:ToolConfig[] {
+        return agent:getToolConfigs([self.searchDoc]);
+    }
+
+    @agent:Tool
+    public isolated function searchDoc(string searchQuery) returns string {
+        return string `Answer is: No result found on doc for ${searchQuery}`;
+    }
+}
