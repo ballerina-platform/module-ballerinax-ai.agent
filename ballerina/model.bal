@@ -63,6 +63,17 @@ public enum OPEN_AI_MODEL_NAMES {
     GPT_3_5_TURBO_16K_0613 = "gpt-3.5-turbo-16k-0613"
 }
 
+# Models for the Claude chat
+public enum CLAUDE_MODEL_NAMES {
+    CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
+    CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022",
+    CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022",
+    CLAUDE_3_5_SONNET_20240620 = "claude-3-5-sonnet-20240620",
+    CLAUDE_3_OPUS_20240229 = "claude-3-opus-20240229",
+    CLAUDE_3_SONNET_20240229 = "claude-3-sonnet-20240229",
+    CLAUDE_3_HAIKU_20240307 = "claude-3-haiku-20240307"
+}
+
 # Provides a set of configurations for controlling the behaviours when communicating with a remote HTTP endpoint.
 public type ConnectionConfig record {|
     # The HTTP version understood by the client
@@ -162,6 +173,70 @@ public type FunctionCall record {|
     string arguments;
 |};
 
+# Claude API request message format
+type ClaudeMessage record {|
+    # Role of the participant in the conversation (e.g., "user" or "assistant")
+    string role;
+    # The message content
+    string content;
+|};
+
+# Claude API response format
+type ClaudeApiResponse record {|
+    # Unique identifier for the response message
+    string id;
+    # The Claude model used for generating the response
+    string model;
+    # The type of the response (e.g., "message")
+    string 'type;
+    # Array of content blocks containing the response text and media
+    ContentBlock[] content;
+    # Role of the message sender (typically "assistant")
+    string role;
+    # Reason why the generation stopped (e.g., "end_turn", "max_tokens")
+    string stop_reason;
+    # The sequence that caused generation to stop, if applicable
+    string? stop_sequence;
+    # Token usage statistics for the request and response
+    Usage usage;
+|};
+
+# Content block in Claude API response
+type ContentBlock record {|
+    # The type of content (e.g., "text" or "tool_use")
+    string 'type;
+    # The actual text content (for text type)
+    string text?;
+    # Tool use information (for tool_use type)
+    string id?;
+    # Name of the tool being used
+    string name?;
+    # Input parameters for the tool
+    json input?;
+|};
+
+# Usage statistics in Claude API response
+type Usage record {|
+    # Number of tokens in the input messages
+    int input_tokens;
+    # Number of tokens in the generated response
+    int output_tokens;
+    # Number of input tokens used for cache creation, if applicable
+    int? cache_creation_input_tokens = ();
+    # Number of input tokens read from cache, if applicable
+    int? cache_read_input_tokens = ();
+|};
+
+# Claude Tool definition
+type ClaudeTool record {|
+    # Name of the tool
+    string name;
+    # Description of the tool
+    string description;
+    # Input schema of the tool in JSON Schema format
+    json input_schema;
+|};
+
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
@@ -171,7 +246,7 @@ public type Model distinct isolated client object {
 # OpenAiModel is a client class that provides an interface for interacting with OpenAI language models.
 public isolated client class OpenAiModel {
     *Model;
-    final chat:Client llmClient;
+    private final chat:Client llmClient;
     private final string modelType;
 
     # Initializes the OpenAI model with the given connection configuration and model configuration.
@@ -179,12 +254,12 @@ public isolated client class OpenAiModel {
     # + apiKey - The authentication API key for OpenAI chat  
     # + modelType - The OpenAI model name as constant from OPEN_AI_MODEL_NAMES enum  
     # + serviceUrl - The base URL for the OpenAI service endpoint  
-    # + maxToken - The maximum number of tokens to generate in the response  
+    # + maxTokens - The maximum number of tokens to generate in the response  
     # + temperature - The temperature for controlling randomness in the model's output  
     # + connectionConfig - Connection Configuration for OpenAI chat client
     # + return - Error if the model initialization fails
     public isolated function init(string apiKey, OPEN_AI_MODEL_NAMES modelType, string serviceUrl = OPENAI_SERVICE_URL,
-            int maxToken = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
+            int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
         chat:ClientHttp1Settings?|error http1Settings = connectionConfig?.http1Settings.cloneWithType();
         if http1Settings is error {
             return error Error("Failed to clone http1Settings", http1Settings);
@@ -254,7 +329,7 @@ public isolated client class OpenAiModel {
 # AzureOpenAiModel is a client class that provides an interface for interacting with Azure-hosted OpenAI language models.
 public isolated client class AzureOpenAiModel {
     *Model;
-    final azure_chat:Client llmClient;
+    private final azure_chat:Client llmClient;
     private final string deploymentId;
     private final string apiVersion;
 
@@ -264,12 +339,12 @@ public isolated client class AzureOpenAiModel {
     # + apiKey - The authentication API key for Azure OpenAI services  
     # + deploymentId - The deployment identifier for the specific model deployment in Azure  
     # + apiVersion - The Azure OpenAI API version to use for requests (e.g., "2023-05-15")  
-    # + maxToken - The maximum number of tokens to generate in the response  
+    # + maxTokens - The maximum number of tokens to generate in the response  
     # + temperature - The temperature for controlling randomness in the model's output  
     # + connectionConfig - Optional connection configuration parameters (defaults to basic auth with apiKey)
     # + return - Error if the model initialization fails
     public isolated function init(string serviceUrl, string apiKey, string deploymentId, string apiVersion,
-            int maxToken = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE,
+            int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE,
             *ConnectionConfig connectionConfig) returns Error? {
 
         azure_chat:ClientHttp1Settings?|error http1Settings = connectionConfig?.http1Settings.cloneWithType();
@@ -347,5 +422,206 @@ public isolated client class AzureOpenAiModel {
         }
         return chatAssistantMessages.length() > 0 ? chatAssistantMessages
             : invalidResponseError;
+    }
+}
+
+# ClaudeModel is a client class that provides an interface for interacting with Claude language models.
+public isolated client class ClaudeModel {
+    *Model;
+    private final http:Client claudeClient;
+    private final string apiKey;
+    private final string modelType;
+    private final string apiVersion;
+    private final int maxTokens;
+
+    # Initializes the Claude model with the given connection configuration and model configuration.
+    #
+    # + apiKey - The authentication API key for Claude services  
+    # + modelType - The Claude model name as constant from CLAUDE_MODEL_NAMES enum  
+    # + apiVersion - The Claude API version to use for requests (e.g., "2023-06-01")  
+    # + serviceUrl - The base URL for the Claude service endpoint  
+    # + maxTokens - The maximum number of tokens to generate in the response 
+    # + temperature - The temperature for controlling randomness in the model's output  
+    # + connectionConfig - Connection Configuration for Claude API client
+    # + return - Error if the model initialization fails
+    public isolated function init(string apiKey, CLAUDE_MODEL_NAMES modelType, string apiVersion,
+            string serviceUrl = CLAUDE_SERVICE_URL, int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+            decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
+
+        // Convert ConnectionConfig to http:ClientConfiguration
+        http:ClientConfiguration claudeConfig = {
+            httpVersion: connectionConfig.httpVersion,
+            http1Settings: connectionConfig.http1Settings ?: {},
+            http2Settings: connectionConfig?.http2Settings ?: {},
+            timeout: connectionConfig.timeout,
+            forwarded: connectionConfig.forwarded,
+            poolConfig: connectionConfig?.poolConfig,
+            cache: connectionConfig?.cache ?: {},
+            compression: connectionConfig.compression,
+            circuitBreaker: connectionConfig?.circuitBreaker,
+            retryConfig: connectionConfig?.retryConfig,
+            responseLimits: connectionConfig?.responseLimits ?: {},
+            secureSocket: connectionConfig?.secureSocket,
+            proxy: connectionConfig?.proxy,
+            validation: connectionConfig.validation
+        };
+
+        http:Client|error httpClient = new http:Client(serviceUrl, claudeConfig);
+
+        if (httpClient is error) {
+            return error Error("Failed to initialize ClaudeModel", httpClient);
+        }
+
+        self.claudeClient = httpClient;
+        self.apiKey = apiKey;
+        self.modelType = modelType;
+        self.apiVersion = apiVersion;
+        self.maxTokens = maxTokens;
+    }
+
+    # Converts standard ChatMessage array to Claude's message format
+    #
+    # + messages - List of chat messages 
+    # + return - return value description
+    private isolated function mapToClaudeMessages(ChatMessage[] messages) returns ClaudeMessage[] {
+        ClaudeMessage[] claudeMessages = [];
+
+        foreach ChatMessage message in messages {
+            if message is ChatUserMessage {
+                claudeMessages.push({
+                    role: USER,
+                    content: message.content
+                });
+            } else if message is ChatSystemMessage {
+                // Add a user message containing the system prompt
+                claudeMessages.push({
+                    role: USER,
+                    content: string `<system>${message.content}</system>\n\n`
+                });
+            } else if message is ChatAssistantMessage && message.content is string {
+                claudeMessages.push({
+                    role: ASSISTANT,
+                    content: message.content ?: ""
+                });
+            } else if message is ChatFunctionMessage && message.content is string {
+                // Include function results as user messages with special formatting
+                claudeMessages.push({
+                    role: USER,
+                    content: string `<function_results>\nFunction: ${message.name}\nOutput: ${message.content ?: ""}\n</function_results>`
+                });
+            }
+        }
+        return claudeMessages;
+    }
+
+    # Maps ChatCompletionFunctions to Claude's tool format
+    #
+    # + tools - Array of tool definitions
+    # + return - Array of Claude tool definitions
+    private isolated function mapToClaudeTools(ChatCompletionFunctions[] tools) returns ClaudeTool[] {
+        ClaudeTool[] claudeTools = [];
+
+        foreach ChatCompletionFunctions tool in tools {
+            JsonInputSchema schema = tool.parameters ?: {'type: "object", properties: {}};
+
+            // Create Claude tool with input_schema instead of parameters
+            ClaudeTool claudeTool = {
+                name: tool.name,
+                description: tool.description,
+                input_schema: schema
+            };
+
+            claudeTools.push(claudeTool);
+        }
+
+        return claudeTools;
+    }
+
+    # Uses Claude API to generate a response
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion (not used in this implementation)
+    # + return - Chat response or an error in case of failures
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
+        returns ChatAssistantMessage[]|LlmError {
+
+        // Map messages to Claude format
+        ClaudeMessage[] claudeMessages = self.mapToClaudeMessages(messages);
+
+        // Prepare request payload
+        map<json> requestPayload = {
+            "model": self.modelType,
+            "max_tokens": self.maxTokens,
+            "messages": claudeMessages,
+            "stop_sequences": stop
+        };
+
+        // If tools are provided, add them to the request
+        if tools.length() > 0 {
+            ClaudeTool[] claudeTools = self.mapToClaudeTools(tools);
+            requestPayload["tools"] = claudeTools;
+        }
+
+        // Send request to Claude API with proper headers
+        map<string> headers = {
+            "x-api-key": self.apiKey,
+            "anthropic-version": self.apiVersion,
+            "content-type": "application/json"
+        };
+
+        ClaudeApiResponse|error claudeResponse = self.claudeClient->/messages.post(requestPayload, headers);
+
+        if claudeResponse is error {
+            return error LlmInvalidResponseError("Unexpected response format from Claude API", claudeResponse);
+        }
+
+        string responseText = "";
+        FunctionCall[] functionCalls = [];
+
+        ContentBlock[] contentBlocks = claudeResponse.content;
+
+        foreach ContentBlock block in contentBlocks {
+            string blockType = block.'type;
+            if blockType == "tool_use" {
+                string blockName = block.name ?: "";
+                json inputJson = block?.input;
+                functionCalls.push({
+                    name: blockName,
+                    arguments: inputJson.toJsonString()
+                });
+            } else if blockType == "text" {
+                responseText = block.text ?: "";
+            }
+        }
+
+        // Return response with function calls first, then text
+        if functionCalls.length() > 0 {
+            ChatAssistantMessage[] returnResponse = [];
+
+            // First add each function call as a separate message
+            foreach FunctionCall call in functionCalls {
+                returnResponse.push({
+                    role: ASSISTANT,
+                    function_call: call
+                });
+            }
+
+            // Then add the text response if it exists 
+            if responseText != "" {
+                returnResponse.push({
+                    role: ASSISTANT,
+                    content: responseText
+                });
+            }
+
+            return returnResponse;
+        } else {
+            return [
+                {
+                    role: ASSISTANT,
+                    content: responseText
+                }
+            ];
+        }
     }
 }
