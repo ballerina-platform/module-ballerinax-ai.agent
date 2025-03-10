@@ -30,7 +30,8 @@ public enum ROLE {
     FUNCTION = "function"
 }
 
-# Models for the OpenAI chat
+# Model types for OpenAI
+@display {label: "OpenAI Model Names"}
 public enum OPEN_AI_MODEL_NAMES {
     O3_MINI = "o3-mini",
     O3_MINI_2025_01_31 = "o3-mini-2025-01-31",
@@ -63,8 +64,9 @@ public enum OPEN_AI_MODEL_NAMES {
     GPT_3_5_TURBO_16K_0613 = "gpt-3.5-turbo-16k-0613"
 }
 
-# Models for the Claude chat
-public enum CLAUDE_MODEL_NAMES {
+# Models types for Anthropic
+@display {label: "Anthropic Model Names"}
+public enum ANTHROPIC_MODEL_NAMES {
     CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
     CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022",
     CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022",
@@ -74,35 +76,64 @@ public enum CLAUDE_MODEL_NAMES {
     CLAUDE_3_HAIKU_20240307 = "claude-3-haiku-20240307"
 }
 
-# Provides a set of configurations for controlling the behaviours when communicating with a remote HTTP endpoint.
+# Configurations for controlling the behaviours when communicating with a remote HTTP endpoint.
+@display {label: "Connection Configuration"}
 public type ConnectionConfig record {|
+
     # The HTTP version understood by the client
+    @display {label: "HTTP Version"}
     http:HttpVersion httpVersion = http:HTTP_2_0;
+
     # Configurations related to HTTP/1.x protocol
+    @display {label: "HTTP1 Settings"}
     http:ClientHttp1Settings http1Settings?;
+
     # Configurations related to HTTP/2 protocol
+    @display {label: "HTTP2 Settings"}
     http:ClientHttp2Settings http2Settings?;
+
     # The maximum time to wait (in seconds) for a response before closing the connection
+    @display {label: "Timeout"}
     decimal timeout = 60;
+
     # The choice of setting `forwarded`/`x-forwarded` header
+    @display {label: "Forwarded"}
     string forwarded = "disable";
+
     # Configurations associated with request pooling
+    @display {label: "Pool Configuration"}
     http:PoolConfiguration poolConfig?;
+
     # HTTP caching related configurations
+    @display {label: "Cache Configuration"}
     http:CacheConfig cache?;
+
     # Specifies the way of handling compression (`accept-encoding`) header
+    @display {label: "Compression"}
     http:Compression compression = http:COMPRESSION_AUTO;
+
     # Configurations associated with the behaviour of the Circuit Breaker
+    @display {label: "Circuit Breaker Configuration"}
     http:CircuitBreakerConfig circuitBreaker?;
+
     # Configurations associated with retrying
+    @display {label: "Retry Configuration"}
     http:RetryConfig retryConfig?;
+
     # Configurations associated with inbound response size limits
+    @display {label: "Response Limit Configuration"}
     http:ResponseLimitConfigs responseLimits?;
+
     # SSL/TLS-related options
+    @display {label: "Secure Socket Configuration"}
     http:ClientSecureSocket secureSocket?;
+
     # Proxy server related options
+    @display {label: "Proxy Configuration"}
     http:ProxyConfig proxy?;
+
     # Enables the inbound payload validation functionality which provided by the constraint package. Enabled by default
+    @display {label: "Payload Validation"}
     boolean validation = true;
 |};
 
@@ -173,19 +204,19 @@ public type FunctionCall record {|
     string arguments;
 |};
 
-# Claude API request message format
-type ClaudeMessage record {|
+# Anthropic API request message format
+type AnthropicMessage record {|
     # Role of the participant in the conversation (e.g., "user" or "assistant")
     string role;
     # The message content
     string content;
 |};
 
-# Claude API response format
-type ClaudeApiResponse record {|
+# Anthropic API response format
+type AnthropicApiResponse record {|
     # Unique identifier for the response message
     string id;
-    # The Claude model used for generating the response
+    # The Anthropic model used for generating the response
     string model;
     # The type of the response (e.g., "message")
     string 'type;
@@ -201,7 +232,7 @@ type ClaudeApiResponse record {|
     Usage usage;
 |};
 
-# Content block in Claude API response
+# Content block in Anthropic API response
 type ContentBlock record {|
     # The type of content (e.g., "text" or "tool_use")
     string 'type;
@@ -215,7 +246,7 @@ type ContentBlock record {|
     json input?;
 |};
 
-# Usage statistics in Claude API response
+# Usage statistics in Anthropic API response
 type Usage record {|
     # Number of tokens in the input messages
     int input_tokens;
@@ -227,8 +258,8 @@ type Usage record {|
     int? cache_read_input_tokens = ();
 |};
 
-# Claude Tool definition
-type ClaudeTool record {|
+# Anthropic Tool definition
+type AnthropicTool record {|
     # Name of the tool
     string name;
     # Description of the tool
@@ -251,15 +282,19 @@ public isolated client class OpenAiModel {
 
     # Initializes the OpenAI model with the given connection configuration and model configuration.
     #
-    # + apiKey - The authentication API key for OpenAI chat  
-    # + modelType - The OpenAI model name as constant from OPEN_AI_MODEL_NAMES enum  
-    # + serviceUrl - The base URL for the OpenAI service endpoint  
-    # + maxTokens - The maximum number of tokens to generate in the response  
+    # + apiKey - The OpenAI API key
+    # + modelType - The OpenAI model name
+    # + serviceUrl - The base URL of OpenAI API endpoint
+    # + maxTokens - The upper limit for the number of tokens in the response generated by the model
     # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Connection Configuration for OpenAI chat client
-    # + return - Error if the model initialization fails
-    public isolated function init(string apiKey, OPEN_AI_MODEL_NAMES modelType, string serviceUrl = OPENAI_SERVICE_URL,
-            int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
+    # + connectionConfig - Additional HTTP connection configuration
+    # + return - `nil` on successful initialization; otherwise, returns an `Error`
+    public isolated function init(@display {label: "API Key"} string apiKey,
+            @display {label: "Model Type"} OPEN_AI_MODEL_NAMES modelType,
+            @display {label: "Service URL"} string serviceUrl = OPENAI_SERVICE_URL,
+            @display {label: "Maximum Tokens"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+            @display {label: "Temperature"} decimal temperature = DEFAULT_TEMPERATURE,
+            @display {label: "Connection Configuration"} *ConnectionConfig connectionConfig) returns Error? {
         chat:ClientHttp1Settings?|error http1Settings = connectionConfig?.http1Settings.cloneWithType();
         if http1Settings is error {
             return error Error("Failed to clone http1Settings", http1Settings);
@@ -335,17 +370,21 @@ public isolated client class AzureOpenAiModel {
 
     # Initializes the Azure OpenAI model with the given connection configuration and model configuration.
     #
-    # + serviceUrl - The base URL for the Azure OpenAI service endpoint  
-    # + apiKey - The authentication API key for Azure OpenAI services  
+    # + serviceUrl - The base URL of Azure OpenAI API endpoint
+    # + apiKey - The Azure OpenAI API key
     # + deploymentId - The deployment identifier for the specific model deployment in Azure  
-    # + apiVersion - The Azure OpenAI API version to use for requests (e.g., "2023-05-15")  
-    # + maxTokens - The maximum number of tokens to generate in the response  
+    # + apiVersion - The Azure OpenAI API version (e.g., "2023-07-01-preview")
+    # + maxTokens - The upper limit for the number of tokens in the response generated by the model
     # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Optional connection configuration parameters (defaults to basic auth with apiKey)
-    # + return - Error if the model initialization fails
-    public isolated function init(string serviceUrl, string apiKey, string deploymentId, string apiVersion,
-            int maxTokens = DEFAULT_MAX_TOKEN_COUNT, decimal temperature = DEFAULT_TEMPERATURE,
-            *ConnectionConfig connectionConfig) returns Error? {
+    # + connectionConfig - Additional HTTP connection configuration
+    # + return - `nil` on successful initialization; otherwise, returns an `Error`
+    public isolated function init(@display {label: "Service URL"} string serviceUrl,
+            @display {label: "API Key"} string apiKey,
+            @display {label: "Deployment ID"} string deploymentId,
+            @display {label: "API Version"} string apiVersion,
+            @display {label: "Maximum Tokens"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+            @display {label: "Temperature"} decimal temperature = DEFAULT_TEMPERATURE,
+            @display {label: "Connection Configuration"} *ConnectionConfig connectionConfig) returns Error? {
 
         azure_chat:ClientHttp1Settings?|error http1Settings = connectionConfig?.http1Settings.cloneWithType();
         if http1Settings is error {
@@ -425,31 +464,35 @@ public isolated client class AzureOpenAiModel {
     }
 }
 
-# ClaudeModel is a client class that provides an interface for interacting with Claude language models.
-public isolated client class ClaudeModel {
+# AnthropicModel is a client class that provides an interface for interacting with Anthropic language models.
+public isolated client class AnthropicModel {
     *Model;
-    private final http:Client claudeClient;
+    private final http:Client AnthropicClient;
     private final string apiKey;
     private final string modelType;
     private final string apiVersion;
     private final int maxTokens;
 
-    # Initializes the Claude model with the given connection configuration and model configuration.
+    # Initializes the Anthropic model with the given connection configuration and model configuration.
     #
-    # + apiKey - The authentication API key for Claude services  
-    # + modelType - The Claude model name as constant from CLAUDE_MODEL_NAMES enum  
-    # + apiVersion - The Claude API version to use for requests (e.g., "2023-06-01")  
-    # + serviceUrl - The base URL for the Claude service endpoint  
-    # + maxTokens - The maximum number of tokens to generate in the response 
+    # + apiKey - The Anthropic API key
+    # + modelType - The Anthropic model name
+    # + apiVersion - The Anthropic API version (e.g., "2023-06-01")  
+    # + serviceUrl - The base URL of Anthropic API endpoint
+    # + maxTokens - The upper limit for the number of tokens in the response generated by the model
     # + temperature - The temperature for controlling randomness in the model's output  
-    # + connectionConfig - Connection Configuration for Claude API client
-    # + return - Error if the model initialization fails
-    public isolated function init(string apiKey, CLAUDE_MODEL_NAMES modelType, string apiVersion,
-            string serviceUrl = CLAUDE_SERVICE_URL, int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
-            decimal temperature = DEFAULT_TEMPERATURE, *ConnectionConfig connectionConfig) returns Error? {
+    # + connectionConfig - Additional HTTP connection configuration
+    # + return - `nil` on successful initialization; otherwise, returns an `Error`
+    public isolated function init(@display {label: "API Key"} string apiKey,
+            @display {label: "Model Type"} ANTHROPIC_MODEL_NAMES modelType,
+            @display {label: "API Version"} string apiVersion,
+            @display {label: "Service URL"} string serviceUrl = ANTHROPIC_SERVICE_URL,
+            @display {label: "Maximum Tokens"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+            @display {label: "Temperature"} decimal temperature = DEFAULT_TEMPERATURE,
+            @display {label: "Connection Configuration"} *ConnectionConfig connectionConfig) returns Error? {
 
         // Convert ConnectionConfig to http:ClientConfiguration
-        http:ClientConfiguration claudeConfig = {
+        http:ClientConfiguration anthropicConfig = {
             httpVersion: connectionConfig.httpVersion,
             http1Settings: connectionConfig.http1Settings ?: {},
             http2Settings: connectionConfig?.http2Settings ?: {},
@@ -466,78 +509,78 @@ public isolated client class ClaudeModel {
             validation: connectionConfig.validation
         };
 
-        http:Client|error httpClient = new http:Client(serviceUrl, claudeConfig);
+        http:Client|error httpClient = new http:Client(serviceUrl, anthropicConfig);
 
         if (httpClient is error) {
-            return error Error("Failed to initialize ClaudeModel", httpClient);
+            return error Error("Failed to initialize Anthropic Model", httpClient);
         }
 
-        self.claudeClient = httpClient;
+        self.AnthropicClient = httpClient;
         self.apiKey = apiKey;
         self.modelType = modelType;
         self.apiVersion = apiVersion;
         self.maxTokens = maxTokens;
     }
 
-    # Converts standard ChatMessage array to Claude's message format
+    # Converts standard ChatMessage array to Anthropic's message format
     #
     # + messages - List of chat messages 
     # + return - return value description
-    private isolated function mapToClaudeMessages(ChatMessage[] messages) returns ClaudeMessage[] {
-        ClaudeMessage[] claudeMessages = [];
+    private isolated function mapToAnthropicMessages(ChatMessage[] messages) returns AnthropicMessage[] {
+        AnthropicMessage[] anthropicMessages = [];
 
         foreach ChatMessage message in messages {
             if message is ChatUserMessage {
-                claudeMessages.push({
+                anthropicMessages.push({
                     role: USER,
                     content: message.content
                 });
             } else if message is ChatSystemMessage {
                 // Add a user message containing the system prompt
-                claudeMessages.push({
+                anthropicMessages.push({
                     role: USER,
                     content: string `<system>${message.content}</system>\n\n`
                 });
             } else if message is ChatAssistantMessage && message.content is string {
-                claudeMessages.push({
+                anthropicMessages.push({
                     role: ASSISTANT,
                     content: message.content ?: ""
                 });
             } else if message is ChatFunctionMessage && message.content is string {
                 // Include function results as user messages with special formatting
-                claudeMessages.push({
+                anthropicMessages.push({
                     role: USER,
                     content: string `<function_results>\nFunction: ${message.name}\nOutput: ${message.content ?: ""}\n</function_results>`
                 });
             }
         }
-        return claudeMessages;
+        return anthropicMessages;
     }
 
-    # Maps ChatCompletionFunctions to Claude's tool format
+    # Maps ChatCompletionFunctions to Anthropic's tool format
     #
     # + tools - Array of tool definitions
-    # + return - Array of Claude tool definitions
-    private isolated function mapToClaudeTools(ChatCompletionFunctions[] tools) returns ClaudeTool[] {
-        ClaudeTool[] claudeTools = [];
+    # + return - Array of Anthropic tool definitions
+    private isolated function mapToAnthropicTools(ChatCompletionFunctions[] tools) returns AnthropicTool[] {
+        AnthropicTool[] anthropicTools = [];
 
         foreach ChatCompletionFunctions tool in tools {
             JsonInputSchema schema = tool.parameters ?: {'type: "object", properties: {}};
 
-            // Create Claude tool with input_schema instead of parameters
-            ClaudeTool claudeTool = {
+            // Create Anthropic tool with input_schema instead of parameters
+            AnthropicTool AnthropicTool = {
                 name: tool.name,
                 description: tool.description,
                 input_schema: schema
             };
 
-            claudeTools.push(claudeTool);
+            anthropicTools.push(AnthropicTool);
         }
 
-        return claudeTools;
+        return anthropicTools;
     }
 
-    # Uses Claude API to generate a response
+    # Uses Anthropic API to generate a response
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion (not used in this implementation)
@@ -545,40 +588,40 @@ public isolated client class ClaudeModel {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
         returns ChatAssistantMessage[]|LlmError {
 
-        // Map messages to Claude format
-        ClaudeMessage[] claudeMessages = self.mapToClaudeMessages(messages);
+        // Map messages to Anthropic format
+        AnthropicMessage[] anthropicMessages = self.mapToAnthropicMessages(messages);
 
         // Prepare request payload
         map<json> requestPayload = {
             "model": self.modelType,
             "max_tokens": self.maxTokens,
-            "messages": claudeMessages,
+            "messages": anthropicMessages,
             "stop_sequences": stop
         };
 
         // If tools are provided, add them to the request
         if tools.length() > 0 {
-            ClaudeTool[] claudeTools = self.mapToClaudeTools(tools);
-            requestPayload["tools"] = claudeTools;
+            AnthropicTool[] anthropicTools = self.mapToAnthropicTools(tools);
+            requestPayload["tools"] = anthropicTools;
         }
 
-        // Send request to Claude API with proper headers
+        // Send request to Anthropic API with proper headers
         map<string> headers = {
             "x-api-key": self.apiKey,
             "anthropic-version": self.apiVersion,
             "content-type": "application/json"
         };
 
-        ClaudeApiResponse|error claudeResponse = self.claudeClient->/messages.post(requestPayload, headers);
+        AnthropicApiResponse|error anthropicResponse = self.AnthropicClient->/messages.post(requestPayload, headers);
 
-        if claudeResponse is error {
-            return error LlmInvalidResponseError("Unexpected response format from Claude API", claudeResponse);
+        if anthropicResponse is error {
+            return error LlmInvalidResponseError("Unexpected response format from Anthropic API", anthropicResponse);
         }
 
         string responseText = "";
         FunctionCall[] functionCalls = [];
 
-        ContentBlock[] contentBlocks = claudeResponse.content;
+        ContentBlock[] contentBlocks = anthropicResponse.content;
 
         foreach ContentBlock block in contentBlocks {
             string blockType = block.'type;
