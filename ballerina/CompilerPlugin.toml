@@ -3,7 +3,7 @@ id = "ai.agent-compiler-plugin"
 class = "io.ballerina.lib.ai.plugin.AiCompilerPlugin"
 
 [[dependency]]
-path = "../compiler-plugin/build/libs/ai.agent-compiler-plugin-0.7.12-SNAPSHOT.jar"
+path = "../compiler-plugin/build/libs/ai.agent-compiler-plugin-0.7.13-SNAPSHOT.jar"
 
 [[dependency]]
 path = "../compiler-plugin/build/libs/ballerina-to-openapi-2.3.0-20250305-110414-caaef29.jar"
