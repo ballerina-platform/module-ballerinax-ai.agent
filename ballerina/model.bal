@@ -270,6 +270,11 @@ type AnthropicTool record {|
 
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
+    # Sends a chat request to the model with the given messages and tools.
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion
+    # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
         returns ChatAssistantMessage[]|LlmError;
 };
@@ -326,7 +331,7 @@ public isolated client class OpenAiModel {
         self.modelType = modelType;
     }
 
-    # Uses function call API to determine next function to be called
+    # Sends a chat request to the OpenAI model with the given messages and tools.
     #
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
@@ -417,7 +422,7 @@ public isolated client class AzureOpenAiModel {
         self.apiVersion = apiVersion;
     }
 
-    # Uses function call API to determine next function to be called
+    # Sends a chat request to the OpenAI model with the given messages and tools.
     #
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
