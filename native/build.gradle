@@ -24,8 +24,8 @@ plugins {
 description = 'Ballerina - AI package Java Utils'
 
 dependencies {
-    implementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangVersion}"
-    implementation group: 'org.ballerinalang', name: 'ballerina-runtime', version: "${ballerinaLangVersion}"
+    implementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangTimestampedVersion}"
+    implementation group: 'org.ballerinalang', name: 'ballerina-runtime', version: "${ballerinaLangTimestampedVersion}"
     checkstyle project(":checkstyle")
     checkstyle "com.puppycrawl.tools:checkstyle:${checkstylePluginVersion}"
 }

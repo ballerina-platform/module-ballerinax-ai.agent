@@ -30,9 +30,9 @@ dependencies {
     checkstyle "com.puppycrawl.tools:checkstyle:${checkstylePluginVersion}"
 
     testImplementation project(":ai.agent-compiler-plugin")
-    testImplementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangVersion}"
-    testImplementation group: 'org.ballerinalang', name: 'ballerina-parser', version: "${ballerinaLangVersion}"
-    testImplementation group: 'org.ballerinalang', name: 'ballerina-tools-api', version: "${ballerinaLangVersion}"
+    testImplementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangTimestampedVersion}"
+    testImplementation group: 'org.ballerinalang', name: 'ballerina-parser', version: "${ballerinaLangTimestampedVersion}"
+    testImplementation group: 'org.ballerinalang', name: 'ballerina-tools-api', version: "${ballerinaLangTimestampedVersion}"
     testImplementation group: 'org.testng', name: 'testng', version: "${testngVersion}"
 }
 
@@ -96,7 +96,7 @@ jacocoTestReport {
     sourceSets project(':ai.agent-compiler-plugin').sourceSets.main
 }
 
-def distributionVersion = stripBallerinaExtensionVersion(ballerinaLangVersion)
+def distributionVersion = stripBallerinaExtensionVersion(ballerinaLangTimestampedVersion)
 def testResources = "${project.projectDir}/src/test/resources"
 def tomlVersion = stripBallerinaExtensionVersion("${project.version}")
 
