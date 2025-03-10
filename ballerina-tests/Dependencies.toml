@@ -104,6 +104,9 @@ dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.value"}
 ]
+modules = [
+	{org = "ballerina", packageName = "io", moduleName = "io"}
+]
 
 [[package]]
 org = "ballerina"
@@ -362,6 +365,7 @@ org = "ballerinax"
 name = "ai_tests"
 version = "0.7.11"
 dependencies = [
+	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
