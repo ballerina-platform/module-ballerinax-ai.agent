@@ -62,9 +62,15 @@ public isolated distinct client class FunctionCallAgent {
         if arguments is error {
             return error LlmInvalidGenerationError("Invalid arguments", arguments, name = llmResponse.name, arguments = stringArgs);
         }
+        string? id = ();
+        if llmResponse.id !is () {
+            id = llmResponse.id;
+        }
+
         return {
             name,
-            arguments
+            arguments,
+            id
         };
     }
 
@@ -112,19 +118,7 @@ public isolated distinct client class FunctionCallAgent {
 }
 
 isolated function createFunctionCallMessages(ExecutionProgress progress) returns ChatMessage[] {
-    // add the question
-    ChatMessage[] messages = [
-        {
-            role: USER,
-            content: progress.query
-        }
-    ];
-    // add the context as the first message
-    messages.unshift({
-        role: SYSTEM,
-        content: string `You can use these information if needed: ${progress.context.toString()}`
-    });
-
+    ChatMessage[] messages = [];
     // include the history
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
@@ -139,7 +133,8 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
         {
             role: FUNCTION,
             name: functionCall.name,
-            content: getObservationString(step.observation)
+            content: getObservationString(step.observation),
+            id: functionCall?.id
         });
     }
     return messages;

@@ -14,7 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ai.agent.mistral as mistral;
+
 import ballerina/http;
+import ballerina/lang.regexp;
+import ballerina/uuid;
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/openai.chat;
 
@@ -95,6 +99,11 @@ public type ConnectionConfig record {|
     boolean validation = true;
 |};
 
+public type MistralModelConfig readonly & record {|
+    string model = MISTRAL_SMALL_MODEL;
+    decimal temperature = DEFAULT_TEMPERATURE;
+|};
+
 # User chat message record.
 public type ChatUserMessage record {|
     # Role of the message
@@ -139,6 +148,8 @@ public type ChatFunctionMessage record {|
     string? content = ();
     # Name of the function when the message is a function call
     string name;
+
+    string id?;
 |};
 
 # Chat message record.
@@ -160,6 +171,8 @@ public type FunctionCall record {|
     string name;
     # Arguments of the function
     string arguments;
+
+    string id?;
 |};
 
 # Represents an extendable client for interacting with an AI model.
@@ -347,5 +360,152 @@ public isolated client class AzureOpenAiModel {
         }
         return chatAssistantMessages.length() > 0 ? chatAssistantMessages
             : invalidResponseError;
+    }
+}
+
+# MistralAiModel is a client class that provides an interface for interacting with Mistral AI language models.
+public isolated client class MistralAiModel {
+    *Model;
+    final mistral:Client llmClient;
+    private final MistralModelConfig modelConfig;
+
+    # Initializes the Mistral AI model with the given connection configuration and model configuration.
+    #
+    # + connectionConfig - Connection Configuration for Mistral AI client
+    # + modelConfig - Model configuration for Mistral AI (default is an empty record)
+    # + return - Error if the model initialization fails
+    public isolated function init(mistral:ConnectionConfig connectionConfig, MistralModelConfig modelConfig = {}) returns Error? {
+        mistral:Client|error llmClient = new (connectionConfig);
+        if llmClient is error {
+            return error Error("Failed to initialize MistralAiModel", llmClient);
+        }
+        self.llmClient = llmClient;
+        self.modelConfig = modelConfig;
+    }
+
+    # Uses function call API to determine next function to be called
+    #
+    # + messages - List of chat messages 
+    # + tools - Tool definitions to be used for the tool call
+    # + stop - Stop sequence to stop the completion
+    # + return - Function to be called, chat response or an error in-case of failures
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage[]|LlmError {
+
+        (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages = [];
+
+        foreach ChatMessage message in messages {
+            if (message is ChatUserMessage) {
+                mistral:UserMessage|error usermessage = message.cloneWithType();
+                if usermessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", usermessage);
+                }
+                mistralMessages.push(usermessage);
+            } else if (message is ChatSystemMessage) {
+                mistral:SystemMessage|error systemMessage = message.cloneWithType();
+                if systemMessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", systemMessage);
+                }
+                mistralMessages.push(systemMessage);
+            } else if (message is ChatAssistantMessage) {
+                mistral:FunctionCall functionCall = {
+                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
+                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
+                };
+                mistral:ToolCall[] toolCall = [{'function: functionCall, id: message.function_call?.id ?: self.generateToolId()}];
+                mistral:AssistantMessage mistralAssistantMessage = {
+                    role: ASSISTANT,
+                    content: message.content,
+                    toolCalls: toolCall
+                };
+                mistralMessages.push(mistralAssistantMessage);
+            } else if (message is ChatFunctionMessage) {
+                mistral:ToolMessage mistralToolMessage = {
+                    role: "tool",
+                    content: message.content,
+                    toolCallId: message.id ?: self.generateToolId()
+                };
+                mistralMessages.push(mistralToolMessage);
+            }
+        }
+        mistral:ChatCompletionRequest request = {...self.modelConfig, stop, messages: mistralMessages};
+
+        if tools.length() > 0 {
+            // mistral_ai:Function[]|error mistralFunctions =  tools.ensureType();
+
+            mistral:Function[] mistralFunctions = [];
+            foreach ChatCompletionFunctions toolFunction in tools {
+                mistral:Function mistralFunction = {
+                    name: toolFunction.name,
+                    description: toolFunction.description,
+                    strict: false,
+                    parameters: toolFunction.parameters ?: {}
+                };
+                mistralFunctions.push(mistralFunction);
+            }
+
+            mistral:Tool[] mistralTools = [];
+            foreach mistral:Function mistralfunction in mistralFunctions {
+                mistral:Tool mistralTool = {'function: mistralfunction};
+                mistralTools.push(mistralTool);
+            }
+            request.tools = mistralTools;
+        }
+
+        mistral:ChatCompletionResponse|error response = self.llmClient->/v1/chat/completions.post(request);
+
+        if response is error {
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
+
+        mistral:AssistantMessage message;
+        mistral:ChatCompletionChoice[]? choices = response.choices;
+        if choices !is () {
+            message = choices[0].message;
+            string|mistral:ContentChunk[]? content = message?.content;
+            if content is string && content.length() > 0 {
+                return [{role: ASSISTANT, content}];
+            } else if (message?.toolCalls !is ()) {
+                ChatAssistantMessage[] mistralTools = [];
+                mistral:ToolCall[]? toolCall = message?.toolCalls;
+                if toolCall !is () {
+                    foreach mistral:ToolCall toolcall in toolCall {
+                        FunctionCall functionCall = {name: toolcall.'function.name, id: toolcall.id, arguments: toolcall.'function.arguments.toString()};
+                        mistralTools.push({role: ASSISTANT, function_call: functionCall});
+                    }
+                }
+            } else if (content is mistral:TextChunk[]) {
+                string contentString = "";
+                foreach mistral:ContentChunk chunk in content {
+                    contentString = contentString + chunk.text;
+                }
+                return [{role: ASSISTANT, content: contentString}];
+            } else if (content is ()) {
+                return error LlmError("Empty response from the model when using function call API", cause = content);
+            } else if (content is mistral:ImageURLChunk[]|mistral:DocumentURLChunk[]|mistral:ReferenceChunk[]) {
+                return error LlmError("Unsupported content type", cause = content);
+            }
+        }
+        return error LlmInvalidResponseError("Empty response from the model when using function call API");
+    }
+
+    # Generates a random tool ID.
+    #
+    # + return - A random tool ID string
+    private isolated function generateToolId() returns string {
+        string randomToolID = "";
+        string randomId = uuid:createRandomUuid();
+        regexp:RegExp alphanumericPattern = re `[a-zA-Z0-9]`;
+        int iterationCount = 0;
+
+        foreach string character in randomId {
+            if (alphanumericPattern.isFullMatch(character)) {
+                randomToolID = randomToolID + character;
+                iterationCount = iterationCount + 1;
+            }
+            if (iterationCount == 9) {
+                break;
+            }
+        }
+        return randomToolID;
     }
 }
