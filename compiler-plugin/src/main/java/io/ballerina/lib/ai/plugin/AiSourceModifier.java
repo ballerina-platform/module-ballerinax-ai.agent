@@ -316,6 +316,7 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         }
         String sourceCode = member.toSourceCode();
         int numberOfNewLines = sourceCode.length() - sourceCode.replaceAll("\\R", EMPTY_STRING).length();
+        sourceCode = sourceCode.replace(member.leadingMinutiae().toString(), EMPTY_STRING);
         String modifiedSource = sourceCode.split(EQUAL_TOKEN.stringValue())[0].trim() + SEMICOLON_TOKEN.stringValue()
                 + System.lineSeparator().repeat(numberOfNewLines);
         return NodeParser.parseModuleMemberDeclaration(modifiedSource);
