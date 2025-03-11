@@ -307,6 +307,17 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "uuid"
+version = "1.9.0"
+dependencies = [
+	{org = "ballerina", name = "crypto"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "lang.int"},
+	{org = "ballerina", name = "time"}
+]
+
+[[package]]
+org = "ballerina"
 name = "xmldata"
 version = "2.9.0"
 dependencies = [
@@ -350,6 +361,7 @@ dependencies = [
 	{org = "ballerina", name = "log"},
 	{org = "ballerina", name = "mime"},
 	{org = "ballerina", name = "url"},
+	{org = "ballerina", name = "uuid"},
 	{org = "ballerina", name = "xmldata"},
 	{org = "ballerina", name = "yaml"},
 	{org = "ballerinax", name = "azure.openai.chat"},
