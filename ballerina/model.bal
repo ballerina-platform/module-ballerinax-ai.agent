@@ -604,7 +604,7 @@ public isolated client class AnthropicModel {
         };
 
         // Only add stop_sequences if stop is not empty
-        if stop != () {
+        if stop !is () {
             requestPayload["stop_sequences"] = [stop];
         }
 
