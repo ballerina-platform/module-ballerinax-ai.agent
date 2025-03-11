@@ -32,9 +32,10 @@ public isolated client class ChatClient {
 
     # Handles incoming chat messages by sending a request to the chat service.
     #
+    # + agentId - The ID of the agent handling the chat message.
     # + request - The chat request message to be sent.
     # + return - A `ChatRespMessage` containing the response from the chat service, or an `error` if the request fails.
-    isolated remote function onChatMessage(ChatReqMessage request) returns ChatRespMessage|error {
-        return self.httpClient->/chatMessage.post(request);
+    isolated remote function sendChatMessage(string agentId, ChatReqMessage request) returns ChatRespMessage|error {
+        return self.httpClient->/[agentId]/chatMessage.post(request);
     }
 }

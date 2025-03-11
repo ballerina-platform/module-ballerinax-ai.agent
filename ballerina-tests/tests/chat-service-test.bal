@@ -24,6 +24,6 @@ function testAgentChatOnChatMessage() returns error? {
         sessionId: "1",
         message: "Hello Ballerina!"
     };
-    agent:ChatRespMessage resp = check chatClient->onChatMessage(req);
+    agent:ChatRespMessage resp = check chatClient->sendChatMessage("chatService", req);
     test:assertEquals(resp.message, "1: Hello Ballerina!", "Invalid response message");
 }

@@ -18,7 +18,7 @@ import ballerinax/ai.agent;
 
 listener agent:Listener chatListener = new ();
 
-service agent:ChatService on chatListener {
+service "chatService" on chatListener {
     remote function onChatMessage(agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
         return {
             message: request.sessionId + ": " + request.message
