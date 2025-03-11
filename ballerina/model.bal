@@ -884,12 +884,22 @@ public isolated client class MistralAiModel {
                         id: message.function_call?.id ?: self.generateToolId()
                     }
                 ];
-                mistral:AssistantMessage mistralAssistantMessage = {
-                    role: ASSISTANT,
-                    content: message.content,
-                    toolCalls: toolCall
-                };
-                mistralMessages.push(mistralAssistantMessage);
+
+                if functionCall.name == "" {
+                    mistral:AssistantMessage mistralAssistantMessage = {
+                        role: ASSISTANT,
+                        content: message.content,
+                        toolCalls: ()
+                    };
+                    mistralMessages.push(mistralAssistantMessage);
+                } else {
+                    mistral:AssistantMessage mistralAssistantMessage = {
+                        role: ASSISTANT,
+                        content: message.content,
+                        toolCalls: toolCall
+                    };
+                    mistralMessages.push(mistralAssistantMessage);
+                }
             } else if message is ChatFunctionMessage {
                 mistral:ToolMessage mistralToolMessage = {
                     role: "tool",
