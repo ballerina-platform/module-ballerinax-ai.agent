@@ -600,9 +600,13 @@ public isolated client class AnthropicModel {
         map<json> requestPayload = {
             "model": self.modelType,
             "max_tokens": self.maxTokens,
-            "messages": anthropicMessages,
-            "stop_sequences": stop
+            "messages": anthropicMessages
         };
+
+        // Only add stop_sequences if stop is not empty
+        if stop != () {
+            requestPayload["stop_sequences"] = [stop];
+        }
 
         // If tools are provided, add them to the request
         if tools.length() > 0 {
