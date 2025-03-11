@@ -15,11 +15,9 @@
 // under the License.
 
 import ballerina/http;
-import ballerina/io;
 
 service / on new http:Listener(9090) {
     resource function post v1/chat/completions(map<json> payload) returns ChatCompletionResponse {
-        io:println("Payload chat: ", payload);
         AssistantMessage message = {
             role: "assistant",
             toolCalls: null,

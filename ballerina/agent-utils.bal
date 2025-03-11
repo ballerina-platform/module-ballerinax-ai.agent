@@ -64,7 +64,7 @@ public type LlmToolResponse record {|
     string name;
     # Input to the tool
     map<json>? arguments = {};
-    # identifier for the tool call
+    # Identifier for the tool call
     string id?;
 |};
 

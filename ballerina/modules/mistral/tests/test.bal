@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/io;
 import ballerina/os;
 import ballerina/test;
 
@@ -45,10 +44,7 @@ isolated function testChatCompletion() returns error? {
         model: "mistral-small-latest"
     };
 
-    io:println("Sending chat completion request: ", chatRequest);
-
     ChatCompletionResponse response = check mistralAiClient->/v1/chat/completions.post(chatRequest);
-    io:println("Server response: ", response);
     ChatCompletionChoice[]? choices = response.choices;
     if choices is ChatCompletionChoice[] {
         AssistantMessage? message = choices[0].message;
