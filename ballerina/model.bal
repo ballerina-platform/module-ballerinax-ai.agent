@@ -168,11 +168,6 @@ public type ConnectionConfig record {|
     boolean validation = true;
 |};
 
-public type MistralModelConfig readonly & record {|
-    string model = MISTRAL_SMALL_MODEL;
-    decimal temperature = DEFAULT_TEMPERATURE;
-|};
-
 # User chat message record.
 public type ChatUserMessage record {|
     # Role of the message
@@ -223,6 +218,9 @@ public type ChatFunctionMessage record {|
 
 # Chat message record.
 public type ChatMessage ChatUserMessage|ChatSystemMessage|ChatAssistantMessage|ChatFunctionMessage;
+
+# Mistral message record.
+type MistralMessages mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage;
 
 # Function definitions for function calling API.
 public type ChatCompletionFunctions record {|
@@ -772,13 +770,7 @@ public isolated client class MistralAiModel {
     # + return - Returns an array of ChatAssistantMessage or an LlmError in case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
     returns ChatAssistantMessage[]|LlmError {
-        (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages = [];
-
-        LlmError? mappedResponse = self.mapMistralMessageRecords(messages, mistralMessages);
-        if mappedResponse is error {
-            return mappedResponse;
-        }
-
+        MistralMessages[] mistralMessages = check self.mapMistralMessageRecords(messages);
         mistral:ChatCompletionRequest request = {model: self.modelType, stop, messages: mistralMessages};
 
         if tools.length() > 0 {
@@ -865,17 +857,15 @@ public isolated client class MistralAiModel {
     # Maps an array of `ChatMessage` records to corresponding Mistral message records.
     #
     # + messages - Array of chat messages to be converted
-    # + mistralMessages - Array to store the converted Mistral message records
-    # + return - An `LlmError` if any conversion fails, or nil if successful
-    private isolated function mapMistralMessageRecords(ChatMessage[] messages,
-            (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages)
-    returns LlmError? {
+    # + return - An `LlmError` or an array of Mistral message records
+    private isolated function mapMistralMessageRecords(ChatMessage[] messages) returns MistralMessages[]|LlmError {
+        MistralMessages[] mistralMessages = [];
         foreach ChatMessage message in messages {
             if message is ChatUserMessage {
-                mistral:UserMessage|error usermessage = message.cloneWithType();
-                if usermessage is error {
-                    return error LlmError("Failed to convert user message to MistralMessage", usermessage);
-                }
+                mistral:UserMessage usermessage = {
+                    role: USER,
+                    content: message.content
+                };
                 mistralMessages.push(usermessage);
             } else if message is ChatSystemMessage {
                 mistral:SystemMessage|error systemMessage = message.cloneWithType();
@@ -909,5 +899,6 @@ public isolated client class MistralAiModel {
                 mistralMessages.push(mistralToolMessage);
             }
         }
+        return mistralMessages;
     }
 }

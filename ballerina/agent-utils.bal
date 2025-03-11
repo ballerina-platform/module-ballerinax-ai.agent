@@ -254,14 +254,6 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         ChatUserMessage userMessage = {role: USER, content: query};
         updateMemory(memory, userMessage);
 
-        // ChatSystemMessage systemMessage = {role: SYSTEM, content: context.toString()};
-        // if (agent is ReActAgent) {
-        //     ChatSystemMessage reactSystemMessage = {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`};
-        //     updateMemory(memory, reactSystemMessage);
-        // } else {
-        //     updateMemory(memory, systemMessage);
-        // }
-
         ChatSystemMessage reactSystemMessage = agent is ReActAgent
             ? {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`}
             : {role: SYSTEM, content: context.toString()};

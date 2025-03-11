@@ -33,7 +33,7 @@ service / on new http:Listener(9090) {
             message: message
         };
 
-        ChatCompletionResponse response = {
+        return {
             id: "cmpl-e5cc70bb28c444948073e77776eb30ef",
             model: "gpt-4o-mini-2024-07-18",
             'object: "chat.completion",
@@ -43,6 +43,5 @@ service / on new http:Listener(9090) {
             ],
             created: 1702256327
         };
-        return response;
     }
 };
