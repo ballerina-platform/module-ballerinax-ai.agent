@@ -100,22 +100,24 @@ public isolated distinct client class Agent {
         if answer is string {
             return answer;
         }
-        check validateExecutionSteps(result.steps);
-        return error MaxIterationExceededError("Maximum iteration limit exceeded while processing the query.",
-            steps = result.steps);
+        return constructError(result.steps, self.maxIter);
     }
 }
 
-// Validates whether the execution steps contain only one memory error.
-// If there is exactly one memory error, it is returned; otherwise, null is returned.
-isolated function validateExecutionSteps((ExecutionResult|ExecutionError)[] steps) returns MemoryError? {
-    if steps.length() != 1 {
-        return;
+isolated function constructError((ExecutionResult|ExecutionError)[] steps, int maxIter) returns Error {
+    if (steps.length() == maxIter) {
+        return error MaxIterationExceededError("Maximum iteration limit exceeded while processing the query.",
+            steps = steps);
     }
-    ExecutionResult|ExecutionError step = steps.pop();
-    if step is ExecutionError && step.'error is MemoryError {
-        return <MemoryError>step.'error;
+    // Validates whether the execution steps contain only one memory error.
+    // If there is exactly one memory error, it is returned; otherwise, null is returned.
+    if steps.length() == 1 {
+        ExecutionResult|ExecutionError step = steps.pop();
+        if step is ExecutionError && step.'error is MemoryError {
+            return <MemoryError>step.'error;
+        }
     }
+    return error Error("Unable to obtain valid answer from the agent", steps = steps);
 }
 
 isolated function getFomatedSystemPrompt(SystemPrompt systemPrompt) returns string {
