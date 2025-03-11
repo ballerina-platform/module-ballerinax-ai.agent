@@ -131,7 +131,7 @@ public type ConnectionConfig record {|
     # The HTTP version understood by the client
     http:HttpVersion httpVersion = http:HTTP_2_0;
     # Configurations related to HTTP/1.x protocol
-    ClientHttp1Settings http1Settings?;
+    http:ClientHttp1Settings http1Settings?;
     # Configurations related to HTTP/2 protocol
     http:ClientHttp2Settings http2Settings?;
     # The maximum time to wait (in seconds) for a response before closing the connection

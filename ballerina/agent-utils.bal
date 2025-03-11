@@ -252,15 +252,20 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         int iter = 0;
 
         ChatUserMessage userMessage = {role: USER, content: query};
-        ChatSystemMessage systemMessage = {role: SYSTEM, content: context.toString()};
         updateMemory(memory, userMessage);
 
-        if (agent is ReActAgent) {
-            ChatSystemMessage reactSystemMessage = {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`};
-            updateMemory(memory, reactSystemMessage);
-        } else {
-            updateMemory(memory, systemMessage);
-        }
+        // ChatSystemMessage systemMessage = {role: SYSTEM, content: context.toString()};
+        // if (agent is ReActAgent) {
+        //     ChatSystemMessage reactSystemMessage = {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`};
+        //     updateMemory(memory, reactSystemMessage);
+        // } else {
+        //     updateMemory(memory, systemMessage);
+        // }
+
+        ChatSystemMessage reactSystemMessage = agent is ReActAgent
+            ? {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`}
+            : {role: SYSTEM, content: context.toString()};
+        updateMemory(memory, reactSystemMessage);
 
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
             if iter == maxIter {
@@ -358,10 +363,19 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
         LlmToolResponse tool = step.tool;
         anydata|error observation = step?.observation;
 
-        ChatAssistantMessage assistantMessage = {role: ASSISTANT, function_call: {name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}};
+        ChatAssistantMessage assistantMessage = {
+            role: ASSISTANT,
+            function_call: {name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}
+        };
         updateMemory(memory, assistantMessage);
 
-        ChatFunctionMessage functionMessage = {role: FUNCTION, name: tool.name, content: observation is error ? observation.toString() : observation is () ? "" : observation.toString(), id: tool.id};
+        ChatFunctionMessage functionMessage = {
+            role: FUNCTION,
+            name: tool.name,
+            content: observation is error ?
+                observation.toString() : observation is () ? "" : observation.toString(),
+            id: tool.id
+        };
         updateMemory(memory, functionMessage);
     }
 }

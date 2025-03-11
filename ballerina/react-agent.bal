@@ -73,8 +73,8 @@ public isolated client class ReActAgent {
                 });
             } else {
                 messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(),id:res.id}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation),id: res.id});
+                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
+                {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
 

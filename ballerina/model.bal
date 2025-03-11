@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ai.agent.mistral as mistral;
+import ai.agent.mistral;
 
 import ballerina/http;
 import ballerina/lang.regexp;
@@ -78,6 +78,33 @@ public enum ANTHROPIC_MODEL_NAMES {
     CLAUDE_3_OPUS_20240229 = "claude-3-opus-20240229",
     CLAUDE_3_SONNET_20240229 = "claude-3-sonnet-20240229",
     CLAUDE_3_HAIKU_20240307 = "claude-3-haiku-20240307"
+}
+
+# Models types for Mistral AI
+@display {label: "Mistral Model Names"}
+public enum MISTRAL_MODEL_NAMES {
+    MINISTRAL_3B_2410 = "ministral-3b-2410",
+    MINISTRAL_8B_2410 = "ministral-8b-2410",
+    OPEN_MISTRAL_7B = "open-mistral-7b",
+    OPEN_MISTRAL_NEMO = "open-mistral-nemo",
+    OPEN_MIXTRAL_8X7B = "open-mixtral-8x7b",
+    OPEN_MIXTRAL_8X22B = "open-mixtral-8x22b",
+    MISTRAL_SMALL_2402 = "mistral-small-2402",
+    MISTRAL_SMALL_2409 = "mistral-small-2409",
+    MISTRAL_SMALL_2501 = "mistral-small-2501",
+    MISTRAL_MEDIUM_2312 = "mistral-medium-2312",
+    MISTRAL_LARGE_2402 = "mistral-large-2402",
+    MISTRAL_LARGE_2407 = "mistral-large-2407",
+    MISTRAL_LARGE_2411 = "mistral-large-2411",
+    PIXTRAL_LARGE_2411 = "pixtral-large-2411",
+    CODESTRAL_2405 = "codestral-2405",
+    CODESTRAL_2501 = "codestral-2501",
+    CODESTRAL_MAMBA_2407 = "codestral-mamba-2407",
+    PIXTRAL_12B_2409 = "pixtral-12b-2409",
+    MISTRAL_SABA_2502 = "mistral-saba-2502",
+    MISTRAL_SMALL_MODEL = "mistral-small-latest",
+    MISTRAL_MEDIUM_MODEL = "mistral-medium-latest",
+    MISTRAL_LARGE_MODEL = "mistral-large-latest"
 }
 
 # Configurations for controlling the behaviours when communicating with a remote HTTP endpoint.
@@ -190,7 +217,7 @@ public type ChatFunctionMessage record {|
     string? content = ();
     # Name of the function when the message is a function call
     string name;
-
+    # An identifier for the function call
     string id?;
 |};
 
@@ -213,7 +240,7 @@ public type FunctionCall record {|
     string name;
     # Arguments of the function
     string arguments;
-
+    # An identifier for the function call
     string id?;
 |};
 
@@ -690,21 +717,51 @@ public isolated client class AnthropicModel {
 # MistralAiModel is a client class that provides an interface for interacting with Mistral AI language models.
 public isolated client class MistralAiModel {
     *Model;
-    final mistral:Client llmClient;
-    private final MistralModelConfig modelConfig;
+    private final mistral:Client llmClient;
+    private final string modelType;
+    private final string apiKey;
 
-    # Initializes the Mistral AI model with the given connection configuration and model configuration.
+    # Initializes the Mistral AI model with the given configuration parameters.
     #
-    # + connectionConfig - Connection Configuration for Mistral AI client
-    # + modelConfig - Model configuration for Mistral AI (default is an empty record)
+    # + apiKey - The API key for authenticating with the Mistral AI service
+    # + modelType - The Mistral model type to use from available model names
+    # + maxTokens - The maximum number of tokens to generate
+    # + temperature - Controls the randomness of the output
+    # + connectionConfig - Connection configuration parameters
     # + return - Error if the model initialization fails
-    public isolated function init(mistral:ConnectionConfig connectionConfig, MistralModelConfig modelConfig = {}) returns Error? {
-        mistral:Client|error llmClient = new (connectionConfig);
+    public isolated function init(@display {label: "API Key"} string apiKey,
+            @display {label: "Model Type"} MISTRAL_MODEL_NAMES modelType,
+            @display {label: "Maximum Tokens"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+            @display {label: "Temperature"} decimal temperature = DEFAULT_TEMPERATURE,
+            @display {label: "Connection Configuration"} *ConnectionConfig connectionConfig
+    ) returns Error? {
+
+        mistral:ConnectionConfig mistralConfig = {
+            auth: {token: apiKey},
+            httpVersion: connectionConfig.httpVersion,
+            http1Settings: connectionConfig.http1Settings ?: {},
+            http2Settings: connectionConfig?.http2Settings ?: {},
+            timeout: connectionConfig.timeout,
+            forwarded: connectionConfig.forwarded,
+            poolConfig: connectionConfig?.poolConfig,
+            cache: connectionConfig?.cache ?: {},
+            compression: connectionConfig.compression,
+            circuitBreaker: connectionConfig?.circuitBreaker,
+            retryConfig: connectionConfig?.retryConfig,
+            responseLimits: connectionConfig?.responseLimits ?: {},
+            secureSocket: connectionConfig?.secureSocket,
+            proxy: connectionConfig?.proxy,
+            validation: connectionConfig.validation
+        };
+
+        mistral:Client|error llmClient = new (mistralConfig);
         if llmClient is error {
             return error Error("Failed to initialize MistralAiModel", llmClient);
         }
+
         self.llmClient = llmClient;
-        self.modelConfig = modelConfig;
+        self.modelType = modelType;
+        self.apiKey = apiKey;
     }
 
     # Uses function call API to determine next function to be called
@@ -712,50 +769,19 @@ public isolated client class MistralAiModel {
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
-    # + return - Function to be called, chat response or an error in-case of failures
-    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage[]|LlmError {
-
+    # + return - Returns an array of ChatAssistantMessage or an LlmError in case of failures
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
+    returns ChatAssistantMessage[]|LlmError {
         (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages = [];
 
-        foreach ChatMessage message in messages {
-            if (message is ChatUserMessage) {
-                mistral:UserMessage|error usermessage = message.cloneWithType();
-                if usermessage is error {
-                    return error LlmError("Failed to convert user message to MistralMessage", usermessage);
-                }
-                mistralMessages.push(usermessage);
-            } else if (message is ChatSystemMessage) {
-                mistral:SystemMessage|error systemMessage = message.cloneWithType();
-                if systemMessage is error {
-                    return error LlmError("Failed to convert user message to MistralMessage", systemMessage);
-                }
-                mistralMessages.push(systemMessage);
-            } else if (message is ChatAssistantMessage) {
-                mistral:FunctionCall functionCall = {
-                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
-                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
-                };
-                mistral:ToolCall[] toolCall = [{'function: functionCall, id: message.function_call?.id ?: self.generateToolId()}];
-                mistral:AssistantMessage mistralAssistantMessage = {
-                    role: ASSISTANT,
-                    content: message.content,
-                    toolCalls: toolCall
-                };
-                mistralMessages.push(mistralAssistantMessage);
-            } else if (message is ChatFunctionMessage) {
-                mistral:ToolMessage mistralToolMessage = {
-                    role: "tool",
-                    content: message.content,
-                    toolCallId: message.id ?: self.generateToolId()
-                };
-                mistralMessages.push(mistralToolMessage);
-            }
+        LlmError? mappedResponse = self.mapMistralMessageRecords(messages, mistralMessages);
+        if mappedResponse is error {
+            return mappedResponse;
         }
-        mistral:ChatCompletionRequest request = {...self.modelConfig, stop, messages: mistralMessages};
+
+        mistral:ChatCompletionRequest request = {model: self.modelType, stop, messages: mistralMessages};
 
         if tools.length() > 0 {
-            // mistral_ai:Function[]|error mistralFunctions =  tools.ensureType();
-
             mistral:Function[] mistralFunctions = [];
             foreach ChatCompletionFunctions toolFunction in tools {
                 mistral:Function mistralFunction = {
@@ -788,24 +814,27 @@ public isolated client class MistralAiModel {
             string|mistral:ContentChunk[]? content = message?.content;
             if content is string && content.length() > 0 {
                 return [{role: ASSISTANT, content}];
-            } else if (message?.toolCalls !is ()) {
-                ChatAssistantMessage[] mistralTools = [];
+            } else if message?.toolCalls !is () {
                 mistral:ToolCall[]? toolCall = message?.toolCalls;
                 if toolCall !is () {
                     foreach mistral:ToolCall toolcall in toolCall {
-                        FunctionCall functionCall = {name: toolcall.'function.name, id: toolcall.id, arguments: toolcall.'function.arguments.toString()};
-                        mistralTools.push({role: ASSISTANT, function_call: functionCall});
+                        FunctionCall functionCall = {
+                            name: toolcall.'function.name,
+                            id: toolcall.id,
+                            arguments: toolcall.'function.arguments.toString()
+                        };
+                        return [({role: ASSISTANT, function_call: functionCall})];
                     }
                 }
-            } else if (content is mistral:TextChunk[]) {
+            } else if content is mistral:TextChunk[] {
                 string contentString = "";
                 foreach mistral:ContentChunk chunk in content {
                     contentString = contentString + chunk.text;
                 }
                 return [{role: ASSISTANT, content: contentString}];
-            } else if (content is ()) {
+            } else if content is () {
                 return error LlmError("Empty response from the model when using function call API", cause = content);
-            } else if (content is mistral:ImageURLChunk[]|mistral:DocumentURLChunk[]|mistral:ReferenceChunk[]) {
+            } else if content is mistral:ImageURLChunk[]|mistral:DocumentURLChunk[]|mistral:ReferenceChunk[] {
                 return error LlmError("Unsupported content type", cause = content);
             }
         }
@@ -822,14 +851,63 @@ public isolated client class MistralAiModel {
         int iterationCount = 0;
 
         foreach string character in randomId {
-            if (alphanumericPattern.isFullMatch(character)) {
+            if alphanumericPattern.isFullMatch(character) {
                 randomToolID = randomToolID + character;
                 iterationCount = iterationCount + 1;
             }
-            if (iterationCount == 9) {
+            if iterationCount == 9 {
                 break;
             }
         }
         return randomToolID;
+    }
+
+    # Maps an array of `ChatMessage` records to corresponding Mistral message records.
+    #
+    # + messages - Array of chat messages to be converted
+    # + mistralMessages - Array to store the converted Mistral message records
+    # + return - An `LlmError` if any conversion fails, or nil if successful
+    private isolated function mapMistralMessageRecords(ChatMessage[] messages,
+            (mistral:AssistantMessage|mistral:SystemMessage|mistral:UserMessage|mistral:ToolMessage)[] mistralMessages)
+    returns LlmError? {
+        foreach ChatMessage message in messages {
+            if message is ChatUserMessage {
+                mistral:UserMessage|error usermessage = message.cloneWithType();
+                if usermessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", usermessage);
+                }
+                mistralMessages.push(usermessage);
+            } else if message is ChatSystemMessage {
+                mistral:SystemMessage|error systemMessage = message.cloneWithType();
+                if systemMessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", systemMessage);
+                }
+                mistralMessages.push(systemMessage);
+            } else if message is ChatAssistantMessage {
+                mistral:FunctionCall functionCall = {
+                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
+                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
+                };
+                mistral:ToolCall[] toolCall = [
+                    {
+                        'function: functionCall,
+                        id: message.function_call?.id ?: self.generateToolId()
+                    }
+                ];
+                mistral:AssistantMessage mistralAssistantMessage = {
+                    role: ASSISTANT,
+                    content: message.content,
+                    toolCalls: toolCall
+                };
+                mistralMessages.push(mistralAssistantMessage);
+            } else if message is ChatFunctionMessage {
+                mistral:ToolMessage mistralToolMessage = {
+                    role: "tool",
+                    content: message.content,
+                    toolCallId: message.id ?: self.generateToolId()
+                };
+                mistralMessages.push(mistralToolMessage);
+            }
+        }
     }
 }

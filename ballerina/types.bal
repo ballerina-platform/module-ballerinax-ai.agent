@@ -41,5 +41,3 @@ public type ChatClientConfiguration record {|
 public type ChatService distinct service object {
     remote function onChatMessage(ChatReqMessage chatRequest) returns ChatRespMessage|error;
 };
-
-
