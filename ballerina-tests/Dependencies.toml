@@ -320,7 +320,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "yaml"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
 	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "io"},
