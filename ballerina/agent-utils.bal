@@ -64,6 +64,8 @@ public type LlmToolResponse record {|
     string name;
     # Input to the tool
     map<json>? arguments = {};
+    # identifier for the tool call
+    string id?;
 |};
 
 # Output from executing an action
@@ -252,7 +254,13 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         ChatUserMessage userMessage = {role: USER, content: query};
         ChatSystemMessage systemMessage = {role: SYSTEM, content: context.toString()};
         updateMemory(memory, userMessage);
-        updateMemory(memory, systemMessage);
+        
+        if (agent is ReActAgent) {
+            ChatSystemMessage reactSystemMessage = {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`};
+            updateMemory(memory, reactSystemMessage);
+        } else {
+            updateMemory(memory, systemMessage);
+        }
 
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
             if iter == maxIter {
@@ -350,10 +358,10 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
         LlmToolResponse tool = step.tool;
         anydata|error observation = step?.observation;
 
-        ChatAssistantMessage assistantMessage = {role: ASSISTANT, function_call: {name: tool.name, arguments: tool.arguments.toJsonString()}};
+        ChatAssistantMessage assistantMessage = {role: ASSISTANT, function_call: {name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}};
         updateMemory(memory, assistantMessage);
 
-        ChatFunctionMessage functionMessage = {role: FUNCTION, name: tool.name, content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()};
+        ChatFunctionMessage functionMessage = {role: FUNCTION, name: tool.name, content: observation is error ? observation.toString() : observation is () ? "" : observation.toString(), id: tool.id};
         updateMemory(memory, functionMessage);
     }
 }

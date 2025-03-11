@@ -28,6 +28,9 @@ const OPENAPI_PATTERN_DATE_TIME = "yyyy-MM-dd'T'HH:mm:ssZ";
 // openai
 const OPENAI_SERVICE_URL = "https://api.openai.com/v1";
 
+//deepseek
+const DEEPSEEK_SERVICE_URL = "https://api.deepseek.com";
+
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";

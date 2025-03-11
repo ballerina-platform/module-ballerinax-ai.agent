@@ -17,6 +17,8 @@
 import ballerina/http;
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/openai.chat;
+import ballerina/uuid;
+import ballerina/lang.regexp;
 
 // TODO: change the configs to extend the config record from the respective clients.
 // requirs using never prompt?; never stop? to prevent setting those during initialization
@@ -28,6 +30,11 @@ public enum ROLE {
     USER = "user",
     ASSISTANT = "assistant",
     FUNCTION = "function"
+}
+
+public enum DEEPSEEK_MODEL {
+    DEEPSEEK_CHAT = "deepseek-chat",
+    DEEPSEEK_REASONER = "deepseek-reasoner"
 }
 
 # Models for the OpenAI chat
@@ -95,6 +102,78 @@ public type ConnectionConfig record {|
     boolean validation = true;
 |};
 
+
+public type DeepseekChatResponseFunction record {
+    string name;
+    string arguments;
+};
+
+type DeepseekChatResponseToolCall record {
+    string id;
+    string 'type;
+    DeepseekChatResponseFunction 'function;
+};
+
+type DeepseekChatResponseMessage record {
+    string role;
+    string? content = ();
+    DeepseekChatResponseToolCall[]? tool_calls = ();
+};
+
+type DeepseekChatResponseChoice record {
+    DeepseekChatResponseMessage message;
+};
+
+type DeepSeekChatCompletionResponse record {
+    string id;
+    DeepseekChatResponseChoice[] choices;
+};
+
+type DeepseekChatSystemMessage record {|
+    string content;
+    string role = "system";
+|};
+
+type DeepseekChatAssistantMessage record {
+    string? content = ();
+    string role = "assistant";
+    DeepseekChatResponseToolCall[]? tool_calls = ();
+};
+
+type DeepseekChatToolMessage record {|
+    string content;
+    string role = "tool";
+    string tool_call_id;
+|};
+
+type DeepseekChatUserMessage record {|
+    string content;
+    string role = "user";
+|};
+
+type DeepSeekChatRequestMessages DeepseekChatSystemMessage|DeepseekChatUserMessage|DeepseekChatAssistantMessage|DeepseekChatToolMessage;
+type DeepseekFunction record {|
+    string name;
+    string description;
+    JsonInputSchema parameters?;
+|};
+
+type DeepseekTool record {|
+    string 'type = "function";
+    DeepseekFunction 'function;
+|};
+
+type DeepSeekChatCompletionRequest record {|
+    DeepSeekChatRequestMessages[] messages;
+    DEEPSEEK_MODEL model;
+    int? max_tokens;
+    string|string[]? stop=();
+    int? temperature = 1;
+    DeepseekTool[]? tools=();
+|};
+
+
+
 # User chat message record.
 public type ChatUserMessage record {|
     # Role of the message
@@ -139,6 +218,8 @@ public type ChatFunctionMessage record {|
     string? content = ();
     # Name of the function when the message is a function call
     string name;
+
+    string id?;
 |};
 
 # Chat message record.
@@ -160,6 +241,8 @@ public type FunctionCall record {|
     string name;
     # Arguments of the function
     string arguments;
+
+    string id?;
 |};
 
 # Represents an extendable client for interacting with an AI model.
@@ -347,5 +430,173 @@ public isolated client class AzureOpenAiModel {
         }
         return chatAssistantMessages.length() > 0 ? chatAssistantMessages
             : invalidResponseError;
+    }
+}
+
+
+public isolated client class DeepseekModel {
+    *Model;
+    private final http:Client deepseekClient;
+    private final int maxTokens;
+    private final DEEPSEEK_MODEL model; 
+
+    public isolated function init(string apiKey, DEEPSEEK_MODEL model, int maxTokens=DEFAULT_MAX_TOKEN_COUNT, decimal temperateure = DEFAULT_TEMPERATURE, string serviceUrl= DEEPSEEK_SERVICE_URL ,*ConnectionConfig connectionConfig) returns Error?{
+        
+        http:ClientConfiguration deepseekConfig  = {
+            auth: {
+                token: apiKey
+            },
+            httpVersion: connectionConfig.httpVersion,
+            http1Settings: connectionConfig.http1Settings ?: {},
+            http2Settings: connectionConfig?.http2Settings ?: {},
+            timeout: connectionConfig.timeout,
+            forwarded: connectionConfig.forwarded,
+            poolConfig: connectionConfig?.poolConfig,
+            cache: connectionConfig?.cache ?: {},
+            compression: connectionConfig.compression,
+            circuitBreaker: connectionConfig?.circuitBreaker,
+            retryConfig: connectionConfig?.retryConfig,
+            responseLimits: connectionConfig?.responseLimits ?: {},
+            secureSocket: connectionConfig?.secureSocket,
+            proxy: connectionConfig?.proxy,
+            validation: connectionConfig.validation
+        };
+
+        http:Client|error httpClient = new http:Client(serviceUrl, deepseekConfig);    
+
+        if (httpClient is error) {
+            return error Error("Failed to initialize Deepseek client", httpClient);
+        }
+
+        self.maxTokens = maxTokens;
+        self.model = model;
+        self.deepseekClient = httpClient;
+    }
+
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage[]|LlmError {
+        DeepSeekChatRequestMessages[] deepseekPayloadMessages = [];
+        
+        foreach ChatMessage message in messages {
+            if message is ChatUserMessage {
+                DeepseekChatUserMessage|error deepseekUserMessage =  message.cloneWithType();
+                if deepseekUserMessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", deepseekUserMessage);
+                }
+                deepseekPayloadMessages.push(deepseekUserMessage);
+            } else if message is ChatSystemMessage {
+                DeepseekChatSystemMessage|error deepseekSysteMessage = message.cloneWithType();
+                if deepseekSysteMessage is error {
+                    return error LlmError("Failed to convert user message to MistralMessage", deepseekSysteMessage);
+                } 
+                deepseekPayloadMessages.push(deepseekSysteMessage);
+            } else if message is ChatAssistantMessage {
+                DeepseekChatResponseFunction functionCall = {
+                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
+                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
+                };
+
+                DeepseekChatResponseToolCall[] tool_calls = [{'function: functionCall, id:message.function_call?.id ?: self.generateToolId(), 'type: "function"}];
+                DeepseekChatAssistantMessage deepseekAssistantMessage = {
+                    role: "assistant",
+                    content: message.content,
+                    tool_calls: tool_calls
+                };
+
+                // DeepseekChatAssistantMessage deepseekAssistantMessage = {
+                //     role: "assistant"
+                // };
+                // if message.content is string {
+                //     deepseekAssistantMessage.content = message.content;
+                // } else {
+                //     deepseekAssistantMessage.content = string `{name: ${message?.function_call?.name ?: ""}, arguments: ${message?.function_call?.arguments ?: ""}}`;
+                // }
+                deepseekPayloadMessages.push(deepseekAssistantMessage);
+            } else if message is ChatFunctionMessage {
+                DeepseekChatToolMessage deepseekToolMessage = {
+                    role: "tool",
+                    content: message?.content ?: "",
+                    tool_call_id: message.id ?: self.generateToolId()
+                };
+                deepseekPayloadMessages.push(deepseekToolMessage);
+            }
+        }
+
+       
+        DeepSeekChatCompletionRequest request = {
+            // messages: from var message in messages 
+            //     select message.role == "function" ? 
+            //         {role: "tool", content: message.content, "tool_call_id": (<ChatFunctionMessage>message).id ?: "hsdfbc"} : 
+            //         {role: message.role, content: message.content},
+            messages:deepseekPayloadMessages,
+            model: self.model,
+            max_tokens: self.maxTokens,
+            stop: stop
+        };
+
+
+        //io:println("Request: ", request);
+
+        if tools.length() > 0 {
+            DeepseekFunction[] deepseekFunctions = [];
+            foreach ChatCompletionFunctions toolFunction in tools {
+                DeepseekFunction deepseekFunction = {
+                    name: toolFunction.name,
+                    description: toolFunction.description,
+                    parameters: toolFunction.parameters ?: {}
+                };
+                deepseekFunctions.push(deepseekFunction);
+            }
+
+            DeepseekTool[] deepseekTools = [];
+            foreach DeepseekFunction deepseekFunction in deepseekFunctions {
+                DeepseekTool deepseekTool = {'function: deepseekFunction};
+                deepseekTools.push(deepseekTool);
+            }
+            request.tools = deepseekTools;
+        }
+
+        DeepSeekChatCompletionResponse|error response = self.deepseekClient->/chat/completions.post(request);
+        if response is error{
+            return error LlmConnectionError("Error while connecting to the model", response);
+        }
+
+        DeepseekChatResponseChoice[] choices = response.choices;
+        
+        ChatAssistantMessage[] chatAssistantMessages = [];
+        foreach DeepseekChatResponseChoice choice in choices {
+            DeepseekChatResponseMessage message = choice.message;
+            string? content = message?.content;
+            if content is string && content != "" {
+                chatAssistantMessages.push({role: ASSISTANT, content:content});
+                break;
+            }
+            DeepseekChatResponseToolCall[]? toolCalls = message?.tool_calls;
+            if toolCalls !is () {
+                foreach DeepseekChatResponseToolCall toolCall in toolCalls {
+                    chatAssistantMessages.push({role: ASSISTANT, function_call: {name: toolCall.'function.name, id: toolCall.id, arguments: toolCall.'function.arguments.toString()}});
+                }
+            }
+            break;
+        }
+        return chatAssistantMessages.length() > 0 ? chatAssistantMessages
+            : error LlmInvalidResponseError("Empty response from the model when using function call API");
+    }
+
+    private isolated function generateToolId() returns string {
+        string randomToolID = "";
+        string randomId = uuid:createRandomUuid();
+        regexp:RegExp alphanumericPattern = re `[a-zA-Z0-9]`;
+        int iterationCount = 0;
+
+        foreach string character in randomId {
+            if (alphanumericPattern.isFullMatch(character)) {
+                randomToolID = randomToolID + character;
+                iterationCount = iterationCount + 1;
+            }
+            if (iterationCount == 9) {
+                break;
+            }
+        }
+        return randomToolID;
     }
 }
