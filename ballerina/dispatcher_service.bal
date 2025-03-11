@@ -16,6 +16,7 @@
 
 import ballerina/http;
 
+// Note: DispatcherService class is not used at the moment, can be used in the future.
 service class DispatcherService {
     *http:Service;
     private ChatService? chatService = ();

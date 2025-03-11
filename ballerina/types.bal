@@ -39,5 +39,6 @@ public type ChatClientConfiguration record {|
 
 # Defines a chat service interface that handles incoming chat messages.
 public type ChatService distinct service object {
-    remote function onChatMessage(ChatReqMessage chatRequest) returns ChatRespMessage|error;
+    *http:Service;
+    resource function post chat(@http:Payload ChatReqMessage request) returns ChatRespMessage|error;
 };
