@@ -20,7 +20,7 @@ service / on new http:Listener(9090) {
     resource function post chat/completions(map<json> payload) returns ChatCompletionResponse {
         AssistantMessage message = {
             role: "assistant",
-            toolCalls: null,
+            toolCalls: (),
             content: "Test message received! How can I assist you today?",
             prefix: false
         };
