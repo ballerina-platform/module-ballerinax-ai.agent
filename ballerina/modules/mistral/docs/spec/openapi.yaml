@@ -6,7 +6,7 @@ info:
     \ the [docs](https://docs.mistral.ai) to learn how to use it."
   version: 0.0.2
 servers:
-- url: https://api.mistral.ai
+- url: https://api.mistral.ai/v1
   description: Production server
 security:
 - ApiKey: []
@@ -42,7 +42,7 @@ tags:
   description: OCR API
   x-displayName: OCR API
 paths:
-  /v1/models:
+  /models:
     get:
       tags:
       - models
@@ -62,7 +62,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/models/{modelId}:
+  /models/{modelId}:
     get:
       tags:
       - models
@@ -131,7 +131,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/files:
+  /files:
     get:
       tags:
       - files
@@ -246,7 +246,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UploadFileOut'
-  /v1/files/{fileId}:
+  /files/{fileId}:
     get:
       tags:
       - files
@@ -291,7 +291,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteFileOut'
-  /v1/files/{fileId}/content:
+  /files/{fileId}/content:
     get:
       tags:
       - files
@@ -315,7 +315,7 @@ paths:
               schema:
                 type: string
                 format: binary
-  /v1/files/{fileId}/url:
+  /files/{fileId}/url:
     get:
       tags:
       - files
@@ -349,7 +349,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FileSignedURL'
-  /v1/fine_tuning/jobs:
+  /fine_tuning/jobs:
     get:
       tags:
       - fine-tuning
@@ -516,7 +516,7 @@ paths:
                 anyOf:
                 - $ref: '#/components/schemas/JobOut'
                 - $ref: '#/components/schemas/LegacyJobMetadataOut'
-  /v1/fine_tuning/jobs/{jobId}:
+  /fine_tuning/jobs/{jobId}:
     get:
       tags:
       - fine-tuning
@@ -541,7 +541,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DetailedJobOut'
-  /v1/fine_tuning/jobs/{jobId}/cancel:
+  /fine_tuning/jobs/{jobId}/cancel:
     post:
       tags:
       - fine-tuning
@@ -566,7 +566,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DetailedJobOut'
-  /v1/fine_tuning/jobs/{jobId}/start:
+  /fine_tuning/jobs/{jobId}/start:
     post:
       tags:
       - fine-tuning
@@ -590,7 +590,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DetailedJobOut'
-  /v1/fine_tuning/models/{modelId}:
+  /fine_tuning/models/{modelId}:
     patch:
       tags:
       - models
@@ -621,7 +621,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FTModelOut'
-  /v1/fine_tuning/models/{modelId}/archive:
+  /fine_tuning/models/{modelId}/archive:
     post:
       tags:
       - models
@@ -670,7 +670,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UnarchiveFTModelOut'
-  /v1/batch/jobs:
+  /batch/jobs:
     get:
       tags:
       - batch
@@ -770,7 +770,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BatchJobOut'
-  /v1/batch/jobs/{jobId}:
+  /batch/jobs/{jobId}:
     get:
       tags:
       - batch
@@ -794,7 +794,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BatchJobOut'
-  /v1/batch/jobs/{jobId}/cancel:
+  /batch/jobs/{jobId}/cancel:
     post:
       tags:
       - batch
@@ -818,7 +818,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BatchJobOut'
-  /v1/chat/completions:
+  /chat/completions:
     post:
       tags:
       - chat
@@ -846,7 +846,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/fim/completions:
+  /fim/completions:
     post:
       tags:
       - fim
@@ -875,7 +875,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/ocr:
+  /ocr:
     post:
       tags:
       - ocr
@@ -900,7 +900,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/moderations:
+  /moderations:
     post:
       tags:
       - classifiers
@@ -925,7 +925,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/chat/moderations:
+  /chat/moderations:
     post:
       tags:
       - classifiers
@@ -950,7 +950,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/embeddings:
+  /embeddings:
     post:
       tags:
       - embeddings
@@ -976,7 +976,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/agents/completions:
+  /agents/completions:
     post:
       tags:
       - agents
@@ -2648,11 +2648,11 @@ components:
       title: ApiEndpoint
       type: string
       enum:
-      - /v1/chat/completions
-      - /v1/embeddings
-      - /v1/fim/completions
-      - /v1/moderations
-      - /v1/chat/moderations
+      - /chat/completions
+      - /embeddings
+      - /fim/completions
+      - /moderations
+      - /chat/moderations
     UserMessage:
       title: UserMessage
       required:

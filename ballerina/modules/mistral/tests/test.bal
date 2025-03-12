@@ -44,7 +44,7 @@ isolated function testChatCompletion() returns error? {
         model: "mistral-small-latest"
     };
 
-    ChatCompletionResponse response = check mistralAiClient->/v1/chat/completions.post(chatRequest);
+    ChatCompletionResponse response = check mistralAiClient->/chat/completions.post(chatRequest);
     ChatCompletionChoice[]? choices = response.choices;
     if choices is ChatCompletionChoice[] {
         AssistantMessage? message = choices[0].message;

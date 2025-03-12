@@ -795,7 +795,7 @@ public isolated client class MistralAiModel {
             request.tools = mistralTools;
         }
 
-        mistral:ChatCompletionResponse|error response = self.llmClient->/v1/chat/completions.post(request);
+        mistral:ChatCompletionResponse|error response = self.llmClient->/chat/completions.post(request);
 
         if response is error {
             return error LlmConnectionError("Error while connecting to the model", response);
@@ -846,18 +846,7 @@ public isolated client class MistralAiModel {
                 };
                 mistralMessages.push(systemMessage);
             } else if message is ChatAssistantMessage {
-                mistral:FunctionCall functionCall = {
-                    name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
-                    arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
-                };
-                mistral:ToolCall[] toolCall = [
-                    {
-                        'function: functionCall,
-                        id: message.function_call?.id ?: self.generateToolId()
-                    }
-                ];
-
-                if functionCall.name == "" {
+                if message.function_call is () {
                     mistral:AssistantMessage mistralAssistantMessage = {
                         role: ASSISTANT,
                         content: message.content,
@@ -865,12 +854,23 @@ public isolated client class MistralAiModel {
                     };
                     mistralMessages.push(mistralAssistantMessage);
                 } else {
+                    mistral:FunctionCall functionCall = {
+                        name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
+                        arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
+                    };
+                    mistral:ToolCall[] toolCall = [
+                        {
+                            'function: functionCall,
+                            id: message.function_call?.id ?: self.generateToolId()
+                        }
+                    ];
                     mistral:AssistantMessage mistralAssistantMessage = {
                         role: ASSISTANT,
                         content: message.content,
                         toolCalls: toolCall
                     };
                     mistralMessages.push(mistralAssistantMessage);
+
                 }
             } else if message is ChatFunctionMessage {
                 mistral:ToolMessage mistralToolMessage = {

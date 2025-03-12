@@ -17,7 +17,7 @@
 import ballerina/http;
 
 service / on new http:Listener(9090) {
-    resource function post v1/chat/completions(map<json> payload) returns ChatCompletionResponse {
+    resource function post chat/completions(map<json> payload) returns ChatCompletionResponse {
         AssistantMessage message = {
             role: "assistant",
             toolCalls: null,

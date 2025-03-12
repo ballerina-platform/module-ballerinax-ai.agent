@@ -32,12 +32,6 @@ public type ChatCompletionChoice record {
     AssistantMessage message;
 };
 
-public type ArchiveFTModelOut record {
-    boolean archived = true;
-    string id;
-    "model" 'object = "model";
-};
-
 public type OCRResponse record {|
     # List of OCR info for pages.
     OCRPageObject[] pages;
@@ -47,14 +41,10 @@ public type OCRResponse record {|
     OCRUsageInfo usageInfo;
 |};
 
-public type GithubRepositoryIn record {
-    string owner;
-    string? ref?;
-    string name;
-    @constraint:Number {minValueExclusive: 0}
-    decimal weight = 1;
-    "github" 'type = "github";
-    string token;
+public type ArchiveFTModelOut record {
+    boolean archived = true;
+    string id;
+    "model" 'object = "model";
 };
 
 public type EventOut record {
@@ -63,6 +53,16 @@ public type EventOut record {
     string name;
     @jsondata:Name {value: "created_at"}
     int createdAt;
+};
+
+public type GithubRepositoryIn record {
+    string owner;
+    string? ref?;
+    string name;
+    @constraint:Number {minValueExclusive: 0}
+    decimal weight = 1;
+    "github" 'type = "github";
+    string token;
 };
 
 # Represents the Queries record for the operation: jobs_api_routes_fine_tuning_get_fine_tuning_jobs
@@ -161,12 +161,6 @@ public type ConnectionConfig record {|
     boolean laxDataBinding = true;
 |};
 
-public type ResponseFormat record {|
-    @jsondata:Name {value: "json_schema"}
-    JsonSchema jsonSchema?;
-    ResponseFormats 'type?;
-|};
-
 public type FTModelCapabilitiesOut record {
     @jsondata:Name {value: "completion_chat"}
     boolean completionChat = true;
@@ -177,6 +171,12 @@ public type FTModelCapabilitiesOut record {
     @jsondata:Name {value: "completion_fim"}
     boolean completionFim = false;
 };
+
+public type ResponseFormat record {|
+    @jsondata:Name {value: "json_schema"}
+    JsonSchema jsonSchema?;
+    ResponseFormats 'type?;
+|};
 
 public type UnarchiveFTModelOut record {
     boolean archived = false;
@@ -208,13 +208,6 @@ public type ChatCompletionResponse record {
     UsageInfo usage;
 };
 
-public type TrainingFile record {
-    @jsondata:Name {value: "file_id"}
-    string fileId;
-    @constraint:Number {minValueExclusive: 0}
-    decimal weight = 1;
-};
-
 public type FTModelOut record {
     boolean archived;
     FTModelCapabilitiesOut capabilities;
@@ -230,6 +223,13 @@ public type FTModelOut record {
     string id;
     string job;
     "model" 'object = "model";
+};
+
+public type TrainingFile record {
+    @jsondata:Name {value: "file_id"}
+    string fileId;
+    @constraint:Number {minValueExclusive: 0}
+    decimal weight = 1;
 };
 
 public type ClassificationRequest record {|
@@ -263,7 +263,7 @@ public type ChatCompletionResponseBase record {
     int created?;
 };
 
-public type ApiEndpoint "/v1/chat/completions"|"/v1/embeddings"|"/v1/fim/completions"|"/v1/moderations"|"/v1/chat/moderations";
+public type ApiEndpoint "/chat/completions"|"/embeddings"|"/fim/completions"|"/moderations"|"/chat/moderations";
 
 public type BatchJobStatus "QUEUED"|"RUNNING"|"SUCCESS"|"FAILED"|"TIMEOUT_EXCEEDED"|"CANCELLATION_REQUESTED"|"CANCELLED";
 
@@ -331,16 +331,16 @@ public type OCRPageDimensions record {|
     int height;
 |};
 
+public type UpdateFTModelIn record {
+    string? name?;
+    string? description?;
+};
+
 public type ResponseBase record {
     UsageInfo usage?;
     string model?;
     string id?;
     string 'object?;
-};
-
-public type UpdateFTModelIn record {
-    string? name?;
-    string? description?;
 };
 
 public type ClassificationResponse record {
@@ -487,6 +487,8 @@ public type JobsApiRoutesBatchGetBatchJobsQueries record {
     BatchJobStatus status?;
 };
 
+public type FilePurpose "fine-tune"|"batch";
+
 public type LegacyJobMetadataOut record {
     @jsondata:Name {value: "data_tokens"}
     int? dataTokens?;
@@ -510,8 +512,6 @@ public type LegacyJobMetadataOut record {
     int? trainingSteps?;
     "job.metadata" 'object = "job.metadata";
 };
-
-public type FilePurpose "fine-tune"|"batch";
 
 # this restriction of `Function` is used to select a specific function to call
 public type FunctionName record {|
@@ -563,11 +563,6 @@ public type ToolMessage record {|
     string|ContentChunk[]? content;
 |};
 
-public type Tool record {|
-    Function 'function;
-    ToolTypes 'type?;
-|};
-
 # Extra fields for fine-tuned models.
 public type FTModelCard record {
     ModelCapabilities capabilities;
@@ -589,6 +584,11 @@ public type FTModelCard record {
     string job;
     string 'object = "model";
 };
+
+public type Tool record {|
+    Function 'function;
+    ToolTypes 'type?;
+|};
 
 public type BatchJobsOut record {
     int total;
@@ -833,12 +833,10 @@ public type ChatCompletionRequest record {|
     string model;
 |};
 
-public type Function record {|
-    string name;
-    string description = "";
-    boolean strict = false;
-    record {} parameters;
-|};
+public type ModelList record {
+    (BaseModelCard|FTModelCard)[] data?;
+    string 'object = "list";
+};
 
 # {"type":"image_url","image_url":{"url":"data:image/png;base64,iVBORw0
 public type ImageURLChunk record {|
@@ -847,10 +845,12 @@ public type ImageURLChunk record {|
     "image_url" 'type = "image_url";
 |};
 
-public type ModelList record {
-    (BaseModelCard|FTModelCard)[] data?;
-    string 'object = "list";
-};
+public type Function record {|
+    string name;
+    string description = "";
+    boolean strict = false;
+    record {} parameters;
+|};
 
 public type ToolChoiceEnum "auto"|"none"|"any"|"required";
 
