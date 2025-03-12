@@ -496,21 +496,27 @@ public isolated client class DeepseekModel {
                 };
 
                 DeepseekChatResponseToolCall[] tool_calls = [{'function: functionCall, id:message.function_call?.id ?: self.generateToolId(), 'type: "function"}];
-                DeepseekChatAssistantMessage deepseekAssistantMessage = {
-                    role: "assistant",
-                    content: message.content,
-                    tool_calls: tool_calls
-                };
-
                 // DeepseekChatAssistantMessage deepseekAssistantMessage = {
-                //     role: "assistant"
+                //     role: "assistant",
+                //     content: message.content,
+                //     tool_calls: tool_calls
                 // };
-                // if message.content is string {
-                //     deepseekAssistantMessage.content = message.content;
-                // } else {
-                //     deepseekAssistantMessage.content = string `{name: ${message?.function_call?.name ?: ""}, arguments: ${message?.function_call?.arguments ?: ""}}`;
-                // }
-                deepseekPayloadMessages.push(deepseekAssistantMessage);
+
+                if functionCall.name == "" {
+                    DeepseekChatAssistantMessage deepseekAssistantMessage = {
+                        role: ASSISTANT,
+                        content: message.content,
+                        tool_calls: ()
+                    };
+                    deepseekPayloadMessages.push(deepseekAssistantMessage);
+                } else {
+                    DeepseekChatAssistantMessage deepseekAssistantMessage = {
+                        role: ASSISTANT,
+                        tool_calls: tool_calls
+                    };
+                    deepseekPayloadMessages.push(deepseekAssistantMessage);
+                }
+
             } else if message is ChatFunctionMessage {
                 DeepseekChatToolMessage deepseekToolMessage = {
                     role: "tool",
@@ -523,18 +529,11 @@ public isolated client class DeepseekModel {
 
        
         DeepSeekChatCompletionRequest request = {
-            // messages: from var message in messages 
-            //     select message.role == "function" ? 
-            //         {role: "tool", content: message.content, "tool_call_id": (<ChatFunctionMessage>message).id ?: "hsdfbc"} : 
-            //         {role: message.role, content: message.content},
             messages:deepseekPayloadMessages,
             model: self.model,
             max_tokens: self.maxTokens,
             stop: stop
         };
-
-
-        //io:println("Request: ", request);
 
         if tools.length() > 0 {
             DeepseekFunction[] deepseekFunctions = [];
@@ -554,6 +553,8 @@ public isolated client class DeepseekModel {
             }
             request.tools = deepseekTools;
         }
+
+        //io:println("Payload Request: ", request);
 
         DeepSeekChatCompletionResponse|error response = self.deepseekClient->/chat/completions.post(request);
         if response is error{
