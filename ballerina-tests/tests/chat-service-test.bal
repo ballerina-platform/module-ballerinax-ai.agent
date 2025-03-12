@@ -18,12 +18,12 @@ import ballerina/test;
 import ballerinax/ai.agent;
 
 @test:Config {}
-function testAgentChatOnChatMessage() returns error? {
-    agent:ChatClient chatClient = check new("http://localhost:8090");
+function testAgentChat() returns error? {
+    agent:ChatClient chatClient = check new("http://localhost:9090/chatService");
     agent:ChatReqMessage req = {
         sessionId: "1",
         message: "Hello Ballerina!"
     };
-    agent:ChatRespMessage resp = check chatClient->onChatMessage(req);
+    agent:ChatRespMessage resp = check chatClient->/chat.post(req);
     test:assertEquals(resp.message, "1: Hello Ballerina!", "Invalid response message");
 }

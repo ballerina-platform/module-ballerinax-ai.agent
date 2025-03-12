@@ -73,8 +73,8 @@ public isolated client class ReActAgent {
                 });
             } else {
                 messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(),id:res.id}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation),id: res.id});
+                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
+                {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
 
@@ -160,6 +160,7 @@ isolated function parseReActLlmResponse(string llmResponse) returns LlmToolRespo
         log:printError("Error while extracting action name and inputs from LLM response.", tool, llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
     }
+
     return {
         name: tool.name,
         arguments: tool.arguments

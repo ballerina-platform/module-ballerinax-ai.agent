@@ -62,15 +62,11 @@ public isolated distinct client class FunctionCallAgent {
         if arguments is error {
             return error LlmInvalidGenerationError("Invalid arguments", arguments, name = llmResponse.name, arguments = stringArgs);
         }
-        string? id = ();
-        if llmResponse.id !is () {
-            id = llmResponse.id;
-        }
 
         return {
             name,
             arguments,
-            id
+            id: llmResponse.id
         };
     }
 

@@ -34,7 +34,7 @@ public isolated client class ChatClient {
     #
     # + request - The chat request message to be sent.
     # + return - A `ChatRespMessage` containing the response from the chat service, or an `error` if the request fails.
-    isolated remote function onChatMessage(ChatReqMessage request) returns ChatRespMessage|error {
-        return self.httpClient->/chatMessage.post(request);
+    isolated resource function post chat(ChatReqMessage request) returns ChatRespMessage|error {
+        return self.httpClient->/chat.post(request);
     }
 }

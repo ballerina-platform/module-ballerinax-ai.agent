@@ -15,14 +15,15 @@
 // under the License.
 
 import ballerinax/ai.agent;
+import ballerina/http;
 
-listener agent:Listener chatListener = new ();
+listener http:Listener httpListener = http:getDefaultListener();
+listener agent:Listener chatListener = new (httpListener);
 
-service agent:ChatService on chatListener {
-    remote function onChatMessage(agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
+service /chatService on chatListener {
+    resource function post chat(@http:Payload agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
         return {
             message: request.sessionId + ": " + request.message
         };
     }
 }
-
