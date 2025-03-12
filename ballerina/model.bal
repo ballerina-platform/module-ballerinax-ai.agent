@@ -597,17 +597,19 @@ public isolated client class DeepseekModel {
         return randomToolID;
     }
 
-    private isolated function getAssistantToolCallId(DeepSeekChatRequestMessages[] deeepseekPayloadMessages) returns string {
-        string toolCallId = "";
-        DeepSeekChatRequestMessages lastAssitantMessages = deeepseekPayloadMessages[deeepseekPayloadMessages.length() - 1];
-        if lastAssitantMessages is DeepseekChatAssistantMessage && lastAssitantMessages.tool_calls !is () {
-
-            DeepseekChatResponseToolCall[]? tools = lastAssitantMessages.tool_calls;
-            if tools !is () {
-                toolCallId = tools[0].id;
-                return toolCallId;
+    private isolated function getAssistantToolCallId(DeepSeekChatRequestMessages[] deepseekPayloadMessages) returns string {
+        // Iterate from the end of the array to find the last assistant message
+        int index = deepseekPayloadMessages.length() - 1;
+        while (index >= 0) {
+            DeepSeekChatRequestMessages message = deepseekPayloadMessages[index];
+            if message is DeepseekChatAssistantMessage && message.tool_calls is DeepseekChatResponseToolCall[] {
+                DeepseekChatResponseToolCall[] tools = <DeepseekChatResponseToolCall[]>message.tool_calls;
+                if tools.length() > 0 {
+                    return tools[0].id;
+                }
             }
+            index = index - 1;
         }
-        return toolCallId;
+        return "";
     }
 }
