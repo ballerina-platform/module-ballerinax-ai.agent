@@ -33,7 +33,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "constraint"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "data.jsondata"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.object"}
@@ -99,7 +99,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "io"
-version = "1.7.0"
+version = "1.8.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.value"}
@@ -260,7 +260,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "os"
-version = "1.9.0"
+version = "1.10.0"
 dependencies = [
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "jballerina.java"}
@@ -319,7 +319,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "xmldata"
-version = "2.9.0"
+version = "2.9.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -404,7 +404,7 @@ dependencies = [
 [[package]]
 org = "ballerinax"
 name = "openai.chat"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "http"},
