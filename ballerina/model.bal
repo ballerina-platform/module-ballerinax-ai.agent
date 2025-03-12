@@ -496,12 +496,7 @@ public isolated client class DeepseekModel {
                 };
 
                 DeepseekChatResponseToolCall[] tool_calls = [{'function: functionCall, id:message.function_call?.id ?: self.generateToolId(), 'type: "function"}];
-                // DeepseekChatAssistantMessage deepseekAssistantMessage = {
-                //     role: "assistant",
-                //     content: message.content,
-                //     tool_calls: tool_calls
-                // };
-
+                //DeepseekChatResponseToolCall[] tool_calls = [{'function: functionCall, id:message.function_call?.id ?: "defe344d", 'type: "function"}];
                 if functionCall.name == "" {
                     DeepseekChatAssistantMessage deepseekAssistantMessage = {
                         role: ASSISTANT,
@@ -520,8 +515,9 @@ public isolated client class DeepseekModel {
             } else if message is ChatFunctionMessage {
                 DeepseekChatToolMessage deepseekToolMessage = {
                     role: "tool",
-                    content: message?.content ?: "",
-                    tool_call_id: message.id ?: self.generateToolId()
+                    content: message?.content is string ? {result: message.content}.toJsonString() : "",
+                    //tool_call_id: message.id ?: self.generateToolId()
+                    tool_call_id: message.id ?: self.getAssistantToolCallId(deepseekPayloadMessages)
                 };
                 deepseekPayloadMessages.push(deepseekToolMessage);
             }
@@ -599,5 +595,19 @@ public isolated client class DeepseekModel {
             }
         }
         return randomToolID;
+    }
+
+    private isolated function getAssistantToolCallId(DeepSeekChatRequestMessages[] deeepseekPayloadMessages) returns string {
+        string toolCallId = "";
+        DeepSeekChatRequestMessages lastAssitantMessages = deeepseekPayloadMessages[deeepseekPayloadMessages.length() - 1];
+        if lastAssitantMessages is DeepseekChatAssistantMessage && lastAssitantMessages.tool_calls !is () {
+
+            DeepseekChatResponseToolCall[]? tools = lastAssitantMessages.tool_calls;
+            if tools !is () {
+                toolCallId = tools[0].id;
+                return toolCallId;
+            }
+        }
+        return toolCallId;
     }
 }
