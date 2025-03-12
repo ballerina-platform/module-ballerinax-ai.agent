@@ -25,8 +25,6 @@ public type SystemPrompt record {|
     # Specific instructions for the agent
     @display {label: "Instructions"}
     string instructions;
-
-    string...;
 |};
 
 # Represents the different types of agents supported by the module.
@@ -121,12 +119,9 @@ isolated function constructError((ExecutionResult|ExecutionError)[] steps, int m
 }
 
 isolated function getFomatedSystemPrompt(SystemPrompt systemPrompt) returns string {
-    string additionalInstructions = "";
-    foreach [string, string] [key, value] in systemPrompt.entries() {
-        if key != "role" && key != "instructions" {
-            additionalInstructions += "\n" + key + ":\n" + value + "\n";
-        }
-    }
-    return string `You are an AI agent with the following responsibility: ${systemPrompt.role}` +
-        "Please follow these instructions:" + "\n" + systemPrompt.instructions + "\n" + additionalInstructions;
+    return string `# Role  
+${systemPrompt.role}  
+
+# Instructions  
+${systemPrompt.instructions}`;
 }
