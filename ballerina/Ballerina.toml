@@ -15,4 +15,4 @@ graalvmCompatible = true
 groupId = "io.ballerina.lib"
 artifactId = "ai.agent-native"
 version = "0.7.15"
-path = "../native/build/libs/ai.agent-native-0.7.15-SNAPSHOT.jar"
+path = "../native/build/libs/ai.agent-native-0.7.15.jar"
