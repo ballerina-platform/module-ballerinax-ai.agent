@@ -60,14 +60,7 @@ public isolated client class ReActAgent {
     # + memoryId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
-        ChatMessage[] messages = [{role: USER, content: progress.query}];
-
-        // add the context as the first message
-        messages.unshift({
-            role: SYSTEM,
-            content: string `${self.instructionPrompt} You can use these information if needed: ${progress.context.toString()}`
-        });
-
+        ChatMessage[] messages = [];
         // include the history
         foreach ExecutionStep step in progress.history {
             LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);
@@ -80,8 +73,8 @@ public isolated client class ReActAgent {
                 });
             } else {
                 messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString()}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation)});
+                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
+                {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
 
@@ -167,6 +160,7 @@ isolated function parseReActLlmResponse(string llmResponse) returns LlmToolRespo
         log:printError("Error while extracting action name and inputs from LLM response.", tool, llmResponse = llmResponse);
         return error LlmInvalidGenerationError("Generated 'Action' JSON_BLOB contains invalid action name or inputs.", tool, llmResponse = llmResponse, instruction = "Tool execution failed due to an invalid schema for 'Action' JSON_BLOB.");
     }
+
     return {
         name: tool.name,
         arguments: tool.arguments

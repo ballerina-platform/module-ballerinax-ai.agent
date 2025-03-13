@@ -132,7 +132,7 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         List<ModuleVariableDeclarationNode> agentDeclarations = modifierContextStream
                 .map(ModifierContext::getModuleLevelAgentDeclarations).flatMap(Collection::stream).toList();
         String agentInitializationSourceCode = agentDeclarations.stream().map(Node::toSourceCode)
-                .map(code -> code.replaceFirst(".*Agent", EMPTY_STRING))
+                .map(code -> code.replaceFirst(".*:Agent", EMPTY_STRING))
                 .collect(Collectors.joining(EMPTY_STRING));
         return NodeParser.parseModuleMemberDeclaration("function init() returns error? {"
                 + agentInitializationSourceCode + "}");

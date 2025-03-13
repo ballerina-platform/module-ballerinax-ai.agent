@@ -31,6 +31,9 @@ const OPENAI_SERVICE_URL = "https://api.openai.com/v1";
 // Anthropic
 const ANTHROPIC_SERVICE_URL = "https://api.anthropic.com/v1";
 
+// Mistral AI
+const MISTRAL_AI_SERVICE_URL = "https://api.mistral.ai/v1";
+
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
