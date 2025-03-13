@@ -269,3 +269,8 @@ function testExecutionPanicError() returns error? {
         test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
     }
 }
+
+@test:Config
+isolated function testInitializingToolStoreWithoutNoTools() returns error? {
+    ToolStore _ = check new ();
+}

@@ -47,7 +47,7 @@ public isolated class ToolStore {
     # + return - An error if the tool is already registered
     public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns Error? {
         if tools.length() == 0 {
-            return error Error("Initialization failed.", cause = "No tools provided to the agent.");
+            return;
         }
         ToolConfig[] toolList = [];
         foreach BaseToolKit|ToolConfig|FunctionTool tool in tools {
