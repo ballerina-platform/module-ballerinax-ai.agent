@@ -323,7 +323,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "xmldata"
-version = "2.9.0"
+version = "2.9.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -355,7 +355,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai.agent"
-version = "0.7.14"
+version = "0.7.15"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "data.jsondata"},
@@ -382,7 +382,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.7.14"
+version = "0.7.15"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
