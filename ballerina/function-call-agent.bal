@@ -79,12 +79,14 @@ public isolated distinct client class FunctionCallAgent {
         ChatMessage[] messages = createFunctionCallMessages(progress);
         Memory|MemoryError memory = self.memoryManager.getMemory(memoryId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
+        
         if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);
         } else {
             messages.unshift(...additionalMessages);
         }
 
+        
         // TODO: Improve handling of multiple tool calls returned by the LLM.  
         // Currently, tool calls are executed sequentially in separate chat responses.  
         // Update the logic to execute all tool calls together and return a single response.
