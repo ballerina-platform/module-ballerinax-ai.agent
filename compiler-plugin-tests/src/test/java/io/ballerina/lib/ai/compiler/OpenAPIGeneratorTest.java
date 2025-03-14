@@ -45,7 +45,7 @@ public class OpenAPIGeneratorTest {
         String packagePath = "01_sample";
         DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
         Assert.assertEquals(diagnosticResult.errorCount(), 0);
-        Assert.assertFalse(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath +
+        Assert.assertTrue(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath +
                 "/target/openapi/chatService_openapi.yaml")));
     }
 
