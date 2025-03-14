@@ -20,6 +20,7 @@ package io.ballerina.lib.ai.compiler;
 
 import io.ballerina.projects.BuildOptions;
 import io.ballerina.projects.DiagnosticResult;
+import io.ballerina.projects.PackageCompilation;
 import io.ballerina.projects.ProjectEnvironmentBuilder;
 import io.ballerina.projects.directory.BuildProject;
 import io.ballerina.projects.environment.Environment;
@@ -44,14 +45,17 @@ public class OpenAPIGeneratorTest {
         String packagePath = "01_sample";
         DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
         Assert.assertEquals(diagnosticResult.errorCount(), 0);
-        Assert.assertFalse(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath + "/target/openapi/")));
+        Assert.assertFalse(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath +
+                "/target/openapi/chatService_openapi.yaml")));
     }
 
     private DiagnosticResult getDiagnosticResult(String path) {
         Path projectDirPath = RESOURCE_DIRECTORY.resolve(path);
         BuildOptions buildOptions = BuildOptions.builder().setExportOpenAPI(true).build();
         BuildProject project = BuildProject.load(getEnvironmentBuilder(), projectDirPath, buildOptions);
-        return project.currentPackage().runCodeGenAndModifyPlugins();
+        project.currentPackage().runCodeGenAndModifyPlugins();
+        PackageCompilation compilation = project.currentPackage().getCompilation();
+        return compilation.diagnosticResult();
     }
 
     private static ProjectEnvironmentBuilder getEnvironmentBuilder() {
