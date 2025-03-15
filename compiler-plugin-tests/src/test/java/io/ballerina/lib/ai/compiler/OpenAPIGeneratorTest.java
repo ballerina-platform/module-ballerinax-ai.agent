@@ -41,12 +41,21 @@ public class OpenAPIGeneratorTest {
             "distributions", System.getProperty(BALLERINA_DISTRIBUTION_VERSION)).toAbsolutePath();
 
     @Test
-    public void testToolInputTypeValidation() {
+    public void testOpenAPIGenerationForListenerVariable() {
         String packagePath = "01_sample";
         DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
         Assert.assertEquals(diagnosticResult.errorCount(), 0);
         Assert.assertTrue(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath +
                 "/target/openapi/chatService_openapi.yaml")));
+    }
+
+    @Test
+    public void testOpenAPIGenerationForAnonymousListener() {
+        String packagePath = "02_sample";
+        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
+        Assert.assertEquals(diagnosticResult.errorCount(), 0);
+        Assert.assertTrue(Files.exists(RESOURCE_DIRECTORY.resolve(packagePath +
+                "/target/openapi/api_v1_openapi.yaml")));
     }
 
     private DiagnosticResult getDiagnosticResult(String path) {
