@@ -158,17 +158,21 @@ public class OpenAPIGenerator implements AnalysisTask<SyntaxNodeAnalysisContext>
             return false;
         }
 
-        return serviceNodeSymbol.listenerTypes().stream()
-                .anyMatch(listenerType -> isAiAgentListener(listenerType, semanticModel));
-    }
-
-    private static boolean isAiAgentListener(TypeSymbol listenerType, SemanticModel semanticModel) {
         Optional<Symbol> listenerTypeSymbol = semanticModel.types().getTypeByName(BALLERINAX, AI_AGENT, EMPTY,
                 LISTENER);
         if (listenerTypeSymbol.isEmpty() || listenerTypeSymbol.get().kind() != SymbolKind.CLASS) {
             return false;
         }
-        return listenerType.subtypeOf((ClassSymbol) listenerTypeSymbol.get());
+
+        return serviceNodeSymbol.listenerTypes().stream()
+                .anyMatch(listenerType -> isAiAgentListener(listenerType,
+                        (ClassSymbol) listenerTypeSymbol.get()));
+    }
+
+    private static boolean isAiAgentListener(TypeSymbol listenerType, TypeSymbol aiAgentListenerType) {
+        // The listener type can be ai.agent:Listener for listener variable attachment
+        // or ai.agent:Listener|error for anonymous new listener attachment
+        return aiAgentListenerType.subtypeOf(listenerType);
     }
 
 
