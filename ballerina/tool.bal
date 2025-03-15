@@ -95,6 +95,11 @@ public isolated class ToolStore {
         if observation is http:Response {
             observation = observation.getStatusCodeRecord();
         }
+        if observation is stream<anydata, error?> {
+            anydata[]|error result = from anydata item in observation
+                select item;
+            observation = result;
+        }
         if observation is anydata {
             return {value: observation};
         }
@@ -195,7 +200,7 @@ isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
     // TODO fix when all values are removed as constant, to use null schema
     if schema is ObjectInputSchema {
         map<JsonSubSchema>? properties = schema.properties;
-        if  properties is () {
+        if properties is () {
             return;
         }
         map<json> values = {};
