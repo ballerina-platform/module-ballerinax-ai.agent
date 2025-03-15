@@ -96,7 +96,7 @@ public isolated class ToolStore {
             observation = observation.getStatusCodeRecord();
         }
         if observation is stream<anydata, error?> {
-            anydata[]|error result = from var item in observation
+            anydata[]|error result = from anydata item in observation
                 select item;
             observation = result;
         }
