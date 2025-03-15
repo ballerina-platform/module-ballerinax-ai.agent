@@ -27,3 +27,7 @@ type User record {|
 type Person User;
 
 type Data string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User>|();
+
+type Mail record {
+    string body;
+};
