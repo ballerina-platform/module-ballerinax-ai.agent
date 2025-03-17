@@ -38,37 +38,37 @@ function testResolveSchema() {
     }
 
     test:assertEquals(resolvedSchema, {
-        path: "customsearch/v1",
-        queryParams: {
-            q: "AIzaSyAYFLQpxzp5XlQGkAR8URuBJGr9YiiZyIU",
-            cx: "d60e6379e9234405a"
-        }
-    });
+                                          path: "customsearch/v1",
+                                          queryParams: {
+                                              q: "AIzaSyAYFLQpxzp5XlQGkAR8URuBJGr9YiiZyIU",
+                                              cx: "d60e6379e9234405a"
+                                          }
+                                      });
 
     test:assertEquals(inputSchema, {
-        'type: OBJECT,
-        required: ["queryParams"],
-        properties: {
-            queryParams: {
-                'type: OBJECT,
-                properties: {
-                    q: {
-                        'type: STRING,
-                        default: "AIzaSyAYFLQpxzp5XlQGkAR8URuBJGr9YiiZyIU"
-                    },
-                    cx: {
-                        'type: STRING,
-                        default: "d60e6379e9234405a"
-                    },
-                    key: {
-                        'type: STRING,
-                        description: "the search query"
+                                       'type: OBJECT,
+                                       required: ["queryParams"],
+                                       properties: {
+                                           queryParams: {
+                                               'type: OBJECT,
+                                               properties: {
+                                                   q: {
+                                                       'type: STRING,
+                                                       default: "AIzaSyAYFLQpxzp5XlQGkAR8URuBJGr9YiiZyIU"
+                                                   },
+                                                   cx: {
+                                                       'type: STRING,
+                                                       default: "d60e6379e9234405a"
+                                                   },
+                                                   key: {
+                                                       'type: STRING,
+                                                       description: "the search query"
 
-                    }
-                }
-            }
-        }
-    });
+                                                   }
+                                               }
+                                           }
+                                       }
+                                   });
 
 }
 
@@ -272,5 +272,6 @@ function testExecutionPanicError() returns error? {
 
 @test:Config
 isolated function testInitializingToolStoreWithoutNoTools() returns error? {
-    ToolStore _ = check new ();
+    ToolStore toolStore = check new ();
+    test:assertEquals(toolStore.tools.toArray().length(), 0);
 }

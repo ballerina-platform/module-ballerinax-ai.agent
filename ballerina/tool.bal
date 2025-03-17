@@ -47,6 +47,7 @@ public isolated class ToolStore {
     # + return - An error if the tool is already registered
     public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns Error? {
         if tools.length() == 0 {
+            self.tools = {};
             return;
         }
         ToolConfig[] toolList = [];
