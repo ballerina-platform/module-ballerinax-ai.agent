@@ -357,7 +357,7 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
 
         ChatAssistantMessage assistantMessage = {
             role: ASSISTANT,
-            function_call: {name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}
+            toolCalls: [{name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}]
         };
         updateMemory(memory, assistantMessage);
 

@@ -1,12 +1,12 @@
 [package]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.9.2"
+version = "0.9.3"
 
 [[dependency]]
 org = "ballerinax"
 name = "ai.agent"
-version = "0.9.2"
+version = "0.9.3"
 repository = "local"
 
 [build-options]

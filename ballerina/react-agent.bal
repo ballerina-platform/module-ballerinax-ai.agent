@@ -63,18 +63,28 @@ public isolated client class ReActAgent {
         ChatMessage[] messages = [];
         // include the history
         foreach ExecutionStep step in progress.history {
-            LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);
-            if res is LlmInvalidGenerationError {
+            LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError parsedResponse = self.parseLlmResponse(step.llmResponse);
+            if parsedResponse is LlmInvalidGenerationError {
                 messages.push({role: ASSISTANT, content: step.llmResponse.toJsonString()});
-            } else if res is LlmChatResponse {
+            } else if parsedResponse is LlmChatResponse {
+                messages.push({role: ASSISTANT, content: parsedResponse.content});
+            } else {
                 messages.push({
                     role: ASSISTANT,
-                    content: res.content
+                    toolCalls: [
+                        {
+                            name: parsedResponse.name,
+                            arguments: parsedResponse.arguments.toJsonString(),
+                            id: parsedResponse.id
+                        }
+                    ]
+                },
+                {
+                    role: FUNCTION,
+                    name: parsedResponse.name,
+                    content: getObservationString(step.observation),
+                    id: parsedResponse.id
                 });
-            } else {
-                messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
 
@@ -91,8 +101,9 @@ public isolated client class ReActAgent {
     # + messages - Chat history to be processed by the ReAct agent
     # + return - The processed chat history
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
-        ChatAssistantMessage[] assistantMessages = check self.model->chat(messages, stop = OBSERVATION_KEY);
-        return assistantMessages[0].content is string ? assistantMessages[0].content : assistantMessages[0]?.function_call;
+        ChatAssistantMessage assistantMessage = check self.model->chat(messages, stop = OBSERVATION_KEY);
+        FunctionCall[]? toolCalls = assistantMessage?.toolCalls;
+        return toolCalls is FunctionCall[] ? toolCalls[0] : assistantMessage?.content;
     }
 
     # Execute the agent for a given user's query.

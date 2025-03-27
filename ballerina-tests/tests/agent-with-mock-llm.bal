@@ -73,45 +73,45 @@ isolated client distinct class MockLlm {
     *agent:Model;
 
     isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
-        returns agent:ChatAssistantMessage[]|agent:LlmError {
+        returns agent:ChatAssistantMessage|agent:LlmError {
         agent:ChatMessage lastMessage = messages.pop();
         string query = lastMessage is agent:ChatUserMessage|agent:ChatFunctionMessage ? lastMessage.content ?: "" : "";
         if query.includes("Mail Body") {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: query};
-            return getChatAssistantMessages(string `Answer is:  ${toolCall.toJsonString()})`);
+            return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
         }
         if query.includes("Answer is:") {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
-            return getChatAssistantMessages(string `Answer is:  ${toolCall.toJsonString()})`);
+            return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
         }
         if query.toLowerAscii().includes("mail") {
             MockLlmToolCall toolCall = {action: "getEmails", action_input: {}};
-            return getChatAssistantMessages(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
+            return getChatAssistantMessage(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
         }
         if query.toLowerAscii().includes("search") {
             regexp:Span? span = re `'.*'`.find(query);
             string searchQuery = span is () ? "No search query" : span.substring();
             MockLlmToolCall toolCall = {action: "searchDoc", action_input: {searchQuery}};
-            return getChatAssistantMessages(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
+            return getChatAssistantMessage(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
         }
         if query.toLowerAscii().includes("sum") || query.toLowerAscii().includes("add") {
             decimal[] numbers = getDecimals(getNumbers(query));
             MockLlmToolCall toolCall = {action: "sum", action_input: {numbers}};
-            return getChatAssistantMessages(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
+            return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
         if query.toLowerAscii().includes("mult") || query.toLowerAscii().includes("prod") {
             string[] numbers = getNumbers(query);
             int a = getInt(numbers.shift());
             int b = getInt(numbers.shift());
             MockLlmToolCall toolCall = {action: "mutiply", action_input: {a, b}};
-            return getChatAssistantMessages(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
+            return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
         return error agent:LlmError("I can't understand");
     }
 }
 
-isolated function getChatAssistantMessages(string content) returns agent:ChatAssistantMessage[] {
-    return [{role: agent:ASSISTANT, content}];
+isolated function getChatAssistantMessage(string content) returns agent:ChatAssistantMessage {
+    return {role: agent:ASSISTANT, content};
 }
 
 final MockLlm model = new;
