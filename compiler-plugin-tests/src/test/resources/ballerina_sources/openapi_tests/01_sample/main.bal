@@ -14,20 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-enum Status {
-    ON,
-    OFF
+import ballerinax/ai.agent;
+import ballerina/http;
+
+listener http:Listener httpListener = http:getDefaultListener();
+listener agent:Listener chatListener = new (httpListener);
+
+service /chatService on chatListener {
+    resource function post chat(@http:Payload agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
+        return {
+            message: request.sessionId + ": " + request.message
+        };
+    }
 }
-
-type User record {|
-    string name;
-    int age;
-|};
-
-type Person User;
-
-type Data string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User>|();
-
-type Mail record {
-    string body;
-};

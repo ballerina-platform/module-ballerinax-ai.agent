@@ -47,7 +47,8 @@ public isolated class ToolStore {
     # + return - An error if the tool is already registered
     public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns Error? {
         if tools.length() == 0 {
-            return error Error("Initialization failed.", cause = "No tools provided to the agent.");
+            self.tools = {};
+            return;
         }
         ToolConfig[] toolList = [];
         foreach BaseToolKit|ToolConfig|FunctionTool tool in tools {
@@ -94,6 +95,11 @@ public isolated class ToolStore {
         any|error observation = execution.result;
         if observation is http:Response {
             observation = observation.getStatusCodeRecord();
+        }
+        if observation is stream<anydata, error?> {
+            anydata[]|error result = from anydata item in observation
+                select item;
+            observation = result;
         }
         if observation is anydata {
             return {value: observation};
@@ -195,7 +201,7 @@ isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
     // TODO fix when all values are removed as constant, to use null schema
     if schema is ObjectInputSchema {
         map<JsonSubSchema>? properties = schema.properties;
-        if  properties is () {
+        if properties is () {
             return;
         }
         map<json> values = {};

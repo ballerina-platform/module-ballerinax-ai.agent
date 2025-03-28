@@ -64,6 +64,11 @@ isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
+@agent:Tool
+isolated function getEmails() returns stream<Mail, agent:Error?>|error? {
+    return [{body: "Mail Body 1"}, {body: "Mail Body 2"}, {body: "Mail Body 3"}].toStream();
+}
+
 isolated client distinct class MockLlm {
     *agent:Model;
 
@@ -71,22 +76,30 @@ isolated client distinct class MockLlm {
         returns agent:ChatAssistantMessage[]|agent:LlmError {
         agent:ChatMessage lastMessage = messages.pop();
         string query = lastMessage is agent:ChatUserMessage|agent:ChatFunctionMessage ? lastMessage.content ?: "" : "";
-        if (query.includes("Answer is:")) {
+        if query.includes("Mail Body") {
+            MockLlmToolCall toolCall = {action: "Final answer", action_input: query};
+            return getChatAssistantMessages(string `Answer is:  ${toolCall.toJsonString()})`);
+        }
+        if query.includes("Answer is:") {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
             return getChatAssistantMessages(string `Answer is:  ${toolCall.toJsonString()})`);
         }
-        if (query.toLowerAscii().includes("search")) {
+        if query.toLowerAscii().includes("mail") {
+            MockLlmToolCall toolCall = {action: "getEmails", action_input: {}};
+            return getChatAssistantMessages(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
+        }
+        if query.toLowerAscii().includes("search") {
             regexp:Span? span = re `'.*'`.find(query);
             string searchQuery = span is () ? "No search query" : span.substring();
             MockLlmToolCall toolCall = {action: "searchDoc", action_input: {searchQuery}};
             return getChatAssistantMessages(string `I need to call the searchDoc tool. Action: ${toolCall.toJsonString()}`);
         }
-        if (query.toLowerAscii().includes("sum") || query.toLowerAscii().includes("add")) {
+        if query.toLowerAscii().includes("sum") || query.toLowerAscii().includes("add") {
             decimal[] numbers = getDecimals(getNumbers(query));
             MockLlmToolCall toolCall = {action: "sum", action_input: {numbers}};
             return getChatAssistantMessages(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
-        if (query.toLowerAscii().includes("mult") || query.toLowerAscii().includes("prod")) {
+        if query.toLowerAscii().includes("mult") || query.toLowerAscii().includes("prod") {
             string[] numbers = getNumbers(query);
             int a = getInt(numbers.shift());
             int b = getInt(numbers.shift());
@@ -104,7 +117,7 @@ isolated function getChatAssistantMessages(string content) returns agent:ChatAss
 final MockLlm model = new;
 final agent:Agent agent = check new (model = model,
     systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-    tools = [sum, mutiply, new SearchToolKit()], agentType = agent:REACT_AGENT
+    tools = [sum, mutiply, new SearchToolKit(), getEmails], agentType = agent:REACT_AGENT
 );
 
 isolated class SearchToolKit {

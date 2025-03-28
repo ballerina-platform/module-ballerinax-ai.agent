@@ -21,6 +21,7 @@ package io.ballerina.lib.ai.plugin;
 import io.ballerina.compiler.api.symbols.AnnotationSymbol;
 import io.ballerina.compiler.api.symbols.Documentable;
 import io.ballerina.compiler.api.symbols.FunctionSymbol;
+import io.ballerina.compiler.api.symbols.StreamTypeSymbol;
 import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.api.symbols.TypeDescKind;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
@@ -69,21 +70,27 @@ public class Utils {
         return typeSymbol.subtypeOf(context.semanticModel().types().ERROR);
     }
 
-    public static boolean isAnydataOrErrorTypeOrHttpResponse(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
+    public static boolean isAllowedReturnType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
         if (typeSymbol.typeKind() == TypeDescKind.TYPE_REFERENCE) {
             TypeReferenceTypeSymbol typeReferenceTypeSymbol = (TypeReferenceTypeSymbol) typeSymbol;
             if (HTTP_RESPONSE_OBJECT_NAME.equals(typeReferenceTypeSymbol.definition().getName().orElse("<unknown>"))
                     && Utils.isHttpModuleSymbol(typeReferenceTypeSymbol)) {
                 return true;
             }
-            return isAnydataOrErrorTypeOrHttpResponse(typeReferenceTypeSymbol.typeDescriptor(), context);
+            return isAllowedReturnType(typeReferenceTypeSymbol.typeDescriptor(), context);
         }
         if (typeSymbol.typeKind() == TypeDescKind.UNION) {
             UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) typeSymbol;
             return unionTypeSymbol.memberTypeDescriptors()
-                    .stream().map(member -> isAnydataOrErrorTypeOrHttpResponse(member, context))
+                    .stream().map(member -> isAllowedReturnType(member, context))
                     .reduce((a, b) -> a && b)
                     .orElse(false);
+        }
+        if (typeSymbol.typeKind() == TypeDescKind.STREAM) {
+            StreamTypeSymbol streamTypeSymbol = (StreamTypeSymbol) typeSymbol;
+            TypeSymbol parameterType = streamTypeSymbol.typeParameter();
+            TypeSymbol completionType = streamTypeSymbol.completionValueTypeParameter();
+            return isAllowedReturnType(parameterType, context) && isAllowedReturnType(completionType, context);
         }
         return isAnydataType(typeSymbol, context) || isErrorType(typeSymbol, context);
     }
