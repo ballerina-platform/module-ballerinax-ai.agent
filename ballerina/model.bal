@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ai.agent.mistral;
+import ai.mistral;
 
 import ballerina/http;
 import ballerina/lang.regexp;

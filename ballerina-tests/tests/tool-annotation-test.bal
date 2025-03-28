@@ -16,28 +16,28 @@
 
 import ballerina/io;
 import ballerina/test;
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 @test:Config {
     dataProvider: getTools
 }
-function validateGeneratedSchema(string functionName, agent:FunctionTool tool) returns error? {
-    agent:ToolAnnotationConfig generatedConfig = check getToolConfig(tool);
-    agent:ToolAnnotationConfig expectedConfig = check getExpectedToolConfig(functionName);
+function validateGeneratedSchema(string functionName, ai:FunctionTool tool) returns error? {
+    ai:ToolAnnotationConfig generatedConfig = check getToolConfig(tool);
+    ai:ToolAnnotationConfig expectedConfig = check getExpectedToolConfig(functionName);
     test:assertEquals(generatedConfig, expectedConfig);
 }
 
-function getToolConfig(agent:FunctionTool tool) returns agent:ToolAnnotationConfig|error {
-    typedesc<agent:FunctionTool> functionTypedesc = typeof tool;
-    return functionTypedesc.@agent:Tool.ensureType();
+function getToolConfig(ai:FunctionTool tool) returns ai:ToolAnnotationConfig|error {
+    typedesc<ai:FunctionTool> functionTypedesc = typeof tool;
+    return functionTypedesc.@ai:Tool.ensureType();
 }
 
-function getExpectedToolConfig(string functionName) returns agent:ToolAnnotationConfig|error {
+function getExpectedToolConfig(string functionName) returns ai:ToolAnnotationConfig|error {
     json schema = check io:fileReadJson(string `./resources/expected-schemas/${functionName}.json`);
     return schema.cloneWithType();
 }
 
-function getTools() returns map<[string, agent:FunctionTool]> => {
+function getTools() returns map<[string, ai:FunctionTool]> => {
     toolWithString: ["toolWithString", toolWithString],
     toolWithInt: ["toolWithInt", toolWithInt],
     toolWithFloat: ["toolWithFloat", toolWithFloat],

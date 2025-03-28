@@ -25,7 +25,7 @@ import io.ballerina.runtime.api.values.BError;
 
 public final class ModuleUtils {
     private static final String PACKAGE_ORG = "ballerinax";
-    private static final String PACKAGE_NAME = "ai.agent";
+    private static final String PACKAGE_NAME = "ai";
 
     private static Module module;
 

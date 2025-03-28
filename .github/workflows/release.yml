@@ -12,5 +12,5 @@ jobs:
     uses: ballerina-platform/ballerina-library/.github/workflows/release-package-connector-template.yml@main
     secrets: inherit
     with:
-      package-name: ai.agent
+      package-name: ai
       package-org: ballerinax

@@ -123,7 +123,7 @@ isolated function getToolConfig(FunctionTool tool) returns ToolConfig|Error {
     typedesc<FunctionTool> typedescriptor = typeof tool;
     ToolAnnotationConfig? config = typedescriptor.@Tool;
     if config is () {
-        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
+        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@ai:Tool`.");
     }
     do {
         return {

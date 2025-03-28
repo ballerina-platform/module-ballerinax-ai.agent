@@ -76,7 +76,7 @@ public class OpenAPIGenerator implements AnalysisTask<SyntaxNodeAnalysisContext>
     public static final String OAS_PATH_SEPARATOR = "/";
     public static final String UNDERSCORE = "_";
     public static final String BALLERINAX = "ballerinax";
-    public static final String AI_AGENT = "ai.agent";
+    public static final String AI_AGENT = "ai";
     public static final String EMPTY = "";
     public static final String LISTENER = "Listener";
 
@@ -106,7 +106,7 @@ public class OpenAPIGenerator implements AnalysisTask<SyntaxNodeAnalysisContext>
             if (!isErrorPrinted) {
                 setIsWarningPrinted();
                 PrintStream outStream = System.out;
-                outStream.println("openapi contract generation for ai.agent service is skipped because of the " +
+                outStream.println("openapi contract generation for ai service is skipped because of the " +
                         "following compilation error(s) in the ballerina package:");
             }
             return;
@@ -170,8 +170,8 @@ public class OpenAPIGenerator implements AnalysisTask<SyntaxNodeAnalysisContext>
     }
 
     private static boolean isAiAgentListener(TypeSymbol listenerType, TypeSymbol aiAgentListenerType) {
-        // The listener type can be ai.agent:Listener for listener variable attachment
-        // or ai.agent:Listener|error for anonymous new listener attachment
+        // The listener type can be ai:Listener for listener variable attachment
+        // or ai:Listener|error for anonymous new listener attachment
         return aiAgentListenerType.subtypeOf(listenerType);
     }
 
@@ -227,7 +227,7 @@ public class OpenAPIGenerator implements AnalysisTask<SyntaxNodeAnalysisContext>
             if (syntaxKind.equals(SyntaxKind.SERVICE_DECLARATION)) {
                 ServiceDeclarationNode serviceNode = (ServiceDeclarationNode) node;
                 if (isAiAgentService(serviceNode, semanticModel)) {
-                    // Here check the service is related to the ai.agent
+                    // Here check the service is related to the ai
                     // module by checking listener type that attached to service endpoints.
                     Optional<Symbol> serviceSymbol = semanticModel.symbol(serviceNode);
                     if (serviceSymbol.isPresent() && serviceSymbol.get() instanceof ServiceDeclarationSymbol) {

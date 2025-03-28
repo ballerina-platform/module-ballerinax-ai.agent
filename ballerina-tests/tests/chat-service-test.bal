@@ -15,15 +15,15 @@
 // under the License.
 
 import ballerina/test;
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 @test:Config {}
 function testAgentChat() returns error? {
-    agent:ChatClient chatClient = check new("http://localhost:9090/chatService");
-    agent:ChatReqMessage req = {
+    ai:ChatClient chatClient = check new("http://localhost:9090/chatService");
+    ai:ChatReqMessage req = {
         sessionId: "1",
         message: "Hello Ballerina!"
     };
-    agent:ChatRespMessage resp = check chatClient->/chat.post(req);
+    ai:ChatRespMessage resp = check chatClient->/chat.post(req);
     test:assertEquals(resp.message, "1: Hello Ballerina!", "Invalid response message");
 }
