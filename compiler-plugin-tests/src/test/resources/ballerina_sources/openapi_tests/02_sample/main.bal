@@ -22,7 +22,7 @@ configurable string deploymentId = ?;
 configurable string apiVersion = ?;
 configurable string serviceUrl = ?;
 
-final ai:Model model = check new ai:AzureOpenAiModel(serviceUrl, apiKey, deploymentId, apiVersion);
+final ai:ModelProvider model = check new ai:AzureOpenAiProvider(serviceUrl, apiKey, deploymentId, apiVersion);
 final ai:Agent agent = check new (
     systemPrompt = {
         role: "Math Tutor",

@@ -65,7 +65,7 @@ isolated function mutiply(int a, int b) returns string {
 }
 
 isolated client distinct class MockLlm {
-    *ai:Model;
+    *ai:ModelProvider;
 
     isolated remote function chat(ai:ChatMessage[] messages, ai:ChatCompletionFunctions[] tools, string? stop)
         returns ai:ChatAssistantMessage|ai:LlmError {

@@ -307,7 +307,7 @@ type AnthropicTool record {|
 |};
 
 # Represents an extendable client for interacting with an AI model.
-public type Model distinct isolated client object {
+public type ModelProvider distinct isolated client object {
     # Sends a chat request to the model with the given messages and tools.
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
@@ -317,9 +317,9 @@ public type Model distinct isolated client object {
         returns ChatAssistantMessage|LlmError;
 };
 
-# OpenAiModel is a client class that provides an interface for interacting with OpenAI language models.
-public isolated client class OpenAiModel {
-    *Model;
+# OpenAiProvider is a client class that provides an interface for interacting with OpenAI language models.
+public isolated client class OpenAiProvider {
+    *ModelProvider;
     private final chat:Client llmClient;
     private final string modelType;
 
@@ -363,7 +363,7 @@ public isolated client class OpenAiModel {
         };
         chat:Client|error llmClient = new (openAiConfig);
         if llmClient is error {
-            return error Error("Failed to initialize OpenAiModel", llmClient);
+            return error Error("Failed to initialize OpenAiProvider", llmClient);
         }
         self.llmClient = llmClient;
         self.modelType = modelType;
@@ -424,9 +424,9 @@ public isolated client class OpenAiModel {
     }
 }
 
-# AzureOpenAiModel is a client class that provides an interface for interacting with Azure-hosted OpenAI language models.
-public isolated client class AzureOpenAiModel {
-    *Model;
+# AzureOpenAiProvider is a client class that provides an interface for interacting with Azure-hosted OpenAI language models.
+public isolated client class AzureOpenAiProvider {
+    *ModelProvider;
     private final azure_chat:Client llmClient;
     private final string deploymentId;
     private final string apiVersion;
@@ -473,7 +473,7 @@ public isolated client class AzureOpenAiModel {
         };
         azure_chat:Client|error llmClient = new (azureAiConfig, serviceUrl);
         if llmClient is error {
-            return error Error("Failed to initialize AzureOpenAiModel", llmClient);
+            return error Error("Failed to initialize AzureOpenAiProvider", llmClient);
         }
         self.llmClient = llmClient;
         self.deploymentId = deploymentId;
@@ -540,9 +540,9 @@ public isolated client class AzureOpenAiModel {
     }
 }
 
-# AnthropicModel is a client class that provides an interface for interacting with Anthropic language models.
-public isolated client class AnthropicModel {
-    *Model;
+# AnthropicProvider is a client class that provides an interface for interacting with Anthropic language models.
+public isolated client class AnthropicProvider {
+    *ModelProvider;
     private final http:Client AnthropicClient;
     private final string apiKey;
     private final string modelType;
@@ -714,9 +714,9 @@ public isolated client class AnthropicModel {
     }
 }
 
-# MistralAiModel is a client class that provides an interface for interacting with Mistral AI language models.
-public isolated client class MistralAiModel {
-    *Model;
+# MistralAiProvider is a client class that provides an interface for interacting with Mistral AI language models.
+public isolated client class MistralAiProvider {
+    *ModelProvider;
     private final mistral:Client llmClient;
     private final string modelType;
     private final string apiKey;
@@ -758,7 +758,7 @@ public isolated client class MistralAiModel {
 
         mistral:Client|error llmClient = new (mistralConfig);
         if llmClient is error {
-            return error Error("Failed to initialize MistralAiModel", llmClient);
+            return error Error("Failed to initialize MistralAiProvider", llmClient);
         }
 
         self.llmClient = llmClient;

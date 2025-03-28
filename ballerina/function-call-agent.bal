@@ -23,7 +23,7 @@ public isolated distinct client class FunctionCallAgent {
     # Tool store to be used by the agent
     public final ToolStore toolStore;
     # LLM model instance (should be a function call model)
-    public final Model model;
+    public final ModelProvider model;
     # The memory associated with the agent.
     public final MemoryManager memoryManager;
 
@@ -32,7 +32,7 @@ public isolated distinct client class FunctionCallAgent {
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     # + memory - The memory associated with the agent.
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
+    public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
             MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;

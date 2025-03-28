@@ -70,7 +70,7 @@ isolated function getEmails() returns stream<Mail, ai:Error?>|error? {
 }
 
 isolated client distinct class MockLlm {
-    *ai:Model;
+    *ai:ModelProvider;
 
     isolated remote function chat(ai:ChatMessage[] messages, ai:ChatCompletionFunctions[] tools, string? stop)
         returns ai:ChatAssistantMessage|ai:LlmError {

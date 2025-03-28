@@ -75,7 +75,7 @@ public type ToolOutput record {|
 |};
 
 public type BaseAgent distinct isolated client object {
-    public Model model;
+    public ModelProvider model;
     public ToolStore toolStore;
     public MemoryManager memoryManager;
 

@@ -122,8 +122,8 @@ const OLLAMA_FUNCTION_TYPE = "function";
 const OLLAMA_DEFAULT_SERVICE_URL = "http://localhost:11434";
 
 # Represents a client for interacting with an Ollama models.
-public isolated client class OllamaModel {
-    *Model;
+public isolated client class OllamaProvider {
+    *ModelProvider;
     private final http:Client ollamaClient;
     private final string modelType;
     private final readonly & map<json> modleParameters;
