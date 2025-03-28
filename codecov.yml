@@ -1,3 +1,6 @@
+fixes:
+  - "io/ballerina/lib/ai/plugin/::./compiler-plugin/src/main/java/io/ballerina/lib/ai/plugin/"
+
 coverage:
   precision: 2
   round: down

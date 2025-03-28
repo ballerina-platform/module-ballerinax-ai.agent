@@ -111,7 +111,7 @@ class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisConte
 
     private boolean hasValidateReturnType(FunctionSymbol functionSymbol, Location functionLocation) {
         Optional<TypeSymbol> returnType = functionSymbol.typeDescriptor().returnTypeDescriptor();
-        if (returnType.isEmpty() || Utils.isAnydataOrErrorTypeOrHttpResponse(returnType.get(), this.context)) {
+        if (returnType.isEmpty() || Utils.isAllowedReturnType(returnType.get(), this.context)) {
             return true;
         }
         Diagnostic diagnostic = CompilationDiagnostic.getDiagnostic(INVALID_RETURN_TYPE_IN_TOOL, functionLocation,

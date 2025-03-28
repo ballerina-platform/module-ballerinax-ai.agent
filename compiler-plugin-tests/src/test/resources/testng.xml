@@ -22,6 +22,7 @@
     <test name="UnitTests">
         <classes>
             <class name="io.ballerina.lib.ai.compiler.AiToolValidationTest"/>
+            <class name="io.ballerina.lib.ai.compiler.OpenAPIGeneratorTest"/>
         </classes>
     </test>
 </suite>

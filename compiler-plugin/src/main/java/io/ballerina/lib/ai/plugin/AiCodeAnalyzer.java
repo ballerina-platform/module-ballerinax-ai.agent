@@ -18,17 +18,15 @@
 
 package io.ballerina.lib.ai.plugin;
 
-import io.ballerina.projects.plugins.CompilerPlugin;
-import io.ballerina.projects.plugins.CompilerPluginContext;
+import io.ballerina.projects.plugins.CodeAnalysisContext;
+import io.ballerina.projects.plugins.CodeAnalyzer;
 
-/**
- * Compiler plugin for the Ballerina AI package.
- */
-@SuppressWarnings("unused")
-public class AiCompilerPlugin extends CompilerPlugin {
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.SERVICE_DECLARATION;
+
+public class AiCodeAnalyzer extends CodeAnalyzer {
+
     @Override
-    public void init(CompilerPluginContext context) {
-        context.addCodeAnalyzer(new AiCodeAnalyzer());
-        context.addCodeModifier(new AiCodeModifier());
+    public void init(CodeAnalysisContext codeAnalysisContext) {
+        codeAnalysisContext.addSyntaxNodeAnalysisTask(new OpenAPIGenerator(), SERVICE_DECLARATION);
     }
 }

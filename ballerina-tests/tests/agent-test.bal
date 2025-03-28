@@ -26,4 +26,7 @@ function testAgentToolExecution() returns error? {
 
     result = check agent->run("Search for 'random'");
     test:assertEquals(result, "Answer is: No result found on doc for 'random'");
+
+    result = check agent->run("List all mails");
+    test:assertEquals(result, [{body: "Mail Body 1"}, {body: "Mail Body 2"}, {body: "Mail Body 3"}].toString());
 }
