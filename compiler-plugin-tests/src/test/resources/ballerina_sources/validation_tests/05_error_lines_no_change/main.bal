@@ -28,31 +28,31 @@ type User record {|
 
 # Tool description
 # + param - parameter description
-@ai:Tool
+@ai:AgentTool
 isolated function toolOne(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {}
+@ai:AgentTool {}
 isolated function toolTwo(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@ai:AgentTool {
 
 }
 isolated function toolThree(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@ai:AgentTool {
     name: "toolFourNewName"
 }
 isolated function toolFour(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
 # Tool description
 # + param - parameter description
-@ai:Tool {
+@ai:AgentTool {
     name: "toolFiveNewName",
     parameters: {
         properties: {
@@ -63,5 +63,5 @@ isolated function toolFour(string|int|float|decimal|boolean|byte|Status|User|jso
 }
 isolated function toolFive(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolWithAny(string name, any data) => ();

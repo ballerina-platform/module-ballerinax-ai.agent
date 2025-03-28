@@ -50,7 +50,7 @@ type MockLlmToolCall record {|
     json action_input;
 |};
 
-@ai:Tool
+@ai:AgentTool
 isolated function sum(decimal[] numbers) returns string {
     decimal total = 0;
     foreach decimal number in numbers {
@@ -59,7 +59,7 @@ isolated function sum(decimal[] numbers) returns string {
     return string `Answer is: ${total}`;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }

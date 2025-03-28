@@ -158,14 +158,14 @@ public type ToolAnnotationConfig record {|
 |};
 
 # Represents the annotation of a function tool.
-public annotation ToolAnnotationConfig Tool on function, object function;
+public annotation ToolAnnotationConfig AgentTool on function, object function;
 
 # Represents a type alias for an isolated function, representing a function tool.
 public type FunctionTool isolated function;
 
 # Generates a array of `ToolConfig` from the given list of function pointers.
 # 
-# + tools - Array of function pointers annotated with `@ai:Tool` annotation
+# + tools - Array of function pointers annotated with `@ai:AgentTool` annotation
 # + return - Array of `ai:ToolConfig` instances
 public isolated function getToolConfigs(FunctionTool[] tools) returns ToolConfig[] {
     ToolConfig[] toolConfigs = [];

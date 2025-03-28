@@ -89,7 +89,7 @@ public isolated distinct client class FunctionCallAgent {
         // Currently, tool calls are executed sequentially in separate chat responses.  
         // Update the logic to execute all tool calls together and return a single response.
         ChatAssistantMessage response = check self.model->chat(messages,
-        from AgentTool tool in self.toolStore.tools.toArray()
+        from Tool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,

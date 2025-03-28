@@ -50,7 +50,7 @@ type MockLlmToolCall record {|
     json action_input;
 |};
 
-@ai:Tool
+@ai:AgentTool
 isolated function sum(decimal[] numbers) returns string {
     decimal total = 0;
     foreach decimal number in numbers {
@@ -59,12 +59,12 @@ isolated function sum(decimal[] numbers) returns string {
     return string `Answer is: ${total}`;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function getEmails() returns stream<Mail, ai:Error?>|error? {
     return [{body: "Mail Body 1"}, {body: "Mail Body 2"}, {body: "Mail Body 3"}].toStream();
 }
@@ -127,7 +127,7 @@ isolated class SearchToolKit {
         return ai:getToolConfigs([self.searchDoc]);
     }
 
-    @ai:Tool
+    @ai:AgentTool
     public isolated function searchDoc(string searchQuery) returns string {
         return string `Answer is: No result found on doc for ${searchQuery}`;
     }

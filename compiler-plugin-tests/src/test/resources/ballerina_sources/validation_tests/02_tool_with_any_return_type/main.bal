@@ -20,22 +20,22 @@ class Data {
     public int age = 12;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolReturningAny(string name) returns any {
     return ();
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolReturningInstance(string name) returns Data {
     return new;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolReturningMapOfAny(string name) returns map<any> {
     return {};
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolReturningUnionOfAny(string name) returns Data|string {
     return new;
 }

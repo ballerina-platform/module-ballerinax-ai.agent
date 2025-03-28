@@ -22,6 +22,6 @@ type User record {|
 
 type Friend User;
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolCyclicInput(User user) {
 }

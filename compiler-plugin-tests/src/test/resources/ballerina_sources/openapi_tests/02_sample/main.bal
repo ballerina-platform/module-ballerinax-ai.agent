@@ -35,13 +35,13 @@ final ai:Agent agent = check new (
     verbose = true
 );
 
-@ai:Tool
+@ai:AgentTool
 isolated function sum(decimal a, decimal b) returns decimal => a + b;
 
-@ai:Tool
+@ai:AgentTool
 isolated function mult(decimal a, decimal b) returns decimal => a * b;
 
-@ai:Tool
+@ai:AgentTool
 isolated function sqrt(float a) returns float => a.sqrt();
 
 service /api/v1 on new ai:Listener(9090) {

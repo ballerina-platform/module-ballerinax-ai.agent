@@ -22,7 +22,7 @@ type Record record {|
     XML 'field;
 |};
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolWithXml(xml one, XML two, map<XML> three, map<Record> four,
         Record five, table<Record> six, string|Record seven) {
 }

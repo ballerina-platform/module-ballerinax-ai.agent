@@ -195,7 +195,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
 isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
     string[] toolNameList = [];
     string[] toolIntroList = [];
-    foreach AgentTool tool in toolStore.tools {
+    foreach Tool tool in toolStore.tools {
         toolNameList.push(string `${tool.name}`);
         record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
             description: tool.description,

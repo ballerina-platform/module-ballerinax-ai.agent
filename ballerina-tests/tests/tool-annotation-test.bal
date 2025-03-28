@@ -29,7 +29,7 @@ function validateGeneratedSchema(string functionName, ai:FunctionTool tool) retu
 
 function getToolConfig(ai:FunctionTool tool) returns ai:ToolAnnotationConfig|error {
     typedesc<ai:FunctionTool> functionTypedesc = typeof tool;
-    return functionTypedesc.@ai:Tool.ensureType();
+    return functionTypedesc.@ai:AgentTool.ensureType();
 }
 
 function getExpectedToolConfig(string functionName) returns ai:ToolAnnotationConfig|error {

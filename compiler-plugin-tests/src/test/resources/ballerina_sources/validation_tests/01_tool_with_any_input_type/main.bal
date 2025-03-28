@@ -20,7 +20,7 @@ class Data {
     public int age = 12;
 }
 
-@ai:Tool
+@ai:AgentTool
 isolated function toolWithAny(string name, Data data, map<any> anyMap) {
 
 }

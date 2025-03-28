@@ -35,7 +35,7 @@ import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
 public class Utils {
     public static final String BALLERINAX_ORG = "ballerinax";
     private static final String BALLERINA_ORG = "ballerina";
-    private static final String TOOL_ANNOTATION_NAME = "Tool";
+    private static final String TOOL_ANNOTATION_NAME = "AgentTool";
     private static final String AI_PACKAGE_NAME = "ai";
     private static final String HTTP_PACKAGE_NAME = "http";
     private static final String HTTP_RESPONSE_OBJECT_NAME = "Response";
@@ -43,7 +43,7 @@ public class Utils {
     private Utils() {
     }
 
-    public static boolean isToolAnnotation(AnnotationSymbol annotationSymbol) {
+    public static boolean isAgentToolAnnotation(AnnotationSymbol annotationSymbol) {
         return annotationSymbol.getModule().isPresent()
                 && isAgentModuleSymbol(annotationSymbol.getModule().get())
                 && annotationSymbol.getName().isPresent()

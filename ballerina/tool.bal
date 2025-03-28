@@ -24,7 +24,7 @@ type ToolExecutionResult record {|
 
 # This is the tool used by LLMs during reasoning.
 # This tool is same as the Tool record, but it has a clear separation between the variables that should be generated with the help of the LLMs and the constants that are defined by the users. 
-public type AgentTool record {|
+public type Tool record {|
     # Name of the tool
     string name;
     # Description of the tool
@@ -38,7 +38,7 @@ public type AgentTool record {|
 |};
 
 public isolated class ToolStore {
-    public final map<AgentTool> & readonly tools;
+    public final map<Tool> & readonly tools;
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -62,7 +62,7 @@ public isolated class ToolStore {
                 toolList.push(tool);
             }
         }
-        map<AgentTool & readonly> toolMap = {};
+        map<Tool & readonly> toolMap = {};
         check registerTool(toolMap, toolList);
         self.tools = toolMap.cloneReadOnly();
     }
@@ -121,9 +121,9 @@ public isolated class ToolStore {
 
 isolated function getToolConfig(FunctionTool tool) returns ToolConfig|Error {
     typedesc<FunctionTool> typedescriptor = typeof tool;
-    ToolAnnotationConfig? config = typedescriptor.@Tool;
+    ToolAnnotationConfig? config = typedescriptor.@AgentTool;
     if config is () {
-        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@ai:Tool`.");
+        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@ai:AgentTool`.");
     }
     do {
         return {
@@ -159,7 +159,7 @@ isolated function getInputArgumentsOfFunction(FunctionTool tool, map<json> input
     return argsWithDefaultValues.toArray().cloneReadOnly();
 }
 
-isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] tools) returns Error? {
+isolated function registerTool(map<Tool & readonly> toolMap, ToolConfig[] tools) returns Error? {
     foreach ToolConfig tool in tools {
         string name = tool.name;
         if name.toLowerAscii().matches(FINAL_ANSWER_REGEX) {
@@ -186,7 +186,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] t
             constants = resolveSchema(variables) ?: {};
         }
 
-        AgentTool agentTool = {
+        Tool agentTool = {
             name,
             description: regexp:replaceAll(re `\n`, tool.description, " "),
             variables,
