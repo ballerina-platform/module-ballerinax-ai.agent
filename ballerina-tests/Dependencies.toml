@@ -323,7 +323,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "xmldata"
-version = "2.9.1"
+version = "2.9.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
