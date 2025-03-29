@@ -88,14 +88,15 @@ public isolated distinct client class FunctionCallAgent {
         // TODO: Improve handling of multiple tool calls returned by the LLM.  
         // Currently, tool calls are executed sequentially in separate chat responses.  
         // Update the logic to execute all tool calls together and return a single response.
-        ChatAssistantMessage[] response = check self.model->chat(messages,
+        ChatAssistantMessage response = check self.model->chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
-        return response[0].content is string ? response[0].content : response[0]?.function_call;
+        FunctionCall[]? toolCalls = response?.toolCalls;
+        return toolCalls is FunctionCall[] ? toolCalls[0] : response?.content;
     }
 
     # Execute the agent for a given user's query.
@@ -115,7 +116,6 @@ public isolated distinct client class FunctionCallAgent {
 
 isolated function createFunctionCallMessages(ExecutionProgress progress) returns ChatMessage[] {
     ChatMessage[] messages = [];
-    // include the history
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
         if functionCall is error {
@@ -124,7 +124,7 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
 
         messages.push({
             role: ASSISTANT,
-            function_call: functionCall
+            toolCalls: [functionCall]
         },
         {
             role: FUNCTION,
