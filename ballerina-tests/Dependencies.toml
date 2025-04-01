@@ -355,7 +355,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai"
-version = "0.9.3"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "data.jsondata"},
@@ -382,7 +382,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.9.3"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
