@@ -48,7 +48,6 @@ import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.AGENT
  */
 class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisContext> {
     private static final String AGENT_CLASS_NAME = "Agent";
-    private static final String AGENT_MODULE_NAME = "agent";
     private static final String AI_MODULE_NAME = "ai";
     private final Map<DocumentId, ModifierContext> modifierContextMap;
 
@@ -106,18 +105,17 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
                     .filter(importDeclarationNode -> {
                         SeparatedNodeList<IdentifierToken> moduleName = importDeclarationNode.moduleName();
                         Optional<ImportOrgNameNode> orgNameOpt = importDeclarationNode.orgName();
-                        return moduleName.size() > 1
+                        return moduleName.size() == 1
                                 && moduleName.get(0).text().contains(AI_MODULE_NAME)
                                 && orgNameOpt.isPresent()
-                                && orgNameOpt.get().orgName().text().equals(BALLERINAX_ORG)
-                                && moduleName.get(1).text().contains(AGENT_MODULE_NAME);
+                                && orgNameOpt.get().orgName().text().equals(BALLERINAX_ORG);
                     }).findFirst();
 
             if (agentModuleImport.isEmpty() || agentModuleImport.get().prefix().isEmpty()) {
-                return AGENT_MODULE_NAME;
+                return AI_MODULE_NAME;
             }
             return agentModuleImport.get().prefix().get().prefix().text().trim();
         }
-        return AGENT_MODULE_NAME;
+        return AI_MODULE_NAME;
     }
 }

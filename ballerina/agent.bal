@@ -46,7 +46,7 @@ public type AgentConfiguration record {|
 
     # The model used by the agent
     @display {label: "Model"}
-    Model model;
+    ModelProvider model;
 
     # The tools available for the agent
     @display {label: "Tools"}

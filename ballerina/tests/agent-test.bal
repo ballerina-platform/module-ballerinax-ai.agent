@@ -30,7 +30,7 @@ ToolConfig calculatorTool = {
     caller: calculatorToolMock
 };
 
-OpenAiModel model = test:mock(OpenAiModel, new MockLLM());
+OpenAiProvider model = test:mock(OpenAiProvider, new MockLLM());
 
 @test:Config {
     enable: false

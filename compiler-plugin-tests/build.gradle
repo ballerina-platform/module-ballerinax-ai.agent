@@ -29,7 +29,7 @@ dependencies {
     checkstyle project(':checkstyle')
     checkstyle "com.puppycrawl.tools:checkstyle:${checkstylePluginVersion}"
 
-    testImplementation project(":ai.agent-compiler-plugin")
+    testImplementation project(":ai-compiler-plugin")
     testImplementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangVersion}"
     testImplementation group: 'org.ballerinalang', name: 'ballerina-parser', version: "${ballerinaLangVersion}"
     testImplementation group: 'org.ballerinalang', name: 'ballerina-tools-api', version: "${ballerinaLangVersion}"
@@ -93,7 +93,7 @@ jacocoTestReport {
         csv.required = false
         html.required = false
     }
-    sourceSets project(':ai.agent-compiler-plugin').sourceSets.main
+    sourceSets project(':ai-compiler-plugin').sourceSets.main
 }
 
 def distributionVersion = stripBallerinaExtensionVersion(ballerinaLangVersion)
@@ -133,8 +133,8 @@ test {
     }
 }
 
-test.dependsOn ":ai.agent-ballerina:build"
-compileTestJava.dependsOn ":ai.agent-compiler-plugin:copyOpenApiJar"
-test.dependsOn ":ai.agent-ballerina:publishAiPackageToLocal"
+test.dependsOn ":ai-ballerina:build"
+compileTestJava.dependsOn ":ai-compiler-plugin:copyOpenApiJar"
+test.dependsOn ":ai-ballerina:publishAiPackageToLocal"
 test.finalizedBy jacocoTestReport
 jacocoTestReport.dependsOn test

@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/lang.regexp;
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 isolated function getNumbers(string prompt) returns string[] {
     regexp:Span[] spans = re `-?\d+\.?\d*`.findAll(prompt);
@@ -50,7 +50,7 @@ type MockLlmToolCall record {|
     json action_input;
 |};
 
-@agent:Tool
+@ai:AgentTool
 isolated function sum(decimal[] numbers) returns string {
     decimal total = 0;
     foreach decimal number in numbers {
@@ -59,18 +59,18 @@ isolated function sum(decimal[] numbers) returns string {
     return string `Answer is: ${total}`;
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
 isolated client distinct class MockLlm {
-    *agent:Model;
+    *ai:ModelProvider;
 
-    isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
-        returns agent:ChatAssistantMessage|agent:LlmError {
-        agent:ChatMessage lastMessage = messages.pop();
-        string prompt = lastMessage is agent:ChatUserMessage ? lastMessage.content : "";
+    isolated remote function chat(ai:ChatMessage[] messages, ai:ChatCompletionFunctions[] tools, string? stop)
+        returns ai:ChatAssistantMessage|ai:LlmError {
+        ai:ChatMessage lastMessage = messages.pop();
+        string prompt = lastMessage is ai:ChatUserMessage ? lastMessage.content : "";
         string query = re `Begin!`.split(prompt)[1];
         if (query.includes("Answer is:")) {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
@@ -88,16 +88,16 @@ isolated client distinct class MockLlm {
             MockLlmToolCall toolCall = {action: "mutiply", action_input: {a, b}};
             return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
-        return error agent:LlmError("I can't understand");
+        return error ai:LlmError("I can't understand");
     }
 }
 
-isolated function getChatAssistantMessage(string content) returns agent:ChatAssistantMessage {
-    return {role: agent:ASSISTANT, content};
+isolated function getChatAssistantMessage(string content) returns ai:ChatAssistantMessage {
+    return {role: ai:ASSISTANT, content};
 }
 
 final MockLlm model = new;
-agent:Agent agent = check new (model = model,
+ai:Agent agent = check new (model = model,
     systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-    tools = [sum, mutiply], agentType = agent:REACT_AGENT
+    tools = [sum, mutiply], agentType = ai:REACT_AGENT
 );

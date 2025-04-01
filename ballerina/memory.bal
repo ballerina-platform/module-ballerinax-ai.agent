@@ -4,23 +4,23 @@ public type MemoryManager isolated object {
     # Retrieves memory based on the given memory ID.
     #
     # + memoryId - The ID associated with the memory
-    # + return - A `Memory` instance on success, otherwise an `agent:Error`
+    # + return - A `Memory` instance on success, otherwise an `ai:Error`
     public isolated function getMemory(string memoryId) returns Memory|MemoryError;
 };
 
 # Represents the memory interface for the agents.
 public type Memory isolated object {
     # Retrieves all stored chat messages.
-    # + return - An array of messages or an `agent:Error`
+    # + return - An array of messages or an `ai:Error`
     public isolated function get() returns ChatMessage[]|MemoryError;
 
     # Adds a chat message to the memory.
     # + message - The message to store
-    # + return - nil on success, or an `agent:Error` if the operation fails 
+    # + return - nil on success, or an `ai:Error` if the operation fails 
     public isolated function update(ChatMessage message) returns MemoryError?;
 
     # Deletes all stored messages.
-    # + return - nil on success, or an `agent:Error` if the operation fails
+    # + return - nil on success, or an `ai:Error` if the operation fails
     public isolated function delete() returns MemoryError?;
 };
 
@@ -38,7 +38,7 @@ public isolated class MessageWindowChatMemory {
     }
 
     # Retrieves a copy of all stored messages, with an optional system prompt.
-    # + return - A copy of the messages, or an `agent:Error`
+    # + return - A copy of the messages, or an `ai:Error`
     public isolated function get() returns ChatMessage[]|MemoryError {
         lock {
             ChatMessage[] memory = self.memory.clone();
@@ -52,7 +52,7 @@ public isolated class MessageWindowChatMemory {
 
     # Adds a message to the window.
     # + message - The `ChatMessage` to store or use as system prompt
-    # + return - nil on success, or an `agent:Error` if the operation fails 
+    # + return - nil on success, or an `ai:Error` if the operation fails 
     public isolated function update(ChatMessage message) returns MemoryError? {
         lock {
             if message is ChatSystemMessage {
@@ -67,7 +67,7 @@ public isolated class MessageWindowChatMemory {
     }
 
     # Removes all messages from the memory.
-    # + return - nil on success, or an `agent:Error` if the operation fails 
+    # + return - nil on success, or an `ai:Error` if the operation fails 
     public isolated function delete() returns MemoryError? {
         lock {
             self.memory.removeAll();
@@ -76,15 +76,15 @@ public isolated class MessageWindowChatMemory {
     }
 }
 
-# A default implementation of `agent:MemoryManager`.
+# A default implementation of `ai:MemoryManager`.
 public isolated class DefaultMessageWindowChatMemoryManager {
     *MemoryManager;
     private final map<MessageWindowChatMemory> sessions = {};
     private final int size;
 
-    # Initializes a new `agent:DefaultMessageWindowChatMemoryManager`.
+    # Initializes a new `ai:DefaultMessageWindowChatMemoryManager`.
     #
-    # + size - The maximum number of messages that can be stored in `agent:MessageWindowChatMemory`
+    # + size - The maximum number of messages that can be stored in `ai:MessageWindowChatMemory`
     public isolated function init(int size = 10) {
         self.size = size;
     }
@@ -92,7 +92,7 @@ public isolated class DefaultMessageWindowChatMemoryManager {
     # Retrieves memory based on the given memory ID.
     #
     # + memoryId - The ID associated with the memory
-    # + return - A `Memory` instance on success, otherwise an `agent:Error`
+    # + return - A `Memory` instance on success, otherwise an `ai:Error`
     public isolated function getMemory(string memoryId) returns Memory|MemoryError {
         lock {
             if !self.sessions.hasKey(memoryId) {

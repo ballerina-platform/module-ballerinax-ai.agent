@@ -29,7 +29,7 @@ public isolated client class ReActAgent {
     # ToolStore instance to store the tools used by the agent
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final Model model;
+    public final ModelProvider model;
     # The memory associated with the agent.
     public final MemoryManager memoryManager;
 
@@ -37,7 +37,7 @@ public isolated client class ReActAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
+    public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
             MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
@@ -195,7 +195,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
 isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
     string[] toolNameList = [];
     string[] toolIntroList = [];
-    foreach AgentTool tool in toolStore.tools {
+    foreach Tool tool in toolStore.tools {
         toolNameList.push(string `${tool.name}`);
         record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
             description: tool.description,

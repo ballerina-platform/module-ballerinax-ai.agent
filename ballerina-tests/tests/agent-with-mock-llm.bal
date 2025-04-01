@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/lang.regexp;
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 isolated function getNumbers(string prompt) returns string[] {
     regexp:Span[] spans = re `-?\d+\.?\d*`.findAll(prompt);
@@ -50,7 +50,7 @@ type MockLlmToolCall record {|
     json action_input;
 |};
 
-@agent:Tool
+@ai:AgentTool
 isolated function sum(decimal[] numbers) returns string {
     decimal total = 0;
     foreach decimal number in numbers {
@@ -59,23 +59,23 @@ isolated function sum(decimal[] numbers) returns string {
     return string `Answer is: ${total}`;
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
-@agent:Tool
-isolated function getEmails() returns stream<Mail, agent:Error?>|error? {
+@ai:AgentTool
+isolated function getEmails() returns stream<Mail, ai:Error?>|error? {
     return [{body: "Mail Body 1"}, {body: "Mail Body 2"}, {body: "Mail Body 3"}].toStream();
 }
 
 isolated client distinct class MockLlm {
-    *agent:Model;
+    *ai:ModelProvider;
 
-    isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
-        returns agent:ChatAssistantMessage|agent:LlmError {
-        agent:ChatMessage lastMessage = messages.pop();
-        string query = lastMessage is agent:ChatUserMessage|agent:ChatFunctionMessage ? lastMessage.content ?: "" : "";
+    isolated remote function chat(ai:ChatMessage[] messages, ai:ChatCompletionFunctions[] tools, string? stop)
+        returns ai:ChatAssistantMessage|ai:LlmError {
+        ai:ChatMessage lastMessage = messages.pop();
+        string query = lastMessage is ai:ChatUserMessage|ai:ChatFunctionMessage ? lastMessage.content ?: "" : "";
         if query.includes("Mail Body") {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: query};
             return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
@@ -106,28 +106,28 @@ isolated client distinct class MockLlm {
             MockLlmToolCall toolCall = {action: "mutiply", action_input: {a, b}};
             return getChatAssistantMessage(string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`);
         }
-        return error agent:LlmError("I can't understand");
+        return error ai:LlmError("I can't understand");
     }
 }
 
-isolated function getChatAssistantMessage(string content) returns agent:ChatAssistantMessage {
-    return {role: agent:ASSISTANT, content};
+isolated function getChatAssistantMessage(string content) returns ai:ChatAssistantMessage {
+    return {role: ai:ASSISTANT, content};
 }
 
 final MockLlm model = new;
-final agent:Agent agent = check new (model = model,
+final ai:Agent agent = check new (model = model,
     systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-    tools = [sum, mutiply, new SearchToolKit(), getEmails], agentType = agent:REACT_AGENT
+    tools = [sum, mutiply, new SearchToolKit(), getEmails], agentType = ai:REACT_AGENT
 );
 
 isolated class SearchToolKit {
-    *agent:BaseToolKit;
+    *ai:BaseToolKit;
 
-    public isolated function getTools() returns agent:ToolConfig[] {
-        return agent:getToolConfigs([self.searchDoc]);
+    public isolated function getTools() returns ai:ToolConfig[] {
+        return ai:getToolConfigs([self.searchDoc]);
     }
 
-    @agent:Tool
+    @ai:AgentTool
     public isolated function searchDoc(string searchQuery) returns string {
         return string `Answer is: No result found on doc for ${searchQuery}`;
     }
