@@ -3,9 +3,9 @@ public type MemoryManager isolated object {
 
     # Retrieves memory based on the given memory ID.
     #
-    # + memoryId - The ID associated with the memory
+    # + sessionId - The ID associated with the memory
     # + return - A `Memory` instance on success, otherwise an `ai:Error`
-    public isolated function getMemory(string memoryId) returns Memory|MemoryError;
+    public isolated function getMemory(string sessionId) returns Memory|MemoryError;
 };
 
 # Represents the memory interface for the agents.
@@ -91,14 +91,14 @@ public isolated class DefaultMessageWindowChatMemoryManager {
 
     # Retrieves memory based on the given memory ID.
     #
-    # + memoryId - The ID associated with the memory
+    # + sessionId - The ID associated with the memory
     # + return - A `Memory` instance on success, otherwise an `ai:Error`
-    public isolated function getMemory(string memoryId) returns Memory|MemoryError {
+    public isolated function getMemory(string sessionId) returns Memory|MemoryError {
         lock {
-            if !self.sessions.hasKey(memoryId) {
-                self.sessions[memoryId] = new MessageWindowChatMemory(self.size);
+            if !self.sessions.hasKey(sessionId) {
+                self.sessions[sessionId] = new MessageWindowChatMemory(self.size);
             }
-            return self.sessions.get(memoryId);
+            return self.sessions.get(sessionId);
         }
     }
 }

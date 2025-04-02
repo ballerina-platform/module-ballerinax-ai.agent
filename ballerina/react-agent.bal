@@ -27,22 +27,25 @@ public isolated client class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
     # ToolStore instance to store the tools used by the agent
-    public final ToolStore toolStore;
+    final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final ModelProvider model;
+    final ModelProvider model;
     # The memory associated with the agent.
-    public final MemoryManager memoryManager;
+    final MemoryManager memoryManager;
+    # Represents if the agent is stateless or not.
+    final boolean stateless;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager;
+        self.memoryManager = memoryManager is MemoryManager ? memoryManager : new DefaultMessageWindowChatMemoryManager();
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
+        self.stateless = memoryManager is ();
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
@@ -57,9 +60,9 @@ public isolated client class ReActAgent {
     # Use LLM to decide the next tool/step based on the ReAct prompting.
     #
     # + progress - Execution progress with the current query and execution history
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
-    public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
+    public isolated function selectNextTool(ExecutionProgress progress, string sessionId = DEFAULT_SESSION_ID) returns json|LlmError {
         ChatMessage[] messages = [];
         // include the history
         foreach ExecutionStep step in progress.history {
@@ -88,7 +91,7 @@ public isolated client class ReActAgent {
             }
         }
 
-        Memory|MemoryError memory = self.memoryManager.getMemory(memoryId);
+        Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
         if additionalMessages is error {
             log:printError("Failed to get chat messages from memory", additionalMessages);
@@ -112,12 +115,12 @@ public isolated client class ReActAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {},
-            boolean verbose = true, string memoryId = DEFAULT_MEMORY_ID)
+            boolean verbose = true, string sessionId = DEFAULT_SESSION_ID)
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose, memoryId);
+        return run(self, query, maxIter, context, verbose, sessionId);
     }
 }
 
