@@ -66,7 +66,7 @@ public type AgentConfiguration record {|
 
     # The memory manager used by the agent to store and manage conversation history
     @display {label: "Memory Manager"}
-    MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager();
+    MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager();
 |};
 
 # Represents an agent.

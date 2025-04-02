@@ -27,22 +27,25 @@ public isolated client class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
     # ToolStore instance to store the tools used by the agent
-    public final ToolStore toolStore;
+    final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final ModelProvider model;
+    final ModelProvider model;
     # The memory associated with the agent.
-    public final MemoryManager memoryManager;
+    final MemoryManager memoryManager;
+    # Represents if the agent is stateless or not.
+    final boolean stateless;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager;
+        self.memoryManager = memoryManager is MemoryManager ? memoryManager : new DefaultMessageWindowChatMemoryManager();
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
+        self.stateless = memoryManager is ();
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 

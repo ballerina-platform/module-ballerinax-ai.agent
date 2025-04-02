@@ -75,9 +75,10 @@ public type ToolOutput record {|
 |};
 
 public type BaseAgent distinct isolated client object {
-    public ModelProvider model;
-    public ToolStore toolStore;
-    public MemoryManager memoryManager;
+    ModelProvider model;
+    ToolStore toolStore;
+    MemoryManager memoryManager;
+    boolean stateless;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -315,6 +316,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
             }
             updateExecutionResultInMemory(memory, step);
             steps.push(step);
+        }
+        if agent.stateless {
+            MemoryError? err = memory.delete();
+            // Ignore this error since the stateless agent always relies on DefaultMessageWindowChatMemoryManager,  
+            // which never return an error.
         }
         return {steps, answer: content};
     }
