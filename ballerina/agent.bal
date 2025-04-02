@@ -90,10 +90,10 @@ public isolated distinct client class Agent {
     # Executes the agent for a given user query.
     #
     # + query - The natural language input provided to the agent
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - The agent's response or an error
-    isolated remote function run(@display {label: "Query"} string query, @display {label: "Memory ID"} string memoryId = DEFAULT_MEMORY_ID) returns string|Error {
-        var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose, memoryId);
+    isolated remote function run(@display {label: "Query"} string query, @display {label: "Session ID"} string sessionId = DEFAULT_SESSION_ID) returns string|Error {
+        var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose, sessionId);
         string? answer = result.answer;
         if answer is string {
             return answer;

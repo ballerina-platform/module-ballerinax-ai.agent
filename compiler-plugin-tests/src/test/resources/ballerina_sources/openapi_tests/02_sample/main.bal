@@ -46,7 +46,7 @@ isolated function sqrt(float a) returns float => a.sqrt();
 
 service /api/v1 on new ai:Listener(9090) {
     resource function post chat(@http:Payload ai:ChatReqMessage request) returns ai:ChatRespMessage|error {
-        string response = check agent->run(request.message, memoryId = request.sessionId);
+        string response = check agent->run(request.message, sessionId = request.sessionId);
         return {message: response};
     }
 }
