@@ -260,7 +260,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         ChatUserMessage userMessage = {role: USER, content: query};
         updateMemory(memory, userMessage);
 
-        ChatMessage[] temperoryMemory = [];
+        ChatMessage[] temporaryMemory = [];
 
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
             if iter == maxIter {
@@ -279,11 +279,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
                 if agent is ReActAgent {
                     json finalAnswer = {action: "Final Answer", action_input: step.content};
                     ChatAssistantMessage assistantMessage = {role: ASSISTANT, content: string `${BACKTICKS}${finalAnswer.toJsonString()}${BACKTICKS}\"`};
-                    temperoryMemory.push(assistantMessage);
+                    temporaryMemory.push(assistantMessage);
                     break;
                 }
                 ChatAssistantMessage assistantMessage = {role: "assistant", content: step.content};
-                temperoryMemory.push(assistantMessage);
+                temporaryMemory.push(assistantMessage);
                 break;
             }
             iter += 1;
@@ -316,11 +316,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
     ${BACKTICKS}`);
                 }
             }
-            updateExecutionResultInMemory(memory, step, temperoryMemory);
+            updateExecutionResultInMemory(memory, step, temporaryMemory);
             steps.push(step);
         }
 
-        foreach ChatMessage message in temperoryMemory {
+        foreach ChatMessage message in temporaryMemory {
             updateMemory(memory, message);
         }
 
@@ -363,7 +363,7 @@ public isolated function updateMemory(Memory memory, ChatMessage message) {
     }
 }
 
-isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|LlmChatResponse|ExecutionError|Error step, ChatMessage[] temperoryMemory) {
+isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|LlmChatResponse|ExecutionError|Error step, ChatMessage[] temporaryMemory) {
     if step is ExecutionResult {
         LlmToolResponse tool = step.tool;
         anydata|error observation = step?.observation;
@@ -372,7 +372,7 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
             role: ASSISTANT,
             toolCalls: [{name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}]
         };
-        temperoryMemory.push(assistantMessage);
+        temporaryMemory.push(assistantMessage);
 
         ChatFunctionMessage functionMessage = {
             role: FUNCTION,
@@ -381,6 +381,6 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
                 observation.toString() : observation is () ? "" : observation.toString(),
             id: tool.id
         };
-        temperoryMemory.push(functionMessage);
+        temporaryMemory.push(functionMessage);
     }
 }
