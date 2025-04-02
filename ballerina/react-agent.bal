@@ -27,22 +27,25 @@ public isolated client class ReActAgent {
     *BaseAgent;
     final string instructionPrompt;
     # ToolStore instance to store the tools used by the agent
-    public final ToolStore toolStore;
+    final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final Model model;
+    final ModelProvider model;
     # The memory associated with the agent.
-    public final MemoryManager memoryManager;
+    final MemoryManager memoryManager;
+    # Represents if the agent is stateless or not.
+    final boolean stateless;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+    public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
+            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager;
+        self.memoryManager = memoryManager is MemoryManager ? memoryManager : new DefaultMessageWindowChatMemoryManager();
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
+        self.stateless = memoryManager is ();
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
@@ -57,28 +60,38 @@ public isolated client class ReActAgent {
     # Use LLM to decide the next tool/step based on the ReAct prompting.
     #
     # + progress - Execution progress with the current query and execution history
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
-    public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
+    public isolated function selectNextTool(ExecutionProgress progress, string sessionId = DEFAULT_SESSION_ID) returns json|LlmError {
         ChatMessage[] messages = [];
         // include the history
         foreach ExecutionStep step in progress.history {
-            LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);
-            if res is LlmInvalidGenerationError {
+            LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError parsedResponse = self.parseLlmResponse(step.llmResponse);
+            if parsedResponse is LlmInvalidGenerationError {
                 messages.push({role: ASSISTANT, content: step.llmResponse.toJsonString()});
-            } else if res is LlmChatResponse {
+            } else if parsedResponse is LlmChatResponse {
+                messages.push({role: ASSISTANT, content: parsedResponse.content});
+            } else {
                 messages.push({
                     role: ASSISTANT,
-                    content: res.content
+                    toolCalls: [
+                        {
+                            name: parsedResponse.name,
+                            arguments: parsedResponse.arguments.toJsonString(),
+                            id: parsedResponse.id
+                        }
+                    ]
+                },
+                {
+                    role: FUNCTION,
+                    name: parsedResponse.name,
+                    content: getObservationString(step.observation),
+                    id: parsedResponse.id
                 });
-            } else {
-                messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
-                {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
 
-        Memory|MemoryError memory = self.memoryManager.getMemory(memoryId);
+        Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
         if additionalMessages is error {
             log:printError("Failed to get chat messages from memory", additionalMessages);
@@ -91,8 +104,9 @@ public isolated client class ReActAgent {
     # + messages - Chat history to be processed by the ReAct agent
     # + return - The processed chat history
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
-        ChatAssistantMessage[] assistantMessages = check self.model->chat(messages, stop = OBSERVATION_KEY);
-        return assistantMessages[0].content is string ? assistantMessages[0].content : assistantMessages[0]?.function_call;
+        ChatAssistantMessage assistantMessage = check self.model->chat(messages, stop = OBSERVATION_KEY);
+        FunctionCall[]? toolCalls = assistantMessage?.toolCalls;
+        return toolCalls is FunctionCall[] ? toolCalls[0] : assistantMessage?.content;
     }
 
     # Execute the agent for a given user's query.
@@ -101,12 +115,12 @@ public isolated client class ReActAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {},
-            boolean verbose = true, string memoryId = DEFAULT_MEMORY_ID)
+            boolean verbose = true, string sessionId = DEFAULT_SESSION_ID)
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose, memoryId);
+        return run(self, query, maxIter, context, verbose, sessionId);
     }
 }
 
@@ -184,7 +198,7 @@ isolated function constructHistoryPrompt(ExecutionStep[] history) returns string
 isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
     string[] toolNameList = [];
     string[] toolIntroList = [];
-    foreach AgentTool tool in toolStore.tools {
+    foreach Tool tool in toolStore.tools {
         toolNameList.push(string `${tool.name}`);
         record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
             description: tool.description,

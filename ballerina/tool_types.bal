@@ -158,21 +158,21 @@ public type ToolAnnotationConfig record {|
 |};
 
 # Represents the annotation of a function tool.
-public annotation ToolAnnotationConfig Tool on function, object function;
+public annotation ToolAnnotationConfig AgentTool on function, object function;
 
 # Represents a type alias for an isolated function, representing a function tool.
 public type FunctionTool isolated function;
 
 # Generates a array of `ToolConfig` from the given list of function pointers.
 # 
-# + tools - Array of function pointers annotated with `@agent:Tool` annotation
-# + return - Array of `agent:ToolConfig` instances
+# + tools - Array of function pointers annotated with `@ai:AgentTool` annotation
+# + return - Array of `ai:ToolConfig` instances
 public isolated function getToolConfigs(FunctionTool[] tools) returns ToolConfig[] {
     ToolConfig[] toolConfigs = [];
     foreach FunctionTool tool in tools {
         ToolConfig|Error toolConfig = getToolConfig(tool);
         if toolConfig is Error {
-            log:printWarn("Failed to create 'agent:ToolConfig' for function '" 
+            log:printWarn("Failed to create 'ai:ToolConfig' for function '" 
                 + getFunctionName(tool) + "'. Skipping this tool.", 'error = toolConfig);
         } else {
             toolConfigs.push(toolConfig);

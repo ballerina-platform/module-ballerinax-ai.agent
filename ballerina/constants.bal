@@ -40,7 +40,7 @@ const DEEPSEEK_SERVICE_URL = "https://api.deepseek.com";
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
-const DEFAULT_MEMORY_ID = "memoryId";
+const DEFAULT_SESSION_ID = "sessionId";
 
 final string:RegExp FINAL_ANSWER_REGEX = re `^final.?answer`;
 

@@ -48,14 +48,14 @@ isolated function sendMail(record {|string senderEmail; MessageRequest messageRe
 
 public client class MockLLM {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop)
-        returns ChatAssistantMessage[]|LlmError {
+        returns ChatAssistantMessage|LlmError {
         ChatMessage lastMessage = messages.pop();
         string prompt = lastMessage is ChatUserMessage ? lastMessage.content : "";
         if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {
             int queryLevel = regexp:findAll(re `observation`, prompt.toLowerAscii()).length();
             io:println(queryLevel, prompt);
             string content = check getChatAssistantMessageContent(queryLevel);
-            return [{role: ASSISTANT, content}];
+            return {role: ASSISTANT, content};
         }
         return error LlmError("Unexpected prompt to MockLLM");
     }
