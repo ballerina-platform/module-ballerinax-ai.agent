@@ -972,8 +972,8 @@ public isolated client class MistralAiProvider {
 }
 
 # Deepseek is a client class that provides an interface for interacting with Deepseek language models.
-public isolated client class DeepseekModel {
-    *Model;
+public isolated client class DeepseekProvider {
+    *ModelProvider;
     private final http:Client llmClient;
     private final int maxTokens;
     private final DEEPSEEK_MODEL_NAMES modelType;
@@ -1029,9 +1029,9 @@ public isolated client class DeepseekModel {
     # + messages - List of chat messages 
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
-    # + return - Returns an array of ChatAssistantMessage or an LlmError in case of failures
+    # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
-    returns ChatAssistantMessage[]|LlmError {
+    returns ChatAssistantMessage|LlmError {
         DeepSeekChatRequestMessages[] deepseekPayloadMessages = self.mapDeepseekMessages(messages);
 
         DeepSeekChatCompletionRequest request = {
@@ -1064,9 +1064,7 @@ public isolated client class DeepseekModel {
         if response is error {
             return error LlmConnectionError("Error while connecting to the model", response);
         }
-
-        ChatAssistantMessage[] chatAssistantMessages = check self.getAssistantMessages(response);
-        return chatAssistantMessages;
+        return self.getAssistantMessages(response);
     }
 
     # Generates a random tool ID.
@@ -1131,31 +1129,22 @@ public isolated client class DeepseekModel {
                 };
                 deepseekMessages.push(deepseekSysteMessage);
             } else if message is ChatAssistantMessage {
-                if message.function_call is () {
-                    DeepseekChatAssistantMessage deepseekAssistantMessage = {
-                        role: ASSISTANT,
-                        content: message.content,
-                        tool_calls: ()
-                    };
-                    deepseekMessages.push(deepseekAssistantMessage);
-                } else {
-                    DeepseekChatResponseFunction functionCall = {
-                        name: message.function_call is FunctionCall ? message.function_call?.name ?: "" : "",
-                        arguments: message.function_call is FunctionCall ? message.function_call?.arguments ?: "" : ""
-                    };
-                    DeepseekChatResponseToolCall[] tool_calls = [
-                        {
+                FunctionCall[]? toolCalls = message.toolCalls;
+                DeepseekChatAssistantMessage deepseekAssistantMessage = {role: ASSISTANT, content: message.content};
+                if toolCalls is FunctionCall[] {
+                    DeepseekChatResponseToolCall[] toolCall = [];
+                    foreach  FunctionCall 'function in toolCalls {
+                        DeepseekChatResponseFunction functionCall = {name: 'function.name, arguments: 'function.arguments};
+                         DeepseekChatResponseToolCall tool = {
                             'function: functionCall,
-                            id: message.function_call?.id ?: self.generateToolId(),
+                            id: 'function.id ?: self.generateToolId(),
                             'type: "function"
-                        }
-                    ];
-                    DeepseekChatAssistantMessage deepseekAssistantMessage = {
-                        role: ASSISTANT,
-                        tool_calls: tool_calls
-                    };
-                    deepseekMessages.push(deepseekAssistantMessage);
+                         };
+                         toolCall.push(tool);
+                    }
+                    deepseekAssistantMessage.tool_calls = toolCall;
                 }
+                deepseekMessages.push(deepseekAssistantMessage);
             } else if message is ChatFunctionMessage {
                 DeepseekChatToolMessage deepseekToolMessage = {
                     role: "tool",
@@ -1171,35 +1160,28 @@ public isolated client class DeepseekModel {
     # Extracts assistant messages from a Deepseek chat completion response.
     #
     # + response - The response from LLM
-    # + return - An array of ChatAssistantMessage records
+    # + return - Chat response or an error in-case of failures
     private isolated function getAssistantMessages(DeepSeekChatCompletionResponse response)
-    returns ChatAssistantMessage[]|LlmError {
-        DeepseekChatResponseChoice[] choices = response.choices;
-
-        ChatAssistantMessage[] chatAssistantMessages = [];
-        foreach DeepseekChatResponseChoice choice in choices {
-            DeepseekChatResponseMessage message = choice.message;
-            string? content = message?.content;
-            if content is string && content != "" {
-                chatAssistantMessages.push({role: ASSISTANT, content: content});
-                break;
-            }
-            DeepseekChatResponseToolCall[]? toolCalls = message?.tool_calls;
-            if toolCalls !is () {
-                foreach DeepseekChatResponseToolCall toolCall in toolCalls {
-                    chatAssistantMessages.push({
-                        role: ASSISTANT,
-                        function_call: {
-                            name: toolCall.'function.name,
-                            id: toolCall.id,
-                            arguments: toolCall.'function.arguments.toString()
-                        }
-                    });
-                }
-            }
-            break;
+    returns ChatAssistantMessage|LlmError {
+        DeepseekChatResponseChoice[]? choices = response.choices;
+        if choices is () || choices.length() == 0 {
+            return error LlmInvalidResponseError("Empty response from the model when using function call API");
         }
-        return chatAssistantMessages.length() > 0 ? chatAssistantMessages
-            : error LlmInvalidResponseError("Empty response from the model when using function call API");
+        DeepseekChatResponseMessage message = choices[0].message;
+        string? content = message?.content;
+        DeepseekChatResponseToolCall[]? toolCalls = message?.tool_calls;
+        if toolCalls is () {
+            return {role: ASSISTANT, content: content};
+        }
+
+        FunctionCall[] functionCalls = [];
+        foreach DeepseekChatResponseToolCall toolCall in toolCalls {
+            functionCalls.push({
+                name: toolCall.'function.name,
+                id: toolCall.id,
+                arguments: toolCall.'function.arguments.toString()
+            });
+        }
+        return {role: ASSISTANT, toolCalls: functionCalls, content: content};        
     }
 }
