@@ -75,7 +75,7 @@ class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisConte
         this.context = context;
         Optional<Symbol> symbol = context.semanticModel().symbol(context.node());
         if (symbol.isEmpty() || symbol.get().kind() != SymbolKind.ANNOTATION
-                || !Utils.isToolAnnotation((AnnotationSymbol) symbol.get())) {
+                || !Utils.isAgentToolAnnotation((AnnotationSymbol) symbol.get())) {
             return;
         }
 

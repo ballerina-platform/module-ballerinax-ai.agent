@@ -14,14 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai.agent;
+import ballerinax/ai;
 import ballerina/http;
 
 listener http:Listener httpListener = http:getDefaultListener();
-listener agent:Listener chatListener = new (httpListener);
+listener ai:Listener chatListener = new (httpListener);
 
 service /chatService on chatListener {
-    resource function post chat(@http:Payload agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
+    resource function post chat(@http:Payload ai:ChatReqMessage request) returns ai:ChatRespMessage|error {
         return {
             message: request.sessionId + ": " + request.message
         };

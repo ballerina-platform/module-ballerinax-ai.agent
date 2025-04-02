@@ -5,7 +5,7 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.12.0"
+distribution-version = "2201.12.2"
 
 [[package]]
 org = "ballerina"
@@ -323,7 +323,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "xmldata"
-version = "2.9.1"
+version = "2.9.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -354,8 +354,8 @@ modules = [
 
 [[package]]
 org = "ballerinax"
-name = "ai.agent"
-version = "0.9.2"
+name = "ai"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "data.jsondata"},
@@ -375,21 +375,21 @@ dependencies = [
 	{org = "ballerinax", name = "openai.chat"}
 ]
 modules = [
-	{org = "ballerinax", packageName = "ai.agent", moduleName = "ai.agent"},
-	{org = "ballerinax", packageName = "ai.agent", moduleName = "ai.agent.mistral"}
+	{org = "ballerinax", packageName = "ai", moduleName = "ai"},
+	{org = "ballerinax", packageName = "ai", moduleName = "ai.mistral"}
 ]
 
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.9.2"
+version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
-	{org = "ballerinax", name = "ai.agent"}
+	{org = "ballerinax", name = "ai"}
 ]
 modules = [
 	{org = "ballerinax", packageName = "ai_tests", moduleName = "ai_tests"}

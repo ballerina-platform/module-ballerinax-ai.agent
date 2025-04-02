@@ -75,9 +75,10 @@ public type ToolOutput record {|
 |};
 
 public type BaseAgent distinct isolated client object {
-    public Model model;
-    public ToolStore toolStore;
-    public MemoryManager memoryManager;
+    ModelProvider model;
+    ToolStore toolStore;
+    MemoryManager memoryManager;
+    boolean stateless;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -88,11 +89,11 @@ public type BaseAgent distinct isolated client object {
     # Use LLM to decide the next tool/step.
     #
     # + progress - Execution progress with the current query and execution history
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
-    public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError;
+    public isolated function selectNextTool(ExecutionProgress progress, string sessionId = DEFAULT_SESSION_ID) returns json|LlmError;
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, string memoryId = DEFAULT_MEMORY_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, string sessionId = DEFAULT_SESSION_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
 };
 
 # An iterator to iterate over agent's execution
@@ -103,11 +104,11 @@ public class Iterator {
     # Initialize the iterator with the agent and the query.
     #
     # + agent - Agent instance to be executed
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + query - Natural language query to be executed by the agent
     # + context - Contextual information to be used by the agent during the execution
-    public isolated function init(BaseAgent agent, string memoryId, *ExecutionProgress progress) {
-        self.executor = new (agent, memoryId, progress);
+    public isolated function init(BaseAgent agent, string sessionId, *ExecutionProgress progress) {
+        self.executor = new (agent, sessionId, progress);
     }
 
     # Iterate over the agent's execution steps.
@@ -122,7 +123,7 @@ public class Iterator {
 # An executor to perform step-by-step execution of the agent.
 public class Executor {
     private boolean isCompleted = false;
-    private final string memoryId;
+    private final string sessionId;
     private final BaseAgent agent;
     # Contains the current execution progress for the agent and the query
     public ExecutionProgress progress;
@@ -133,8 +134,8 @@ public class Executor {
     # + query - Natural language query to be executed by the agent
     # + history - Execution history of the agent (This is used to continue an execution paused without completing)
     # + context - Contextual information to be used by the agent during the execution
-    public isolated function init(BaseAgent agent, string memoryId, *ExecutionProgress progress) {
-        self.memoryId = memoryId;
+    public isolated function init(BaseAgent agent, string sessionId, *ExecutionProgress progress) {
+        self.sessionId = sessionId;
         self.agent = agent;
         self.progress = progress;
     }
@@ -153,7 +154,7 @@ public class Executor {
         if self.isCompleted {
             return error TaskCompletedError("Task is already completed. No more reasoning is needed.");
         }
-        return check self.agent.selectNextTool(self.progress, self.memoryId);
+        return check self.agent.selectNextTool(self.progress, self.sessionId);
     }
 
     # Execute the next step of the agent.
@@ -236,19 +237,19 @@ public class Executor {
 # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
-# + memoryId - The ID associated with the memory
+# + sessionId - The ID associated with the memory
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
 public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose,
-        string memoryId = DEFAULT_MEMORY_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        string sessionId = DEFAULT_SESSION_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     lock {
         (ExecutionResult|ExecutionError)[] steps = [];
-        Memory|MemoryError memory = agent.memoryManager.getMemory(memoryId);
+        Memory|MemoryError memory = agent.memoryManager.getMemory(sessionId);
         if memory is Error {
             ExecutionError memoryExecutionError = {observation: "Unable to obtain memory", 'error: memory, llmResponse: ()};
             return {steps: [memoryExecutionError]};
         }
         string? content = ();
-        Iterator iterator = new (agent, memoryId, query = query, context = context);
+        Iterator iterator = new (agent, sessionId, query = query, context = context);
         int iter = 0;
 
         ChatSystemMessage reactSystemMessage = agent is ReActAgent
@@ -323,6 +324,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
             updateMemory(memory, message);
         }
 
+        if agent.stateless {
+            MemoryError? err = memory.delete();
+            // Ignore this error since the stateless agent always relies on DefaultMessageWindowChatMemoryManager,  
+            // which never return an error.
+        }
         return {steps, answer: content};
     }
 }
@@ -348,7 +354,7 @@ isolated function getObservationString(anydata|error observation) returns string
 #
 # + agent - Agent instance
 # + return - Array of tools registered with the agent
-public isolated function getTools(BaseAgent agent) returns AgentTool[] => agent.toolStore.tools.toArray();
+public isolated function getTools(BaseAgent agent) returns Tool[] => agent.toolStore.tools.toArray();
 
 public isolated function updateMemory(Memory memory, ChatMessage message) {
     error? updationStation = memory.update(message);
@@ -364,7 +370,7 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
 
         ChatAssistantMessage assistantMessage = {
             role: ASSISTANT,
-            function_call: {name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}
+            toolCalls: [{name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}]
         };
         temperoryMemory.push(assistantMessage);
 

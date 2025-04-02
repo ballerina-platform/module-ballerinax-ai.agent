@@ -15,15 +15,15 @@
 // under the License.
 
 import ballerina/http;
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 configurable string apiKey = ?;
 configurable string deploymentId = ?;
 configurable string apiVersion = ?;
 configurable string serviceUrl = ?;
 
-final agent:Model model = check new agent:AzureOpenAiModel(serviceUrl, apiKey, deploymentId, apiVersion);
-final agent:Agent agent = check new (
+final ai:ModelProvider model = check new ai:AzureOpenAiProvider(serviceUrl, apiKey, deploymentId, apiVersion);
+final ai:Agent agent = check new (
     systemPrompt = {
         role: "Math Tutor",
         instructions: "You are a school tutor assistant. " +
@@ -35,18 +35,18 @@ final agent:Agent agent = check new (
     verbose = true
 );
 
-@agent:Tool
+@ai:AgentTool
 isolated function sum(decimal a, decimal b) returns decimal => a + b;
 
-@agent:Tool
+@ai:AgentTool
 isolated function mult(decimal a, decimal b) returns decimal => a * b;
 
-@agent:Tool
+@ai:AgentTool
 isolated function sqrt(float a) returns float => a.sqrt();
 
-service /api/v1 on new agent:Listener(9090) {
-    resource function post chat(@http:Payload agent:ChatReqMessage request) returns agent:ChatRespMessage|error {
-        string response = check agent->run(request.message, memoryId = request.sessionId);
+service /api/v1 on new ai:Listener(9090) {
+    resource function post chat(@http:Payload ai:ChatReqMessage request) returns ai:ChatRespMessage|error {
+        string response = check agent->run(request.message, sessionId = request.sessionId);
         return {message: response};
     }
 }

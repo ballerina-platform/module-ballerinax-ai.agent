@@ -21,22 +21,25 @@ import ballerina/log;
 public isolated distinct client class FunctionCallAgent {
     *BaseAgent;
     # Tool store to be used by the agent
-    public final ToolStore toolStore;
+    final ToolStore toolStore;
     # LLM model instance (should be a function call model)
-    public final Model model;
+    final ModelProvider model;
     # The memory associated with the agent.
-    public final MemoryManager memoryManager;
+    final MemoryManager memoryManager;
+    # Represents if the agent is stateless or not.
+    final boolean stateless;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     # + memory - The memory associated with the agent.
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+    public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
+            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager;
+        self.memoryManager = memoryManager is () ? new DefaultMessageWindowChatMemoryManager() : memoryManager;
+        self.stateless = memoryManager is ();
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -73,11 +76,11 @@ public isolated distinct client class FunctionCallAgent {
     # Use LLM to decide the next tool/step based on the function calling APIs.
     #
     # + progress - Execution progress with the current query and execution history
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
-    public isolated function selectNextTool(ExecutionProgress progress, string memoryId = DEFAULT_MEMORY_ID) returns json|LlmError {
+    public isolated function selectNextTool(ExecutionProgress progress, string sessionId = DEFAULT_SESSION_ID) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        Memory|MemoryError memory = self.memoryManager.getMemory(memoryId);
+        Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
         if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);
@@ -88,14 +91,15 @@ public isolated distinct client class FunctionCallAgent {
         // TODO: Improve handling of multiple tool calls returned by the LLM.  
         // Currently, tool calls are executed sequentially in separate chat responses.  
         // Update the logic to execute all tool calls together and return a single response.
-        ChatAssistantMessage[] response = check self.model->chat(messages,
-        from AgentTool tool in self.toolStore.tools.toArray()
+        ChatAssistantMessage response = check self.model->chat(messages,
+        from Tool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
-        return response[0].content is string ? response[0].content : response[0]?.function_call;
+        FunctionCall[]? toolCalls = response?.toolCalls;
+        return toolCalls is FunctionCall[] ? toolCalls[0] : response?.content;
     }
 
     # Execute the agent for a given user's query.
@@ -104,18 +108,17 @@ public isolated distinct client class FunctionCallAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
-    # + memoryId - The ID associated with the agent memory
+    # + sessionId - The ID associated with the agent memory
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true,
-            string memoryId = DEFAULT_MEMORY_ID)
+            string sessionId = DEFAULT_SESSION_ID)
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose, memoryId);
+        return run(self, query, maxIter, context, verbose, sessionId);
     }
 }
 
 isolated function createFunctionCallMessages(ExecutionProgress progress) returns ChatMessage[] {
     ChatMessage[] messages = [];
-    // include the history
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
         if functionCall is error {
@@ -124,7 +127,7 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
 
         messages.push({
             role: ASSISTANT,
-            function_call: functionCall
+            toolCalls: [functionCall]
         },
         {
             role: FUNCTION,

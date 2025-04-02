@@ -30,7 +30,7 @@ ToolConfig calculatorTool = {
     caller: calculatorToolMock
 };
 
-OpenAiModel model = test:mock(OpenAiModel, new MockLLM());
+OpenAiProvider model = test:mock(OpenAiProvider, new MockLLM());
 
 @test:Config {
     enable: false
@@ -104,7 +104,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
-    Executor agentExecutor = new (agent, DEFAULT_MEMORY_ID, query = query);
+    Executor agentExecutor = new (agent, DEFAULT_SESSION_ID, query = query);
     record {|ExecutionResult|LlmChatResponse|ExecutionError|Error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");

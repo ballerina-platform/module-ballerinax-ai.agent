@@ -107,7 +107,7 @@ function testExecuteSuccessfullOutput() returns error? {
                 messageRequest: {
                     to: ["alica@wso2.com"],
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
@@ -154,7 +154,7 @@ function testExecuteErrorOutput() returns error? {
                 messageRequest: {
                     to: ["alica@wso2.com"],
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
@@ -201,7 +201,7 @@ function testExecutionError() returns error? {
                 messageRequest: {
                     to: "alica@wso2.com", // errornous generation
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
