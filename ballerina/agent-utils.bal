@@ -251,7 +251,6 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         string? content = ();
         Iterator iterator = new (agent, sessionId, query = query, context = context);
         int iter = 0;
-
         ChatSystemMessage reactSystemMessage = agent is ReActAgent
             ? {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`}
             : {role: SYSTEM, content: context.toString()};
@@ -261,7 +260,6 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         updateMemory(memory, userMessage);
 
         ChatMessage[] temporaryMemory = [];
-
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
             if iter == maxIter {
                 break;
@@ -323,7 +321,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         foreach ChatMessage message in temporaryMemory {
             updateMemory(memory, message);
         }
-
+        
         if agent.stateless {
             MemoryError? err = memory.delete();
             // Ignore this error since the stateless agent always relies on DefaultMessageWindowChatMemoryManager,  
@@ -363,7 +361,7 @@ public isolated function updateMemory(Memory memory, ChatMessage message) {
     }
 }
 
-isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|LlmChatResponse|ExecutionError|Error step, ChatMessage[] temporaryMemory) {
+isolated function updateExecutionResultInMemory(ExecutionResult|LlmChatResponse|ExecutionError|Error step, ChatMessage[] temporaryMemory) {
     if step is ExecutionResult {
         LlmToolResponse tool = step.tool;
         anydata|error observation = step?.observation;
