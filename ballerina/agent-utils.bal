@@ -314,7 +314,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
     ${BACKTICKS}`);
                 }
             }
-            updateExecutionResultInMemory(memory, step, temporaryMemory);
+            updateExecutionResultInMemory(step, temporaryMemory);
             steps.push(step);
         }
 
