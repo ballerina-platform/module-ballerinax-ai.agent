@@ -251,15 +251,15 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         string? content = ();
         Iterator iterator = new (agent, sessionId, query = query, context = context);
         int iter = 0;
-
-        ChatUserMessage userMessage = {role: USER, content: query};
-        updateMemory(memory, userMessage);
-
         ChatSystemMessage reactSystemMessage = agent is ReActAgent
             ? {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`}
             : {role: SYSTEM, content: context.toString()};
         updateMemory(memory, reactSystemMessage);
 
+        ChatUserMessage userMessage = {role: USER, content: query};
+        updateMemory(memory, userMessage);
+
+        ChatMessage[] temporaryMemory = [];
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
             if iter == maxIter {
                 break;
@@ -277,11 +277,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
                 if agent is ReActAgent {
                     json finalAnswer = {action: "Final Answer", action_input: step.content};
                     ChatAssistantMessage assistantMessage = {role: ASSISTANT, content: string `${BACKTICKS}${finalAnswer.toJsonString()}${BACKTICKS}\"`};
-                    updateMemory(memory, assistantMessage);
+                    temporaryMemory.push(assistantMessage);
                     break;
                 }
                 ChatAssistantMessage assistantMessage = {role: "assistant", content: step.content};
-                updateMemory(memory, assistantMessage);
+                temporaryMemory.push(assistantMessage);
                 break;
             }
             iter += 1;
@@ -314,9 +314,14 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
     ${BACKTICKS}`);
                 }
             }
-            updateExecutionResultInMemory(memory, step);
+            updateExecutionResultInMemory(step, temporaryMemory);
             steps.push(step);
         }
+
+        foreach ChatMessage message in temporaryMemory {
+            updateMemory(memory, message);
+        }
+        
         if agent.stateless {
             MemoryError? err = memory.delete();
             // Ignore this error since the stateless agent always relies on DefaultMessageWindowChatMemoryManager,  
@@ -356,7 +361,7 @@ public isolated function updateMemory(Memory memory, ChatMessage message) {
     }
 }
 
-isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|LlmChatResponse|ExecutionError|Error step) {
+isolated function updateExecutionResultInMemory(ExecutionResult|LlmChatResponse|ExecutionError|Error step, ChatMessage[] temporaryMemory) {
     if step is ExecutionResult {
         LlmToolResponse tool = step.tool;
         anydata|error observation = step?.observation;
@@ -365,7 +370,7 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
             role: ASSISTANT,
             toolCalls: [{name: tool.name, id: tool.id, arguments: tool.arguments.toJsonString()}]
         };
-        updateMemory(memory, assistantMessage);
+        temporaryMemory.push(assistantMessage);
 
         ChatFunctionMessage functionMessage = {
             role: FUNCTION,
@@ -374,6 +379,6 @@ isolated function updateExecutionResultInMemory(Memory memory, ExecutionResult|L
                 observation.toString() : observation is () ? "" : observation.toString(),
             id: tool.id
         };
-        updateMemory(memory, functionMessage);
+        temporaryMemory.push(functionMessage);
     }
 }
