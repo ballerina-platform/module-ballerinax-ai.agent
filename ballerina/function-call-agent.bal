@@ -89,7 +89,6 @@ public isolated distinct client class FunctionCallAgent {
             messages.unshift(...additionalMessages);
         }
 
-        
         // TODO: Improve handling of multiple tool calls returned by the LLM.  
         // Currently, tool calls are executed sequentially in separate chat responses.  
         // Update the logic to execute all tool calls together and return a single response.

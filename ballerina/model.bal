@@ -237,7 +237,7 @@ type DeepSeekChatCompletionRequest record {|
     DeepSeekChatRequestMessages[] messages;
     DEEPSEEK_MODEL_NAMES model;
     int? max_tokens;
-    string|string[]? stop = ();
+    string?|string[]? stop = ();
     int? temperature = 1;
     DeepseekTool[]? tools = ();
 |};
@@ -861,14 +861,14 @@ public isolated client class MistralAiProvider {
                     parameters: toolFunction.parameters ?: {}
                 };
                 mistralFunctions.push(mistralFunction);
-            }
+            }   
 
             mistral:Tool[] mistralTools = [];
             foreach mistral:Function mistralfunction in mistralFunctions {
                 mistral:Tool mistralTool = {'function: mistralfunction};
                 mistralTools.push(mistralTool);
             }
-            request.tools = mistralTools;
+            request.tools = mistralTools;            
         }
 
         mistral:ChatCompletionResponse|error response = self.llmClient->/chat/completions.post(request);
@@ -988,7 +988,7 @@ public isolated client class DeepseekProvider {
     # + connectionConfig - Additional HTTP client configurations
     # + return - `nil` on successful initialization; otherwise, returns an `Error`
     public isolated function init(@display {label: "API Key"} string apiKey,
-            @display {label: "Model Type"} DEEPSEEK_MODEL_NAMES model,
+            @display {label: "Model Type"} DEEPSEEK_MODEL_NAMES modelType = DEEPSEEK_MODEL_TYPE,
             @display {label: "Service URL"} string serviceUrl = DEEPSEEK_SERVICE_URL,
             @display {label: "Maximum Token"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
             @display {label: "Temperature"} decimal temperateure = DEFAULT_TEMPERATURE,
@@ -1020,7 +1020,7 @@ public isolated client class DeepseekProvider {
         }
 
         self.maxTokens = maxTokens;
-        self.modelType = model;
+        self.modelType = modelType;
         self.llmClient = httpClient;
     }
 
@@ -1032,7 +1032,7 @@ public isolated client class DeepseekProvider {
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
     returns ChatAssistantMessage|LlmError {
-        DeepSeekChatRequestMessages[] deepseekPayloadMessages = self.mapDeepseekMessages(messages);
+        DeepSeekChatRequestMessages[] deepseekPayloadMessages = check self.mapDeepseekMessages(messages);
 
         DeepSeekChatCompletionRequest request = {
             messages: deepseekPayloadMessages,
@@ -1051,12 +1051,7 @@ public isolated client class DeepseekProvider {
                 };
                 deepseekFunctions.push(deepseekFunction);
             }
-
-            DeepseekTool[] deepseekTools = [];
-            foreach DeepseekFunction deepseekFunction in deepseekFunctions {
-                DeepseekTool deepseekTool = {'function: deepseekFunction};
-                deepseekTools.push(deepseekTool);
-            }
+            DeepseekTool[] deepseekTools =deepseekFunctions.'map(self.transFormFuncToTool);
             request.tools = deepseekTools;
         }
 
@@ -1065,6 +1060,11 @@ public isolated client class DeepseekProvider {
             return error LlmConnectionError("Error while connecting to the model", response);
         }
         return self.getAssistantMessages(response);
+    }
+
+    private isolated function transFormFuncToTool(DeepseekFunction deepseekFunction ) returns DeepseekTool {
+        DeepseekTool deepseekTool = {'function: deepseekFunction};
+        return deepseekTool;
     }
 
     # Generates a random tool ID.
@@ -1077,11 +1077,11 @@ public isolated client class DeepseekProvider {
         int iterationCount = 0;
 
         foreach string character in randomId {
-            if (alphanumericPattern.isFullMatch(character)) {
+            if alphanumericPattern.isFullMatch(character) {
                 randomToolID = randomToolID + character;
                 iterationCount = iterationCount + 1;
             }
-            if (iterationCount == 9) {
+            if iterationCount == 9 {
                 break;
             }
         }
@@ -1093,13 +1093,16 @@ public isolated client class DeepseekProvider {
     # + deepseekPayloadMessages - Array of DeepSeek chat messages
     # + return - ID of the first tool call from the most recent assistant message, or empty `Error`
     private isolated function getAssistantToolCallId(DeepSeekChatRequestMessages[] deepseekPayloadMessages)
-    returns string {
+    returns string|LlmError {
         // Iterate from the end of the array to find the last assistant message
         int index = deepseekPayloadMessages.length() - 1;
         while (index >= 0) {
             DeepSeekChatRequestMessages message = deepseekPayloadMessages[index];
             if message is DeepseekChatAssistantMessage && message.tool_calls is DeepseekChatResponseToolCall[] {
-                DeepseekChatResponseToolCall[] tools = <DeepseekChatResponseToolCall[]>message.tool_calls;
+                DeepseekChatResponseToolCall[]? tools = message.tool_calls;
+                if tools is () {
+                    return error LlmError("No tool calls found in the assistant message");
+                }
                 if tools.length() > 0 {
                     return tools[0].id;
                 }
@@ -1113,7 +1116,7 @@ public isolated client class DeepseekProvider {
     #
     # + messages - Array of chat messages to be converted
     # + return - An `LlmError` or an array of Mistral message records
-    private isolated function mapDeepseekMessages(ChatMessage[] messages) returns DeepSeekChatRequestMessages[] {
+    private isolated function mapDeepseekMessages(ChatMessage[] messages) returns DeepSeekChatRequestMessages[]|LlmError {
         DeepSeekChatRequestMessages[] deepseekMessages = [];
         foreach ChatMessage message in messages {
             if message is ChatUserMessage {
@@ -1149,7 +1152,7 @@ public isolated client class DeepseekProvider {
                 DeepseekChatToolMessage deepseekToolMessage = {
                     role: "tool",
                     content: message?.content is string ? {result: message.content}.toJsonString() : "",
-                    tool_call_id: message.id ?: self.getAssistantToolCallId(deepseekMessages)
+                    tool_call_id: message.id ?: check self.getAssistantToolCallId(deepseekMessages)
                 };
                 deepseekMessages.push(deepseekToolMessage);
             }
