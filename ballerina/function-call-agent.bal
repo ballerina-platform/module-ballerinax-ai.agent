@@ -82,6 +82,7 @@ public isolated distinct client class FunctionCallAgent {
         ChatMessage[] messages = createFunctionCallMessages(progress);
         Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
         ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
+        
         if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);
         } else {
