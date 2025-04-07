@@ -5,7 +5,7 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.12.0"
+distribution-version = "2201.12.2"
 
 [[package]]
 org = "ballerina"
@@ -355,7 +355,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "data.jsondata"},
@@ -382,7 +382,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
