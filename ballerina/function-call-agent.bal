@@ -25,7 +25,7 @@ public isolated distinct client class FunctionCallAgent {
     # LLM model instance (should be a function call model)
     final ModelProvider model;
     # The memory associated with the agent.
-    final MemoryManager memoryManager;
+    final Memory memory;
     # Represents if the agent is stateless or not.
     final boolean stateless;
 
@@ -35,11 +35,11 @@ public isolated distinct client class FunctionCallAgent {
     # + tools - Tools to be used by the agent
     # + memory - The memory associated with the agent.
     public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+            Memory? memory = new MessageWindowChatMemory()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager is () ? new DefaultMessageWindowChatMemoryManager() : memoryManager;
-        self.stateless = memoryManager is ();
+        self.memory = memory is Memory ? memory : new MessageWindowChatMemory();
+        self.stateless = memory is ();
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -80,8 +80,7 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress, string sessionId = DEFAULT_SESSION_ID) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
-        ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
+        ChatMessage[]|MemoryError additionalMessages = self.memory.get(sessionId);
         if additionalMessages is MemoryError {
             log:printError("Failed to get chat messages from memory", additionalMessages);
         } else {

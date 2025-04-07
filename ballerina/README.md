@@ -90,12 +90,12 @@ Constraints for defining tools:
 3. The tool should return a subtype of `anydata|http:Response|stream<anydata, error>|error`.
 4. Tool documentation enhances LLM performance but is optional.
 
-### Step 5: Define the Memory Manager
+### Step 5: Define the Memory
 
-The `ai` module manages memory for individual user sessions using the `MemoryManager`. By default, agents are configured with a memory manager that has a predefined capacity. To create a stateless agent, set the `memoryManager` to `()` when defining the agent. Additionally, you can customize the memory capacity or provide your own memory implementation. Here's how to initialize the default memory manager with a new capacity:
+The `ai` module manages memory for individual user sessions using the `Memory`. By default, agents are configured with a memory that has a predefined capacity. To create a stateless agent, set the `memory` to `()` when defining the agent. Additionally, you can customize the memory capacity or provide your own memory implementation. Here's how to initialize the default memory with a new capacity:
 
 ```ballerina
-final ai:MemoryManager memoryManager = new ai:DefaultMessageWindowChatMemoryManager(20);
+final ai:Memory memory = new ai:MessageWindowChatMemory(20);
 ```
 
 ### Step 6: Define the Agent
@@ -107,7 +107,7 @@ final ai:Agent mathTutorAgent = check new (
     systemPrompt = systemPrompt,
     model = openAiModel,
     tools = [sum, mult], // Pass array of function pointers annotated with @ai:AgentTool
-    memoryManager = memoryManager
+    memory = memory
 );
 ```
 
