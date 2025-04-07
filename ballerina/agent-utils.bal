@@ -77,7 +77,7 @@ public type ToolOutput record {|
 public type BaseAgent distinct isolated client object {
     ModelProvider model;
     ToolStore toolStore;
-    MemoryManager memoryManager;
+    Memory memory;
     boolean stateless;
 
     # Parse the llm response and extract the tool to be executed.
@@ -243,21 +243,17 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         string sessionId = DEFAULT_SESSION_ID) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     lock {
         (ExecutionResult|ExecutionError)[] steps = [];
-        Memory|MemoryError memory = agent.memoryManager.getMemory(sessionId);
-        if memory is Error {
-            ExecutionError memoryExecutionError = {observation: "Unable to obtain memory", 'error: memory, llmResponse: ()};
-            return {steps: [memoryExecutionError]};
-        }
+
         string? content = ();
         Iterator iterator = new (agent, sessionId, query = query, context = context);
         int iter = 0;
         ChatSystemMessage reactSystemMessage = agent is ReActAgent
             ? {role: SYSTEM, content: string `${agent.instructionPrompt} You can use these information if needed: ${context.toString()}`}
             : {role: SYSTEM, content: context.toString()};
-        updateMemory(memory, reactSystemMessage);
+        updateMemory(agent.memory, sessionId, reactSystemMessage);
 
         ChatUserMessage userMessage = {role: USER, content: query};
-        updateMemory(memory, userMessage);
+        updateMemory(agent.memory, sessionId, userMessage);
 
         ChatMessage[] temporaryMemory = [];
         foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
@@ -319,11 +315,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         }
 
         foreach ChatMessage message in temporaryMemory {
-            updateMemory(memory, message);
+            updateMemory(agent.memory, sessionId, message);
         }
-        
+
         if agent.stateless {
-            MemoryError? err = memory.delete();
+            MemoryError? err = agent.memory.delete(sessionId);
             // Ignore this error since the stateless agent always relies on DefaultMessageWindowChatMemoryManager,  
             // which never return an error.
         }
@@ -354,8 +350,8 @@ isolated function getObservationString(anydata|error observation) returns string
 # + return - Array of tools registered with the agent
 public isolated function getTools(BaseAgent agent) returns Tool[] => agent.toolStore.tools.toArray();
 
-public isolated function updateMemory(Memory memory, ChatMessage message) {
-    error? updationStation = memory.update(message);
+public isolated function updateMemory(Memory memory, string sessionId, ChatMessage message) {
+    error? updationStation = memory.update(sessionId, message);
     if (updationStation is error) {
         log:printError("Error occured while updating the memory", updationStation);
     }

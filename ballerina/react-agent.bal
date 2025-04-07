@@ -31,7 +31,7 @@ public isolated client class ReActAgent {
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
     final ModelProvider model;
     # The memory associated with the agent.
-    final MemoryManager memoryManager;
+    final Memory memory;
     # Represents if the agent is stateless or not.
     final boolean stateless;
 
@@ -40,12 +40,12 @@ public isolated client class ReActAgent {
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
     public isolated function init(ModelProvider model, (BaseToolKit|ToolConfig|FunctionTool)[] tools,
-            MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager()) returns Error? {
+            Memory? memory = new MessageWindowChatMemory()) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
-        self.memoryManager = memoryManager is MemoryManager ? memoryManager : new DefaultMessageWindowChatMemoryManager();
+        self.memory = memory is Memory ? memory : new MessageWindowChatMemory();
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
-        self.stateless = memoryManager is ();
+        self.stateless = memory is ();
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
 
@@ -91,8 +91,7 @@ public isolated client class ReActAgent {
             }
         }
 
-        Memory|MemoryError memory = self.memoryManager.getMemory(sessionId);
-        ChatMessage[]|MemoryError additionalMessages = memory is Memory ? memory.get() : memory;
+        ChatMessage[]|MemoryError additionalMessages = self.memory.get(sessionId);
         if additionalMessages is error {
             log:printError("Failed to get chat messages from memory", additionalMessages);
         } else {
