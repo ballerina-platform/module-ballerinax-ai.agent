@@ -47,7 +47,9 @@ isolated function getDeepObjectStyleRequest(string parent, record {} anyRecord) 
         }
         recordArray.push("&");
     }
-    _ = recordArray.pop();
+    if recordArray.length() > 0 {
+        _ = recordArray.pop();
+    }
     return string:'join("", ...recordArray);
 }
 
@@ -70,7 +72,9 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
             }
             recordArray.push("&");
         }
-        _ = recordArray.pop();
+        if recordArray.length() > 0 {
+            _ = recordArray.pop();
+        }
     } else {
         foreach [string, anydata] [key, value] in anyRecord.entries() {
             if (value is PrimitiveType) {
@@ -82,7 +86,9 @@ isolated function getFormStyleRequest(string parent, record {} anyRecord, boolea
             }
             recordArray.push(",");
         }
-        _ = recordArray.pop();
+        if recordArray.length() > 0 {
+            _ = recordArray.pop();
+        }
     }
     return string:'join("", ...recordArray);
 }
@@ -122,7 +128,9 @@ isolated function getSerializedArray(string arrayName, anydata[] anyArray, strin
                 arrayValues.push(key, "=", getEncodedUri(i.toString()), "&");
             }
         }
-        _ = arrayValues.pop();
+        if arrayValues.length() > 0 {
+            _ = arrayValues.pop();
+        }
     }
     return string:'join("", ...arrayValues);
 }
@@ -150,7 +158,9 @@ isolated function getSerializedRecordArray(string parent, record {}[] value, str
             serializedArray.push(getFormStyleRequest(parent, recordItem, explode), ",");
         }
     }
-    _ = serializedArray.pop();
+    if serializedArray.length() > 0 {
+        _ = serializedArray.pop();
+    }
     return string:'join("", ...serializedArray);
 }
 
@@ -196,7 +206,9 @@ isolated function getPathForQueryParam(map<anydata> queryParam, map<QueryParamEn
             }
             param.push("&");
         }
-        _ = param.pop();
+        if param.length() > 0 {
+            _ = param.pop();
+        }
     }
     string restOfPath = string:'join("", ...param);
     return restOfPath;
