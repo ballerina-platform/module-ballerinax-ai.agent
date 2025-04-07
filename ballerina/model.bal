@@ -18,6 +18,8 @@ import ai.mistral;
 
 import ballerina/http;
 import ballerina/lang.regexp;
+import ballerina/regex;
+import ballerina/time;
 import ballerina/uuid;
 import ballerinax/azure.openai.chat as azure_chat;
 import ballerinax/openai.chat;
@@ -861,14 +863,14 @@ public isolated client class MistralAiProvider {
                     parameters: toolFunction.parameters ?: {}
                 };
                 mistralFunctions.push(mistralFunction);
-            }   
+            }
 
             mistral:Tool[] mistralTools = [];
             foreach mistral:Function mistralfunction in mistralFunctions {
                 mistral:Tool mistralTool = {'function: mistralfunction};
                 mistralTools.push(mistralTool);
             }
-            request.tools = mistralTools;            
+            request.tools = mistralTools;
         }
 
         mistral:ChatCompletionResponse|error response = self.llmClient->/chat/completions.post(request);
@@ -1051,7 +1053,7 @@ public isolated client class DeepseekProvider {
                 };
                 deepseekFunctions.push(deepseekFunction);
             }
-            DeepseekTool[] deepseekTools =deepseekFunctions.'map(self.transFormFuncToTool);
+            DeepseekTool[] deepseekTools = deepseekFunctions.'map(self.transFormFuncToTool);
             request.tools = deepseekTools;
         }
 
@@ -1062,7 +1064,7 @@ public isolated client class DeepseekProvider {
         return self.getAssistantMessages(response);
     }
 
-    private isolated function transFormFuncToTool(DeepseekFunction deepseekFunction ) returns DeepseekTool {
+    private isolated function transFormFuncToTool(DeepseekFunction deepseekFunction) returns DeepseekTool {
         DeepseekTool deepseekTool = {'function: deepseekFunction};
         return deepseekTool;
     }
@@ -1070,22 +1072,12 @@ public isolated client class DeepseekProvider {
     # Generates a random tool ID.
     #
     # + return - A random tool ID string
-    private isolated function generateToolId() returns string {
-        string randomToolID = "";
-        string randomId = uuid:createRandomUuid();
-        regexp:RegExp alphanumericPattern = re `[a-zA-Z0-9]`;
-        int iterationCount = 0;
-
-        foreach string character in randomId {
-            if alphanumericPattern.isFullMatch(character) {
-                randomToolID = randomToolID + character;
-                iterationCount = iterationCount + 1;
-            }
-            if iterationCount == 9 {
-                break;
-            }
-        }
-        return randomToolID;
+    private isolated function generateNewToolId() returns string {
+        decimal timestampForToolCallId = time:monotonicNow();
+        string strTimestamp = timestampForToolCallId.toString();
+        string toolCallId = regex:replace(strTimestamp, "\\.", "");
+        string newToolCallId = toolCallId.substring(toolCallId.length() - 9);
+        return newToolCallId;
     }
 
     # Retrieves the ID of the last tool call from a deepseek chat assistant message.
@@ -1136,14 +1128,14 @@ public isolated client class DeepseekProvider {
                 DeepseekChatAssistantMessage deepseekAssistantMessage = {role: ASSISTANT, content: message.content};
                 if toolCalls is FunctionCall[] {
                     DeepseekChatResponseToolCall[] toolCall = [];
-                    foreach  FunctionCall 'function in toolCalls {
+                    foreach FunctionCall 'function in toolCalls {
                         DeepseekChatResponseFunction functionCall = {name: 'function.name, arguments: 'function.arguments};
-                         DeepseekChatResponseToolCall tool = {
+                        DeepseekChatResponseToolCall tool = {
                             'function: functionCall,
-                            id: 'function.id ?: self.generateToolId(),
+                            id: 'function.id ?: self.generateNewToolId(),
                             'type: "function"
-                         };
-                         toolCall.push(tool);
+                        };
+                        toolCall.push(tool);
                     }
                     deepseekAssistantMessage.tool_calls = toolCall;
                 }
@@ -1185,6 +1177,6 @@ public isolated client class DeepseekProvider {
                 arguments: toolCall.'function.arguments.toString()
             });
         }
-        return {role: ASSISTANT, toolCalls: functionCalls, content: content};        
+        return {role: ASSISTANT, toolCalls: functionCalls, content: content};
     }
 }
