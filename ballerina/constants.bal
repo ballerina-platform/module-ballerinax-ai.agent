@@ -36,7 +36,6 @@ const MISTRAL_AI_SERVICE_URL = "https://api.mistral.ai/v1";
 
 // Deepseek
 const DEEPSEEK_SERVICE_URL = "https://api.deepseek.com";
-const DEEPSEEK_MODEL_TYPE = "deepseek-chat";
 
 //agent
 const THOUGHT_KEY = "Thought:";

@@ -117,7 +117,7 @@ type OllamaFunction record {
     map<json> arguments;
 };
 
-const OLLAMA_TOOL_ROLE = "tool";
+const TOOL_ROLE = "tool";
 const OLLAMA_FUNCTION_TYPE = "function";
 const OLLAMA_DEFAULT_SERVICE_URL = "http://localhost:11434";
 
@@ -170,7 +170,7 @@ public isolated client class OllamaProvider {
         returns json {
         json[] transformedMessages = messages.'map(isolated function(ChatMessage message) returns json {
             if message is ChatFunctionMessage {
-                return {role: OLLAMA_TOOL_ROLE, content: message?.content};
+                return {role: TOOL_ROLE, content: message?.content};
             }
             return message;
         });

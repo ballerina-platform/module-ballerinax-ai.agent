@@ -202,7 +202,7 @@ type DeepSeekChatCompletionResponse record {
 
 type DeepseekChatSystemMessage record {|
     string content;
-    string role = "system";
+    string role = SYSTEM;
 |};
 
 type DeepseekChatAssistantMessage record {
@@ -213,13 +213,13 @@ type DeepseekChatAssistantMessage record {
 
 type DeepseekChatToolMessage record {|
     string content;
-    string role = "tool";
+    string role = TOOL_ROLE;
     string tool_call_id;
 |};
 
 type DeepseekChatUserMessage record {|
     string content;
-    string role = "user";
+    string role = USER;
 |};
 
 type DeepSeekChatRequestMessages DeepseekChatSystemMessage|DeepseekChatUserMessage|DeepseekChatAssistantMessage|DeepseekChatToolMessage;
@@ -990,7 +990,7 @@ public isolated client class DeepseekProvider {
     # + connectionConfig - Additional HTTP client configurations
     # + return - `nil` on successful initialization; otherwise, returns an `Error`
     public isolated function init(@display {label: "API Key"} string apiKey,
-            @display {label: "Model Type"} DEEPSEEK_MODEL_NAMES modelType = DEEPSEEK_MODEL_TYPE,
+            @display {label: "Model Type"} DEEPSEEK_MODEL_NAMES modelType = DEEPSEEK_CHAT,
             @display {label: "Service URL"} string serviceUrl = DEEPSEEK_SERVICE_URL,
             @display {label: "Maximum Token"} int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
             @display {label: "Temperature"} decimal temperateure = DEFAULT_TEMPERATURE,
@@ -1017,7 +1017,7 @@ public isolated client class DeepseekProvider {
 
         http:Client|error httpClient = new http:Client(serviceUrl, deepseekConfig);
 
-        if (httpClient is error) {
+        if httpClient is error {
             return error Error("Failed to initialize Deepseek client", httpClient);
         }
 
@@ -1133,7 +1133,7 @@ public isolated client class DeepseekProvider {
                         DeepseekChatResponseToolCall tool = {
                             'function: functionCall,
                             id: 'function.id ?: self.generateNewToolId(),
-                            'type: "function"
+                            'type: FUNCTION
                         };
                         toolCall.push(tool);
                     }
@@ -1142,7 +1142,7 @@ public isolated client class DeepseekProvider {
                 deepseekMessages.push(deepseekAssistantMessage);
             } else if message is ChatFunctionMessage {
                 DeepseekChatToolMessage deepseekToolMessage = {
-                    role: "tool",
+                    role: TOOL_ROLE,
                     content: message?.content is string ? {result: message.content}.toJsonString() : "",
                     tool_call_id: message.id ?: check self.getAssistantToolCallId(deepseekMessages)
                 };
