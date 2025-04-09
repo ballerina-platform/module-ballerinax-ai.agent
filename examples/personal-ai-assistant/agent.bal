@@ -81,5 +81,5 @@ final ai:Agent personalAiAssistantAgent = check new (
     systemPrompt = systemPrompt,
     model = openAiModel,
     tools = [readEmails, sendEmail, getCalanderEvents, createCalanderEvent],
-    memoryManager = new ai:DefaultMessageWindowChatMemoryManager(20)
+    memory = new ai:MessageWindowChatMemory(20)
 );

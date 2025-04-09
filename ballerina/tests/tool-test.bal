@@ -275,3 +275,45 @@ isolated function testInitializingToolStoreWithoutNoTools() returns error? {
     ToolStore toolStore = check new ();
     test:assertEquals(toolStore.tools.toArray().length(), 0);
 }
+
+@test:Config
+isolated function testToolExecutionWithEmptyQueryRecordParam() returns error? {
+    HttpTool httpGet =
+        {
+        name: "httpGet",
+        path: "/example-get",
+        method: GET,
+        description: "test HTTP GET tool",
+        parameters: {
+            "location": {
+                description: "location to get",
+                location: QUERY,
+                required: true,
+                schema: {
+                    'type: OBJECT,
+                    properties: {
+                        "street": {
+                            'type: STRING,
+                            description: "location to get"
+                        },
+                        "city": {
+                            'type: STRING,
+                            description: "location to get"
+                        }
+                    }
+                }
+            }
+        }
+    };
+    map<json> parameters = {
+        "name": "httpGet",
+        "arguments": {
+            "httpInput": {
+                "parameters": {
+                    "location": {}
+                }
+            }
+        }
+    };
+    string _ = check getParamEncodedPath(httpGet, parameters);
+}

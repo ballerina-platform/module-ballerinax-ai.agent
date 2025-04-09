@@ -64,9 +64,9 @@ public type AgentConfiguration record {|
     @display {label: "Verbose"}
     boolean verbose = false;
 
-    # The memory manager used by the agent to store and manage conversation history
-    @display {label: "Memory Manager"}
-    MemoryManager? memoryManager = new DefaultMessageWindowChatMemoryManager();
+    # The memory used by the agent to store and manage conversation history
+    @display {label: "Memory"}
+    Memory? memory = new MessageWindowChatMemory();
 |};
 
 # Represents an agent.
@@ -83,8 +83,8 @@ public isolated distinct client class Agent {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
         self.systemPrompt = config.systemPrompt.cloneReadOnly();
-        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memoryManager)
-            : check new FunctionCallAgent(config.model, config.tools, config.memoryManager);
+        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memory)
+            : check new FunctionCallAgent(config.model, config.tools, config.memory);
     }
 
     # Executes the agent for a given user query.
