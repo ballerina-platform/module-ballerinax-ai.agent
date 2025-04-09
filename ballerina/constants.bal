@@ -34,6 +34,9 @@ const ANTHROPIC_SERVICE_URL = "https://api.anthropic.com/v1";
 // Mistral AI
 const MISTRAL_AI_SERVICE_URL = "https://api.mistral.ai/v1";
 
+// Deepseek
+const DEEPSEEK_SERVICE_URL = "https://api.deepseek.com";
+
 //agent
 const THOUGHT_KEY = "Thought:";
 const BACKTICKS = "```";
