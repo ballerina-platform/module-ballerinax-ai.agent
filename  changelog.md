@@ -4,6 +4,11 @@ This file documents all significant changes made to the Ballerina AI package acr
 
 ## [Unreleased]
 
+### Added
+- [Add Deepseek Model Provider Support](https://github.com/ballerina-platform/ballerina-library/issues/7850)
+
+## [1.0.1]
+
 ### Fixed
 
 - [Fix Http Utility Methods Failling with Arrayindexoutofrange](https://github.com/ballerina-platform/ballerina-library/issues/7540)
