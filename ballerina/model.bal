@@ -77,6 +77,8 @@ public enum OPEN_AI_MODEL_NAMES {
 # Models types for Anthropic
 @display {label: "Anthropic Model Names"}
 public enum ANTHROPIC_MODEL_NAMES {
+    CLAUDE_OPUS_4_20250514 = "claude-opus-4-20250514",
+    CLAUDE_SONNET_4_20250514 = "claude-sonnet-4-20250514",
     CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219",
     CLAUDE_3_5_HAIKU_20241022 = "claude-3-5-haiku-20241022",
     CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022",
@@ -327,7 +329,7 @@ type AnthropicMessage record {|
 |};
 
 # Anthropic API response format
-type AnthropicApiResponse record {|
+type AnthropicApiResponse record {
     # Unique identifier for the response message
     string id;
     # The Anthropic model used for generating the response
@@ -344,7 +346,7 @@ type AnthropicApiResponse record {|
     string? stop_sequence;
     # Token usage statistics for the request and response
     Usage usage;
-|};
+};
 
 # Content block in Anthropic API response
 type ContentBlock record {|
@@ -361,7 +363,7 @@ type ContentBlock record {|
 |};
 
 # Usage statistics in Anthropic API response
-type Usage record {|
+type Usage record {
     # Number of tokens in the input messages
     int input_tokens;
     # Number of tokens in the generated response
@@ -370,7 +372,7 @@ type Usage record {|
     int? cache_creation_input_tokens = ();
     # Number of input tokens read from cache, if applicable
     int? cache_read_input_tokens = ();
-|};
+};
 
 # Anthropic Tool definition
 type AnthropicTool record {|
