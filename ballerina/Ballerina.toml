@@ -15,4 +15,4 @@ graalvmCompatible = true
 groupId = "io.ballerina.lib"
 artifactId = "ai-native"
 version = "1.1.2"
-path = "../native/build/libs/ai-native-1.1.2-SNAPSHOT.jar"
+path = "../native/build/libs/ai-native-1.1.2.jar"
