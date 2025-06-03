@@ -30,6 +30,7 @@ const OPENAI_SERVICE_URL = "https://api.openai.com/v1";
 
 // Anthropic
 const ANTHROPIC_SERVICE_URL = "https://api.anthropic.com/v1";
+const ANTHROPIC_API_VERSION = "2023-06-01";
 
 // Mistral AI
 const MISTRAL_AI_SERVICE_URL = "https://api.mistral.ai/v1";
