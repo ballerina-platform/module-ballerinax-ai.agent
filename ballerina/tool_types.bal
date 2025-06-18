@@ -124,7 +124,15 @@ public type ObjectInputSchema record {|
     string[] required?;
     # Schema of the object properties
     map<JsonSubSchema> properties?;
+    # The name of the MCP (Managed Control Plane) tool. This property is required only when interacting with MCP tools.
+    # It is used to uniquely identify the tool during invocation.
+    string name?;
+    # Represents the arguments required by the MCP tool. This is relevant only when interacting with tools that require explicit argument input.
+    # It is used to specify and pass the necessary parameters when invoking an MCP tool.
+    JsonSchema arguments?;
 |};
+
+public type JsonSchema map<json>;
 
 # Defines a json input schema
 public type JsonInputSchema ObjectInputSchema|ArrayInputSchema|AnyOfInputSchema|OneOfInputSchema|AllOfInputSchema|NotInputSchema;

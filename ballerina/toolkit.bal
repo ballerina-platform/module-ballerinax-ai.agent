@@ -15,6 +15,7 @@
 // under the License.
 
 import ballerina/http;
+import ballerina/mcp;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -119,6 +120,48 @@ public type BaseToolKit distinct object {
     # + return - An array of Tools
     public isolated function getTools() returns ToolConfig[];
 };
+
+public isolated class McpToolkit {
+    *BaseToolKit;
+    private mcp:Client mcpClient;
+    private ToolConfig[] & readonly tools;
+
+    public isolated function init(string serverUrl, mcp:Implementation clientInfo, mcp:ClientConfiguration? config = (), string[] requestedTools = []) returns error? {
+
+        self.mcpClient = new (serverUrl, clientInfo, config);
+        lock {
+	        _ = check self.mcpClient->initialize();
+            ToolConfig[] toolConfigs = [];
+	        mcp:ListToolsResult listTools = check self.mcpClient->listTools();
+            isolated function caller = self.callTool;
+
+            foreach mcp:Tool tool in listTools.tools {
+                toolConfigs.push({
+                    name: tool.name,
+                    description: tool.description ?: "",
+                    parameters: {
+                        name: tool.name,
+                        arguments: check tool.inputSchema.ensureType(JsonSchema)
+                    },
+                    caller
+                });
+            }
+            self.tools = toolConfigs.cloneReadOnly();
+        }
+    }
+
+    public isolated function callTool(mcp:CallToolParams params) returns mcp:CallToolResult|error {
+        lock {
+            return self.mcpClient->callTool(params.cloneReadOnly());
+        }
+    }
+
+    public isolated function getTools() returns ToolConfig[] {
+        lock {
+            return self.tools.cloneReadOnly();
+        }
+    };
+}
 
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
 # Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
