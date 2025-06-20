@@ -199,7 +199,7 @@ isolated function extractToolInfo(ToolStore toolStore) returns ToolInfo {
     string[] toolIntroList = [];
     foreach Tool tool in toolStore.tools {
         toolNameList.push(string `${tool.name}`);
-        record {|string description; JsonInputSchema inputSchema?;|} toolDescription = {
+        record {|string description; map<json> inputSchema?;|} toolDescription = {
             description: tool.description,
             inputSchema: tool.variables
         };
