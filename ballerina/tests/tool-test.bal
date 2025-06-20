@@ -73,7 +73,7 @@ function testResolveSchema() {
 }
 
 @test:Config {}
-function testExecuteSuccessfullOutput() returns error? {
+function testExecuteSuccessfulOutput() returns error? {
     ToolConfig sendEmailTool = {
         name: "Send mail",
         description: "useful to send emails to a given recipient",
@@ -104,6 +104,7 @@ function testExecuteSuccessfullOutput() returns error? {
         name: "Send_mail",
         arguments: {
             input: {
+                senderEmail: "ballerina@email.com",
                 messageRequest: {
                     to: ["alica@wso2.com"],
                     subject: "Greetings Alica!",

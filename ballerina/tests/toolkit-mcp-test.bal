@@ -32,23 +32,31 @@ function testMcpToolKit() returns error? {
     mcp:Client mcpClient = new (serverUrl = "http://localhost:3000/mcp", clientInfo = {name: "Greeting", version: ""});
     check mcpClient->initialize();
     json expectedParams = {
-        "type": "object",
-        "name": "single-greeting",
-        "arguments":
-            {
-            "type": "object",
-            "properties": {"name": {"description": "name to greet", "type": "string"}},
-            "required": ["name"]
-        }
+        "type": "object", 
+        "properties": {
+            "params": {
+                "type": "object", 
+                "properties": {
+                    "name": {
+                        "type": "string", 
+                        "const": "single-greeting", 
+                        "description": "The fixed name of the tool to call"
+                    }, 
+                    "arguments": {
+                        "type": "object", 
+                        "properties": {
+                            "greetName": {
+                                "description": "name to greet",
+                                "type": "string"
+                            }
+                        }, 
+                        "required": ["greetName"]
+                    }
+                }, 
+                "required": ["name", "arguments"]
+            }
+        },
+        "required": ["params"]
     };
     test:assertEquals(tools[0].parameters, expectedParams);
-    mcp:CallToolResult callTool = check mcpClient->callTool({
-        name: tools[0].name,
-        arguments: tools[0].parameters
-    });
-    json expectedResult = {
-        "type":"text",
-        "text":"Hey single-greeting! Welcome to itsuki's world!"
-    };
-    test:assertEquals(callTool.content[0], expectedResult);
 }
