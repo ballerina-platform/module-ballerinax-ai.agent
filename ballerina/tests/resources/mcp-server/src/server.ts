@@ -104,16 +104,16 @@ export class MCPServer {
             // tool that returns a single greeting
             const singleGreetTool = {
                 name: this.singleGreetToolName,
-                description: "Greet the user once.",
+                description: "Greet a person with the given name",
                 inputSchema: {
                     type: "object",
                     properties: {
-                        name: {
+                        greetName: {
                             type: "string" ,
                             description: "name to greet"
                         },
                     },
-                    required: ["name"]
+                    required: ["greetName"]
                 }
             }
 
@@ -124,7 +124,7 @@ export class MCPServer {
                 inputSchema: {
                     type: "object",
                     properties: {
-                        name: {
+                        greetName: {
                             type: "string" ,
                             description: "name to greet"
                         },
@@ -172,34 +172,34 @@ export class MCPServer {
 
             if (toolName === this.singleGreetToolName) {
 
-                const { name } = args
+                const { greetName } = args
 
-                if (!name) {
+                if (!greetName) {
                     throw new Error("Name to greet undefined.")
                 }
 
                 return {
                     content: [ {
                         type: "text",
-                        text: `Hey ${name}! Welcome to itsuki's world!`
+                        text: `Hey ${greetName}! Welcome to itsuki's world!`
                     }]
                 }
             }
 
             if (toolName === this.multiGreetToolName) {
-                const { name } = args
+                const { greetName } = args
                 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
                 let notification: LoggingMessageNotification = {
                     method: "notifications/message",
-                    params: { level: "info", data: `First greet to ${name}` }
+                    params: { level: "info", data: `First greet to ${greetName}` }
                 }
 
                 await sendNotification(notification)
 
                 await sleep(1000)
 
-                notification.params.data = `Second greet to ${name}`
+                notification.params.data = `Second greet to ${greetName}`
                 await sendNotification(notification);
 
                 await sleep(1000)
