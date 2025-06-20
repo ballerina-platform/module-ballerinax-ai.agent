@@ -19,7 +19,7 @@ import ballerina/lang.regexp;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/url;
-import ballerina/xmldata;
+import ballerina/data.xmldata;
 
 type QueryParamEncoding record {
     EncodingStyle style = FORM;
