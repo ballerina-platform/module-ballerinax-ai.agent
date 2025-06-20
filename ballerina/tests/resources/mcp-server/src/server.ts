@@ -181,7 +181,7 @@ export class MCPServer {
                 return {
                     content: [ {
                         type: "text",
-                        text: `Hey ${greetName}! Welcome to itsuki's world!`
+                        text: `Hey ${greetName}! Welcome to Ballerina!`
                     }]
                 }
             }
