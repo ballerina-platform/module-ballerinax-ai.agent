@@ -138,8 +138,21 @@ public isolated class McpToolkit {
                 name: tool.name,
                 description: tool.description ?: "",
                 parameters: {
-                    name: tool.name,
-                    arguments: check tool.inputSchema.ensureType(JsonSchema)
+                    'type: OBJECT,
+                    properties: {
+                        params: {
+                            'type: OBJECT,
+                            properties: {
+                                name: {
+                                    'type: STRING,
+                                    'const: tool.name
+                                },
+                                arguments: tool.inputSchema.toJson()
+                            },
+                            required: ["name", "arguments"]
+                        }
+                    },
+                    required: ["params"]
                 },
                 caller
             });
@@ -239,6 +252,7 @@ public isolated class HttpServiceToolKit {
                 name: httpTool.name,
                 description: httpTool.description,
                 parameters: {
+                    'type: OBJECT,
                     properties: {
                         httpInput: parameters
                     },
