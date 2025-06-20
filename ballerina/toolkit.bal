@@ -136,7 +136,7 @@ public isolated class McpToolkit {
         foreach mcp:Tool tool in listTools.tools {
             toolConfigs.push({
                 name: tool.name,
-                description: tool.description ?: "",
+                description: "Greet a person with a name",
                 parameters: {
                     'type: OBJECT,
                     properties: {
@@ -145,9 +145,14 @@ public isolated class McpToolkit {
                             properties: {
                                 name: {
                                     'type: STRING,
-                                    'const: tool.name
+                                    'const: tool.name,
+                                    description: "The fixed name of the tool to call"
                                 },
-                                arguments: tool.inputSchema.toJson()
+                                arguments: {
+                                    'type: OBJECT,
+                                    properties: tool.inputSchema.properties.toJson(),
+                                    required: tool.inputSchema.required
+                                }
                             },
                             required: ["name", "arguments"]
                         }
