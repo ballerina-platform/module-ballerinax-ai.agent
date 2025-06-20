@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerina/mcp;
 import ballerina/test;
 
 @test:Config {
@@ -29,34 +28,20 @@ function testMcpToolKit() returns error? {
     test:assertEquals(tools.length(), 2);
     test:assertEquals(tools[0].name, "single-greeting");
 
-    mcp:Client mcpClient = new (serverUrl = "http://localhost:3000/mcp", clientInfo = {name: "Greeting", version: ""});
-    check mcpClient->initialize();
-    json expectedParams = {
-        "type": "object", 
-        "properties": {
-            "params": {
-                "type": "object", 
-                "properties": {
-                    "name": {
-                        "type": "string", 
-                        "const": "single-greeting", 
-                        "description": "The fixed name of the tool to call"
-                    }, 
-                    "arguments": {
-                        "type": "object", 
-                        "properties": {
-                            "greetName": {
-                                "description": "name to greet",
-                                "type": "string"
-                            }
-                        }, 
-                        "required": ["greetName"]
-                    }
-                }, 
-                "required": ["name", "arguments"]
+    LlmToolResponse mcpInput = {
+        name: "single-greeting",
+        arguments: {
+            params: {
+                name: "single-greeting",
+                arguments: {
+                    "greetName": "John"
+                }
             }
-        },
-        "required": ["params"]
+        }
     };
-    test:assertEquals(tools[0].parameters, expectedParams);
+    ToolStore toolStore = check new (mcpToolKit);
+    ToolOutput output = check toolStore.execute(mcpInput);
+    if output.value is error {
+        test:assertFail("tool execution output is an error");
+    }
 }
