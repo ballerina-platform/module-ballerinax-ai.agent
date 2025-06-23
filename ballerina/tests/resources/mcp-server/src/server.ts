@@ -120,7 +120,7 @@ export class MCPServer {
             // tool that returns a single greeting
             const singleGreetTool = {
                 name: this.singleGreetToolName,
-                description: "Greet a person with the given name",
+                description: "Greet a person with a name",
                 inputSchema: {
                     type: "object",
                     properties: {
