@@ -126,17 +126,21 @@ public isolated class McpToolkit {
     private final mcp:Client mcpClient;
     private final ToolConfig[] & readonly tools;
 
-    public isolated function init(string serverUrl, mcp:Implementation clientInfo, mcp:ClientConfiguration? config = (), string[] requestedTools = []) returns error? {
+    public isolated function init(string serverUrl, mcp:Implementation clientInfo, 
+                                  mcp:ClientConfiguration? config = (), string[] requestedTools = []) returns error? {
         self.mcpClient = new (serverUrl, clientInfo, config);
         _ = check self.mcpClient->initialize();
         ToolConfig[] toolConfigs = [];
         mcp:ListToolsResult listTools = check self.mcpClient->listTools();
+
+        string[] & readonly tools = requestedTools.cloneReadOnly();
+        mcp:Tool[] filteredTools = check filter(listTools.tools, tools);
         isolated function caller = self.callTool;
 
-        foreach mcp:Tool tool in listTools.tools {
+        foreach mcp:Tool tool in filteredTools {
             toolConfigs.push({
                 name: tool.name,
-                description: "Greet a person with a name",
+                description: tool.description ?: "",
                 parameters: {
                     'type: OBJECT,
                     properties: {
@@ -265,8 +269,8 @@ public isolated class HttpServiceToolKit {
                 },
                 caller
             });
-            self.tools = tools.cloneReadOnly();
         }
+        self.tools = tools.cloneReadOnly();
     }
 
     # Useful to retrieve the Tools extracted from the HttpTools.
@@ -349,4 +353,17 @@ isolated function handleHttpResourceDespatchError(error e) returns Error {
         return e;
     }
     return error Error(e.message(), e);
+}
+
+isolated function filter(mcp:Tool[] tools, string[] requestedTools) returns mcp:Tool[]|error {
+    if requestedTools.length() == 0 {
+        return tools;
+    }
+    mcp:Tool[] filteredTools = [];
+    foreach mcp:Tool tool in tools {
+        if requestedTools.indexOf(tool.name) !is () {
+            filteredTools.push(tool);
+        }
+    }
+    return filteredTools;
 }
