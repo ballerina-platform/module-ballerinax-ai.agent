@@ -44,4 +44,13 @@ function testMcpToolKit() returns error? {
     if output.value is error {
         test:assertFail("tool execution output is an error");
     }
+    json expectedResult = {
+        "content":[
+            {
+                "type":"text",
+                "text":"Hey John! Welcome to Ballerina!"
+            }
+        ]
+    };
+    test:assertEquals((check output.value).toJson(), expectedResult);
 }
