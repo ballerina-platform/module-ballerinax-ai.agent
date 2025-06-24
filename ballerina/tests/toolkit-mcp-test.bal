@@ -21,10 +21,7 @@ import ballerina/test;
 }
 function testMcpToolKit() returns error? {
     McpToolkit mcpToolKit = check new (serverUrl = "http://localhost:3000/mcp", clientInfo = {name: "Greeting", version: ""});
-    ToolConfig[]|error tools = mcpToolKit.getTools();
-    if tools is error {
-        test:assertFail("Error occurred while getting tools from HttpToolKit");
-    }
+    ToolConfig[] tools = check mcpToolKit.getTools();
     test:assertEquals(tools.length(), 2);
     test:assertEquals(tools[0].name, "single-greeting");
 
