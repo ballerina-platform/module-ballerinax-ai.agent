@@ -128,7 +128,7 @@ public isolated class McpToolkit {
     private final ToolConfig[] & readonly tools;
 
     public isolated function init(string serverUrl, mcp:Implementation clientInfo, 
-                                  mcp:ClientConfiguration? config = (), string[] permittedTools = []) returns Error? {
+                                  mcp:ClientConfiguration? config = (), string[]? permittedTools = ()) returns Error? {
         self.mcpClient = new (serverUrl, clientInfo, config);
         do {
             _ = check self.mcpClient->initialize();
@@ -140,8 +140,7 @@ public isolated class McpToolkit {
         if listTools is error {
             return error Error("Failed to get tools from the MCP server", listTools);
         }
-        string[] & readonly tools = permittedTools.cloneReadOnly();
-        mcp:Tool[] filteredTools = filterAllowedTools(listTools.tools, tools);
+        mcp:Tool[] filteredTools = filterAllowedTools(listTools.tools, permittedTools);
         isolated function caller = self.callTool;
 
         foreach mcp:Tool tool in filteredTools {
@@ -341,9 +340,12 @@ isolated function handleHttpResourceDespatchError(error e) returns Error {
     return error Error(e.message(), e);
 }
 
-isolated function filterAllowedTools(mcp:Tool[] tools, string[] permittedTools) returns mcp:Tool[] {
+isolated function filterAllowedTools(mcp:Tool[] tools, string[]? permittedTools) returns mcp:Tool[] {
+    if permittedTools is () {
+        return tools;
+    }
     final readonly & string[] allowedTools = permittedTools.cloneReadOnly();
-    return allowedTools.length() == 0 ? tools : tools.filter(tool => allowedTools.indexOf(tool.name.clone()) is int);
+    return tools.filter(tool => allowedTools.indexOf(tool.name.clone()) is int);
 }
 
 isolated function getParameterValueMap(mcp:Tool tool) returns map<json> {
