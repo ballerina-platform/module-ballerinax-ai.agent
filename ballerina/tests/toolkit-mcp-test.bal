@@ -20,8 +20,8 @@ import ballerina/test;
     groups: ["mcp"]
 }
 function testMcpToolKit() returns error? {
-    McpToolkit mcpToolKit = check new (serverUrl = "http://localhost:3000/mcp", clientInfo = {name: "Greeting", version: ""});
-    ToolConfig[] tools = check mcpToolKit.getTools();
+    McpToolkit mcpToolKit = check new (serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""});
+    ToolConfig[] tools = mcpToolKit.getTools();
     test:assertEquals(tools.length(), 2);
     test:assertEquals(tools[0].name, "single-greeting");
 

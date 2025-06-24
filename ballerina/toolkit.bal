@@ -127,9 +127,9 @@ public isolated class McpToolkit {
     private final mcp:Client mcpClient;
     private final ToolConfig[] & readonly tools;
 
-    public isolated function init(string serverUrl, mcp:Implementation clientInfo, 
-                                  mcp:ClientConfiguration? config = (), string[]? permittedTools = ()) returns Error? {
-        self.mcpClient = new (serverUrl, clientInfo, config);
+    public isolated function init(string serverUrl, 
+                                  string[]? permittedTools = (), *mcp:ClientConfiguration config) returns Error? {
+        self.mcpClient = new (serverUrl, config);
         do {
             _ = check self.mcpClient->initialize();
         } on fail error e {
