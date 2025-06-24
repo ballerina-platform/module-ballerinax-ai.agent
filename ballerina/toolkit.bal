@@ -121,48 +121,34 @@ public type BaseToolKit distinct object {
     public isolated function getTools() returns ToolConfig[];
 };
 
+# Defines an MCP tool kit. This is a special type of tool kit that can be used to invoke tools from an MCP server.
 public isolated class McpToolkit {
     *BaseToolKit;
     private final mcp:Client mcpClient;
     private final ToolConfig[] & readonly tools;
 
     public isolated function init(string serverUrl, mcp:Implementation clientInfo, 
-                                  mcp:ClientConfiguration? config = (), string[] requestedTools = []) returns error? {
+                                  mcp:ClientConfiguration? config = (), string[] requestedTools = []) returns Error? {
         self.mcpClient = new (serverUrl, clientInfo, config);
-        _ = check self.mcpClient->initialize();
+        do {
+            _ = check self.mcpClient->initialize();
+        } on fail error e {
+            return error Error("Failed to initialize the MCP client", e);
+        }
         ToolConfig[] toolConfigs = [];
-        mcp:ListToolsResult listTools = check self.mcpClient->listTools();
-
+        mcp:ListToolsResult|error listTools = self.mcpClient->listTools();
+        if listTools is error {
+            return error Error("Failed to get tools from the MCP server", listTools);
+        }
         string[] & readonly tools = requestedTools.cloneReadOnly();
-        mcp:Tool[] filteredTools = check filter(listTools.tools, tools);
+        mcp:Tool[] filteredTools = filter(listTools.tools, tools);
         isolated function caller = self.callTool;
 
         foreach mcp:Tool tool in filteredTools {
             toolConfigs.push({
                 name: tool.name,
                 description: tool.description ?: "",
-                parameters: {
-                    'type: OBJECT,
-                    properties: {
-                        params: {
-                            'type: OBJECT,
-                            properties: {
-                                name: {
-                                    'type: STRING,
-                                    'const: tool.name,
-                                    description: "The fixed name of the tool to call"
-                                },
-                                arguments: {
-                                    'type: OBJECT,
-                                    properties: tool.inputSchema.properties.toJson(),
-                                    required: tool.inputSchema.required
-                                }
-                            },
-                            required: ["name", "arguments"]
-                        }
-                    },
-                    required: ["params"]
-                },
+                parameters: getParameterValueMap(tool),
                 caller
             });
         }
@@ -355,7 +341,7 @@ isolated function handleHttpResourceDespatchError(error e) returns Error {
     return error Error(e.message(), e);
 }
 
-isolated function filter(mcp:Tool[] tools, string[] requestedTools) returns mcp:Tool[]|error {
+isolated function filter(mcp:Tool[] tools, string[] requestedTools) returns mcp:Tool[] {
     if requestedTools.length() == 0 {
         return tools;
     }
@@ -366,4 +352,29 @@ isolated function filter(mcp:Tool[] tools, string[] requestedTools) returns mcp:
         }
     }
     return filteredTools;
+}
+
+isolated function getParameterValueMap(mcp:Tool tool) returns map<json> {
+    return {
+        'type: OBJECT,
+        properties: {
+            params: {
+                'type: OBJECT,
+                properties: {
+                    name: {
+                        'type: STRING,
+                        'const: tool.name,
+                        description: "The fixed name of the tool to call"
+                    },
+                    arguments: {
+                        'type: OBJECT,
+                        properties: tool.inputSchema.properties.toJson(),
+                        required: tool.inputSchema.required
+                    }
+                },
+                required: ["name", "arguments"] // Fields used in `CallToolParams` record
+            }
+        },
+        required: ["params"] // Parameter name used in `callTool()` method
+    };
 }
