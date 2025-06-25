@@ -30,7 +30,7 @@ public type Tool record {|
     # Description of the tool
     string description;
     # Variables that should be generated with the help of the LLMs
-    JsonInputSchema variables?;
+    map<json> variables?;
     # Constants that are defined by the users
     map<json> constants = {};
     # Function that should be called to execute the tool
@@ -176,7 +176,7 @@ isolated function registerTool(map<Tool & readonly> toolMap, ToolConfig[] tools)
             return error Error("Duplicated tools. Tool name should be unique.", toolName = name);
         }
 
-        JsonInputSchema|error? variables = tool.parameters.cloneWithType();
+        map<json>|error? variables = tool.parameters.cloneWithType();
         if variables is error {
             return error Error("Unable to regesiter tool", variables);
         }

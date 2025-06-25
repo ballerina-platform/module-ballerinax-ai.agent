@@ -108,11 +108,33 @@ task publishAiPackageToLocal {
     }
 }
 
+task buildMcpServer(type: Exec) {
+    workingDir "$project.projectDir/tests/resources/mcp-server"
+    commandLine 'docker', 'build', '-t', 'mcp-server', '.'
+}
+
+task startMcpServer(type: Exec) {
+    commandLine 'docker', 'run', '-d', '-p', '3000:3000', 'mcp-server'
+}
+
+task stopMcpServer(type: Exec) {
+    commandLine 'sh', '-c', 'docker stop $(docker ps -q --filter ancestor=mcp-server)'
+}
+
 updateTomlFiles.dependsOn copyStdlibs
 
 build.dependsOn "generatePomFileForMavenPublication"
 build.dependsOn ":${packageName}-native:build"
 build.dependsOn ":${packageName}-compiler-plugin:build"
+
+if (!project.gradle.startParameter.excludedTaskNames.contains('test')) {
+    build.dependsOn buildMcpServer
+    build.dependsOn startMcpServer
+    test.dependsOn buildMcpServer
+    test.dependsOn startMcpServer
+    build.finalizedBy stopMcpServer
+    test.finalizedBy stopMcpServer
+}
 test.dependsOn ":${packageName}-native:build"
 test.dependsOn ":${packageName}-compiler-plugin:build"
 

@@ -140,7 +140,7 @@ public type ToolConfig record {|
     # A description of the tool. This is used by the LLMs to understand the behavior of the tool.
     string description;
     # Input schema expected by the tool. If the tool doesn't expect any input, this should be null.
-    JsonInputSchema? parameters = ();
+    map<json>? parameters = ();
     # Pointer to the function that should be called when the tool is invoked.
     FunctionTool caller;
 |};

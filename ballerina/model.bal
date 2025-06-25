@@ -236,7 +236,7 @@ type DeepSeekChatRequestMessages DeepseekChatSystemMessage|DeepseekChatUserMessa
 type DeepseekFunction record {|
     string name;
     string description;
-    JsonInputSchema parameters?;
+    map<json> parameters?;
 |};
 
 type DeepseekTool record {|
@@ -314,7 +314,7 @@ public type ChatCompletionFunctions record {|
     # Description of the function
     string description;
     # Parameters of the function
-    JsonInputSchema parameters?;
+    map<json> parameters?;
 |};
 
 # Function call record
@@ -726,7 +726,7 @@ public isolated client class AnthropicProvider {
         AnthropicTool[] anthropicTools = [];
 
         foreach ChatCompletionFunctions tool in tools {
-            JsonInputSchema schema = tool.parameters ?: {'type: "object", properties: {}};
+            map<json> schema = tool.parameters ?: {'type: "object", properties: {}};
 
             // Create Anthropic tool with input_schema instead of parameters
             AnthropicTool AnthropicTool = {

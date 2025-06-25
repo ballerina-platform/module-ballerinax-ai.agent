@@ -76,6 +76,21 @@ isolated client distinct class MockLlm {
         returns ai:ChatAssistantMessage|ai:LlmError {
         ai:ChatMessage lastMessage = messages.pop();
         string query = lastMessage is ai:ChatUserMessage|ai:ChatFunctionMessage ? lastMessage.content ?: "" : "";
+        if query.includes("Greet") {
+            MockLlmToolCall toolCall = {action: "single-greeting", action_input: {
+                params: {
+                    name: "single-greeting",
+                    arguments: {
+                        greetName: "John"
+                    }
+                }
+            }};
+            return getChatAssistantMessage(string `I need to call the single-greeting tool. Action: ${toolCall.toJsonString()}`);
+        }
+        if query.includes("Ballerina") {
+            MockLlmToolCall toolCall = {action: "Final answer", action_input: query};
+            return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
+        }
         if query.includes("Mail Body") {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: query};
             return getChatAssistantMessage(string `Answer is:  ${toolCall.toJsonString()})`);
@@ -117,7 +132,14 @@ isolated function getChatAssistantMessage(string content) returns ai:ChatAssista
 final MockLlm model = new;
 final ai:Agent agent = check new (model = model,
     systemPrompt = {role: "Math tutor", instructions: "Help the students with their questions."},
-    tools = [sum, mutiply, new SearchToolKit(), getEmails], agentType = ai:REACT_AGENT
+    tools = [
+        sum, 
+        mutiply, 
+        new SearchToolKit(), 
+        getEmails, 
+        check new ai:McpToolKit(serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""})
+    ],
+    agentType = ai:REACT_AGENT
 );
 
 isolated class SearchToolKit {
