@@ -25,7 +25,7 @@ function testMcpToolKit() returns error? {
     test:assertEquals(tools.length(), 2);
     test:assertEquals(tools[0].name, "single-greeting");
 
-    LlmToolResponse mcpInput = {
+    LlmToolResponse toolInput = {
         name: "single-greeting",
         arguments: {
             params: {
@@ -37,7 +37,47 @@ function testMcpToolKit() returns error? {
         }
     };
     ToolStore toolStore = check new (mcpToolKit);
-    ToolOutput output = check toolStore.execute(mcpInput);
+    ToolOutput output = check toolStore.execute(toolInput);
+    if output.value is error {
+        test:assertFail("tool execution output is an error");
+    }
+    json expectedResult = {
+        "content":[
+            {
+                "type":"text",
+                "text":"Hey John! Welcome to Ballerina!"
+            }
+        ]
+    };
+    test:assertEquals((check output.value).toJson(), expectedResult);
+}
+
+@test:Config {
+    groups: ["mcp"]
+}
+function testMcpToolKitWithPermittedTools() returns error? {
+    McpToolkit mcpToolKit = check new (
+        serverUrl = "http://localhost:3000/mcp",
+        permittedTools = ["single-greeting"],
+        info = {name: "Greeting", version: ""}
+    );
+    ToolConfig[] tools = mcpToolKit.getTools();
+    test:assertEquals(tools.length(), 1);
+    test:assertEquals(tools[0].name, "single-greeting");
+
+    LlmToolResponse toolInput = {
+        name: "single-greeting",
+        arguments: {
+            params: {
+                name: "single-greeting",
+                arguments: {
+                    "greetName": "John"
+                }
+            }
+        }
+    };
+    ToolStore toolStore = check new (mcpToolKit);
+    ToolOutput output = check toolStore.execute(toolInput);
     if output.value is error {
         test:assertFail("tool execution output is an error");
     }
