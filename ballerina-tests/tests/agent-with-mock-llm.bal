@@ -137,7 +137,7 @@ final ai:Agent agent = check new (model = model,
         mutiply, 
         new SearchToolKit(), 
         getEmails, 
-        check new ai:McpToolkit(serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""})
+        check new ai:McpToolKit(serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""})
     ],
     agentType = ai:REACT_AGENT
 );

@@ -122,7 +122,7 @@ public type BaseToolKit distinct object {
 };
 
 # Represents a toolkit for interacting with an MCP server, invoking tools via the MCP protocol.
-public isolated class McpToolkit {
+public isolated class McpToolKit {
     *BaseToolKit;
     private final mcp:Client mcpClient;
     private final ToolConfig[] & readonly tools;

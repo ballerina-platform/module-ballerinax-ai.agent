@@ -20,7 +20,7 @@ import ballerina/test;
     groups: ["mcp"]
 }
 function testMcpToolKit() returns error? {
-    McpToolkit mcpToolKit = check new (serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""});
+    McpToolKit mcpToolKit = check new (serverUrl = "http://localhost:3000/mcp", info = {name: "Greeting", version: ""});
     ToolConfig[] tools = mcpToolKit.getTools();
     test:assertEquals(tools.length(), 2);
     test:assertEquals(tools[0].name, "single-greeting");
@@ -56,7 +56,7 @@ function testMcpToolKit() returns error? {
     groups: ["mcp"]
 }
 function testMcpToolKitWithPermittedTools() returns error? {
-    McpToolkit mcpToolKit = check new (
+    McpToolKit mcpToolKit = check new (
         serverUrl = "http://localhost:3000/mcp",
         permittedTools = ["single-greeting"],
         info = {name: "Greeting", version: ""}
