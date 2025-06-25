@@ -91,3 +91,14 @@ function testMcpToolKitWithPermittedTools() returns error? {
     };
     test:assertEquals((check output.value).toJson(), expectedResult);
 }
+
+@test:Config {
+    groups: ["mcp", "error"]
+}
+function testMcpToolKitWithInvalidUrl() returns error? {
+    McpToolKit|error mcpToolKit = new (serverUrl = "http://invalid-url:3000", info = {name: "Greeting", version: ""});
+    test:assertTrue(mcpToolKit is error);
+    if mcpToolKit is error {
+        test:assertEquals(mcpToolKit.message(), "Failed to initialize the MCP client");
+    }
+}
