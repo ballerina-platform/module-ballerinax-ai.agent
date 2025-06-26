@@ -5,6 +5,14 @@ This file documents all significant changes made to the Ballerina AI package acr
 ## [Unreleased]
 
 ### Fixed
+- [Fix `temperature` and `maxToken` Configurations in ModelProviders Not Taking Effect as Expected](https://github.com/ballerina-platform/ballerina-library/issues/8055)
+
+## [1.2.0]
+
+### Added
+- [Add Support for MCP ToolKit](https://github.com/wso2/product-ballerina-integrator/issues/544)
+
+### Fixed
 - [Fixed Issue Where Overriding serviceUrl in OpenAIModelProvider Was Not Taking Effect as Expected](https://github.com/ballerina-platform/ballerina-library/issues/7941)
 - [Fix Anthropic API Payload Binding Error for service_tier Field](https://github.com/ballerina-platform/ballerina-library/issues/7954)
 
