@@ -39,7 +39,7 @@ public type Tool record {|
 
 public isolated class ToolStore {
     public final map<Tool> & readonly tools;
-    private final string[] & readonly mcpTools;
+    private string[] & readonly mcpTools = [];
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -94,17 +94,15 @@ public isolated class ToolStore {
         isolated function caller = self.tools.get(name).caller;
         ToolExecutionResult|error execution;
         lock {
-            if self.mcpTools.indexOf(name) !is () {
-                map<json> inputParams = {
+            execution = self.mcpTools.indexOf(name) is () ?
+                trap callFunction(caller, inputValues.cloneReadOnly()) :
+                trap callFunction(caller, {
                     params: {
                         name,
                         arguments: inputValues.cloneReadOnly()
                     }
-                };
-                execution = trap callFunction(caller, inputParams.cloneReadOnly());
-            } else {
-                execution = trap callFunction(caller, inputValues.cloneReadOnly());
-            }
+                }
+            );
         }
         if execution is error {
             return error ToolExecutionError("Tool execution failed.", execution, toolName = name,
