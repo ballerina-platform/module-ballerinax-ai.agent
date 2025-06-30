@@ -78,13 +78,8 @@ isolated client distinct class MockLlm {
         string query = lastMessage is ai:ChatUserMessage|ai:ChatFunctionMessage ? lastMessage.content ?: "" : "";
         if query.includes("Greet") {
             MockLlmToolCall toolCall = {action: "single-greeting", action_input: {
-                params: {
-                    name: "single-greeting",
-                    arguments: {
-                        greetName: "John"
-                    }
-                }
-            }};
+                    greetName: "John"
+                }};
             return getChatAssistantMessage(string `I need to call the single-greeting tool. Action: ${toolCall.toJsonString()}`);
         }
         if query.includes("Ballerina") {
