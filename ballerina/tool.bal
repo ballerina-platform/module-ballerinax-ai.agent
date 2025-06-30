@@ -39,7 +39,7 @@ public type Tool record {|
 
 public isolated class ToolStore {
     public final map<Tool> & readonly tools;
-    private map<string> mcpTools = {};
+    private map<()> mcpTools = {};
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -61,7 +61,7 @@ public isolated class ToolStore {
                 if tool is McpToolKit {
                     foreach ToolConfig element in toolsFromToolKit {
                         lock {
-                            self.mcpTools[element.name] = element.name;
+                            self.mcpTools[element.name] = ();
                         }
                     }
                 }
