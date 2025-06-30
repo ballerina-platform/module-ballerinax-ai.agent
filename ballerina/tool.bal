@@ -97,14 +97,14 @@ public isolated class ToolStore {
         isolated function caller = self.tools.get(name).caller;
         ToolExecutionResult|error execution;
         lock {
-            execution = callFunction(caller, !self.mcpTools.hasKey(name) 
-                ? inputValues.cloneReadOnly() 
-                : {
+            execution = trap callFunction(caller, self.mcpTools.hasKey(name) 
+                ? {
                     params: {
                         name,
                         arguments: inputValues.cloneReadOnly()
                     }
-                });
+                }
+                : inputValues.cloneReadOnly());
         }
         if execution is error {
             return error ToolExecutionError("Tool execution failed.", execution, toolName = name,
