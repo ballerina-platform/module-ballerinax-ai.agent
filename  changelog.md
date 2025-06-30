@@ -5,6 +5,12 @@ This file documents all significant changes made to the Ballerina AI package acr
 ## [Unreleased]
 
 ### Fixed
+
+- [Improve passing arguments in MCP tool executions](https://github.com/ballerina-platform/ballerina-library/issues/8061)
+
+## [1.2.0]
+
+### Fixed
 - [Fixed Issue Where Overriding serviceUrl in OpenAIModelProvider Was Not Taking Effect as Expected](https://github.com/ballerina-platform/ballerina-library/issues/7941)
 - [Fix Anthropic API Payload Binding Error for service_tier Field](https://github.com/ballerina-platform/ballerina-library/issues/7954)
 
