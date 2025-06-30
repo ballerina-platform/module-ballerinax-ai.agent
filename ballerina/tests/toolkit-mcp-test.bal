@@ -28,12 +28,7 @@ function testMcpToolKit() returns error? {
     LlmToolResponse toolInput = {
         name: "single-greeting",
         arguments: {
-            params: {
-                name: "single-greeting",
-                arguments: {
-                    "greetName": "John"
-                }
-            }
+            "greetName": "John"
         }
     };
     ToolStore toolStore = check new (mcpToolKit);
@@ -68,12 +63,7 @@ function testMcpToolKitWithPermittedTools() returns error? {
     LlmToolResponse toolInput = {
         name: "single-greeting",
         arguments: {
-            params: {
-                name: "single-greeting",
-                arguments: {
-                    "greetName": "John"
-                }
-            }
+            "greetName": "John"
         }
     };
     ToolStore toolStore = check new (mcpToolKit);
