@@ -39,7 +39,7 @@ public type Tool record {|
 
 public isolated class ToolStore {
     public final map<Tool> & readonly tools;
-    private string[] & readonly mcpTools = [];
+    private map<string> mcpTools = {};
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -59,8 +59,11 @@ public isolated class ToolStore {
             } else if tool is BaseToolKit {
                 ToolConfig[] toolsFromToolKit = tool.getTools(); // TODO remove this after Ballerina fixes nullpointer exception
                 if tool is McpToolKit {
-                    self.mcpTools = from ToolConfig toolItem in toolsFromToolKit
-                        select toolItem.name;
+                    foreach ToolConfig element in toolsFromToolKit {
+                        lock {
+                            self.mcpTools[element.name] = element.name;
+                        }
+                    }
                 }
                 toolList.push(...toolsFromToolKit);
             } else {
@@ -94,15 +97,14 @@ public isolated class ToolStore {
         isolated function caller = self.tools.get(name).caller;
         ToolExecutionResult|error execution;
         lock {
-            execution = self.mcpTools.indexOf(name) is () ?
-                trap callFunction(caller, inputValues.cloneReadOnly()) :
-                trap callFunction(caller, {
+            execution = callFunction(caller, !self.mcpTools.hasKey(name) 
+                ? inputValues.cloneReadOnly() 
+                : {
                     params: {
                         name,
                         arguments: inputValues.cloneReadOnly()
                     }
-                }
-            );
+                });
         }
         if execution is error {
             return error ToolExecutionError("Tool execution failed.", execution, toolName = name,

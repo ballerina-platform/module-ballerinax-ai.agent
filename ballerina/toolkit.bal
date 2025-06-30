@@ -145,7 +145,7 @@ public isolated class McpToolKit {
             select {
                 name: tool.name,
                 description: tool.description ?: "",
-                parameters: check getParameterValueMap(tool).cloneReadOnly(),
+                parameters: check getInputSchemaValues(tool).cloneReadOnly(),
                 caller
             };
     }
@@ -345,7 +345,7 @@ isolated function filterPermittedTools(mcp:Tool[] tools, string[]? permittedTool
             select tool;
 }
 
-isolated function getParameterValueMap(mcp:Tool tool) returns map<json>|Error {
+isolated function getInputSchemaValues(mcp:Tool tool) returns map<json>|Error {
     map<json>|error inputSchema = tool.inputSchema.cloneWithType();
     if inputSchema is error {
         return error Error("Failed to get parameter value map for tool");
