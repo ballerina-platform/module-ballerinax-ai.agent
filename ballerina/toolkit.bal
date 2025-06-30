@@ -348,7 +348,7 @@ isolated function filterPermittedTools(mcp:Tool[] tools, string[]? permittedTool
 isolated function getInputSchemaValues(mcp:Tool tool) returns map<json>|Error {
     map<json>|error inputSchema = tool.inputSchema.cloneWithType();
     if inputSchema is error {
-        return error Error("Failed to get parameter value map for tool");
+        return error Error(string `Failed to get the input schema for the tool: ${tool.name}`, inputSchema);
     }
     return inputSchema;
 };
