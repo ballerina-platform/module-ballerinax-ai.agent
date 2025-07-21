@@ -21,6 +21,7 @@ package io.ballerina.lib.ai.plugin;
 import io.ballerina.compiler.api.symbols.AnnotationSymbol;
 import io.ballerina.compiler.api.symbols.Documentable;
 import io.ballerina.compiler.api.symbols.FunctionSymbol;
+import io.ballerina.compiler.api.symbols.StreamTypeSymbol;
 import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.api.symbols.TypeDescKind;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
@@ -34,15 +35,15 @@ import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
 public class Utils {
     public static final String BALLERINAX_ORG = "ballerinax";
     private static final String BALLERINA_ORG = "ballerina";
-    private static final String TOOL_ANNOTATION_NAME = "Tool";
-    private static final String AI_AGENT_PACKAGE_NAME = "ai.agent";
+    private static final String TOOL_ANNOTATION_NAME = "AgentTool";
+    private static final String AI_PACKAGE_NAME = "ai";
     private static final String HTTP_PACKAGE_NAME = "http";
     private static final String HTTP_RESPONSE_OBJECT_NAME = "Response";
 
     private Utils() {
     }
 
-    public static boolean isToolAnnotation(AnnotationSymbol annotationSymbol) {
+    public static boolean isAgentToolAnnotation(AnnotationSymbol annotationSymbol) {
         return annotationSymbol.getModule().isPresent()
                 && isAgentModuleSymbol(annotationSymbol.getModule().get())
                 && annotationSymbol.getName().isPresent()
@@ -51,7 +52,7 @@ public class Utils {
 
     public static boolean isAgentModuleSymbol(Symbol symbol) {
         return symbol.getModule().isPresent()
-                && AI_AGENT_PACKAGE_NAME.equals(symbol.getModule().get().id().moduleName())
+                && AI_PACKAGE_NAME.equals(symbol.getModule().get().id().moduleName())
                 && BALLERINAX_ORG.equals(symbol.getModule().get().id().orgName());
     }
 
@@ -69,21 +70,27 @@ public class Utils {
         return typeSymbol.subtypeOf(context.semanticModel().types().ERROR);
     }
 
-    public static boolean isAnydataOrErrorTypeOrHttpResponse(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
+    public static boolean isAllowedReturnType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
         if (typeSymbol.typeKind() == TypeDescKind.TYPE_REFERENCE) {
             TypeReferenceTypeSymbol typeReferenceTypeSymbol = (TypeReferenceTypeSymbol) typeSymbol;
             if (HTTP_RESPONSE_OBJECT_NAME.equals(typeReferenceTypeSymbol.definition().getName().orElse("<unknown>"))
                     && Utils.isHttpModuleSymbol(typeReferenceTypeSymbol)) {
                 return true;
             }
-            return isAnydataOrErrorTypeOrHttpResponse(typeReferenceTypeSymbol.typeDescriptor(), context);
+            return isAllowedReturnType(typeReferenceTypeSymbol.typeDescriptor(), context);
         }
         if (typeSymbol.typeKind() == TypeDescKind.UNION) {
             UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) typeSymbol;
             return unionTypeSymbol.memberTypeDescriptors()
-                    .stream().map(member -> isAnydataOrErrorTypeOrHttpResponse(member, context))
+                    .stream().map(member -> isAllowedReturnType(member, context))
                     .reduce((a, b) -> a && b)
                     .orElse(false);
+        }
+        if (typeSymbol.typeKind() == TypeDescKind.STREAM) {
+            StreamTypeSymbol streamTypeSymbol = (StreamTypeSymbol) typeSymbol;
+            TypeSymbol parameterType = streamTypeSymbol.typeParameter();
+            TypeSymbol completionType = streamTypeSymbol.completionValueTypeParameter();
+            return isAllowedReturnType(parameterType, context) && isAllowedReturnType(completionType, context);
         }
         return isAnydataType(typeSymbol, context) || isErrorType(typeSymbol, context);
     }

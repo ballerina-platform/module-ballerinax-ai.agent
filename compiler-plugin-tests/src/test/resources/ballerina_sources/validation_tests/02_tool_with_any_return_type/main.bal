@@ -14,28 +14,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/ai.agent;
+import ballerinax/ai;
 
 class Data {
     public int age = 12;
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function toolReturningAny(string name) returns any {
     return ();
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function toolReturningInstance(string name) returns Data {
     return new;
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function toolReturningMapOfAny(string name) returns map<any> {
     return {};
 }
 
-@agent:Tool
+@ai:AgentTool
 isolated function toolReturningUnionOfAny(string name) returns Data|string {
     return new;
 }

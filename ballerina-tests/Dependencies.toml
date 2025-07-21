@@ -5,7 +5,7 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.12.0"
+distribution-version = "2201.12.7"
 
 [[package]]
 org = "ballerina"
@@ -58,6 +58,15 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "data.xmldata"
+version = "1.4.1"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "lang.object"}
+]
+
+[[package]]
+org = "ballerina"
 name = "file"
 version = "1.12.0"
 dependencies = [
@@ -70,7 +79,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "http"
-version = "2.14.0"
+version = "2.14.2"
 dependencies = [
 	{org = "ballerina", name = "auth"},
 	{org = "ballerina", name = "cache"},
@@ -231,6 +240,15 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "mcp"
+version = "0.4.2"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "jballerina.java"}
+]
+
+[[package]]
+org = "ballerina"
 name = "mime"
 version = "2.12.0"
 dependencies = [
@@ -272,11 +290,21 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
-name = "task"
-version = "2.7.0"
+name = "regex"
+version = "1.3.2"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
-	{org = "ballerina", name = "time"}
+	{org = "ballerina", name = "lang.string"}
+]
+
+[[package]]
+org = "ballerina"
+name = "task"
+version = "2.10.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "time"},
+	{org = "ballerina", name = "uuid"}
 ]
 
 [[package]]
@@ -322,14 +350,6 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
-name = "xmldata"
-version = "2.9.1"
-dependencies = [
-	{org = "ballerina", name = "jballerina.java"}
-]
-
-[[package]]
-org = "ballerina"
 name = "yaml"
 version = "0.8.0"
 dependencies = [
@@ -354,42 +374,45 @@ modules = [
 
 [[package]]
 org = "ballerinax"
-name = "ai.agent"
-version = "0.7.15"
+name = "ai"
+version = "1.2.1"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "data.jsondata"},
+	{org = "ballerina", name = "data.xmldata"},
 	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "mcp"},
 	{org = "ballerina", name = "mime"},
 	{org = "ballerina", name = "os"},
+	{org = "ballerina", name = "regex"},
+	{org = "ballerina", name = "time"},
 	{org = "ballerina", name = "url"},
 	{org = "ballerina", name = "uuid"},
-	{org = "ballerina", name = "xmldata"},
 	{org = "ballerina", name = "yaml"},
 	{org = "ballerinax", name = "azure.openai.chat"},
 	{org = "ballerinax", name = "openai.chat"}
 ]
 modules = [
-	{org = "ballerinax", packageName = "ai.agent", moduleName = "ai.agent"},
-	{org = "ballerinax", packageName = "ai.agent", moduleName = "ai.agent.mistral"}
+	{org = "ballerinax", packageName = "ai", moduleName = "ai"},
+	{org = "ballerinax", packageName = "ai", moduleName = "ai.mistral"}
 ]
 
 [[package]]
 org = "ballerinax"
 name = "ai_tests"
-version = "0.7.15"
+version = "1.2.1"
 dependencies = [
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
-	{org = "ballerinax", name = "ai.agent"}
+	{org = "ballerinax", name = "ai"}
 ]
 modules = [
 	{org = "ballerinax", packageName = "ai_tests", moduleName = "ai_tests"}
@@ -398,7 +421,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "azure.openai.chat"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "http"},

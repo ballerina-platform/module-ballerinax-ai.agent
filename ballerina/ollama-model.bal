@@ -117,13 +117,13 @@ type OllamaFunction record {
     map<json> arguments;
 };
 
-const OLLAMA_TOOL_ROLE = "tool";
+const TOOL_ROLE = "tool";
 const OLLAMA_FUNCTION_TYPE = "function";
 const OLLAMA_DEFAULT_SERVICE_URL = "http://localhost:11434";
 
 # Represents a client for interacting with an Ollama models.
-public isolated client class OllamaModel {
-    *Model;
+public isolated client class OllamaProvider {
+    *ModelProvider;
     private final http:Client ollamaClient;
     private final string modelType;
     private final readonly & map<json> modleParameters;
@@ -156,21 +156,21 @@ public isolated client class OllamaModel {
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
-        returns ChatAssistantMessage[]|LlmError {
+        returns ChatAssistantMessage|LlmError {
         // Ollama chat completion API reference: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion
         json requestPayload = self.prepareRequestPayload(messages, tools, stop);
         OllamaResponse|error response = self.ollamaClient->/api/chat.post(requestPayload);
         if response is error {
             return error LlmConnectionError("Error while connecting to ollama", response);
         }
-        return self.mapOllamaResponseToAssistantMessages(response);
+        return self.mapOllamaResponseToAssistantMessage(response);
     }
 
     private isolated function prepareRequestPayload(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop)
         returns json {
         json[] transformedMessages = messages.'map(isolated function(ChatMessage message) returns json {
             if message is ChatFunctionMessage {
-                return {role: OLLAMA_TOOL_ROLE, content: message?.content};
+                return {role: TOOL_ROLE, content: message?.content};
             }
             return message;
         });
@@ -192,25 +192,23 @@ public isolated client class OllamaModel {
         return payload;
     }
 
-    private isolated function mapOllamaResponseToAssistantMessages(OllamaResponse response)
-        returns ChatAssistantMessage[] {
+    private isolated function mapOllamaResponseToAssistantMessage(OllamaResponse response)
+        returns ChatAssistantMessage {
         OllamaToolCall[]? toolCalls = response.message?.tool_calls;
         if toolCalls is OllamaToolCall[] {
-            return self.mapToolCallsToAssistantMessages(toolCalls);
+            return self.mapToolCallsToAssistantMessage(toolCalls);
         }
-        return [{role: ASSISTANT, content: response.message.content}];
+        return {role: ASSISTANT, content: response.message.content};
     }
 
-    private isolated function mapToolCallsToAssistantMessages(OllamaToolCall[] toolCalls)
-        returns ChatAssistantMessage[] {
-        return from OllamaToolCall toolCall in toolCalls
+    private isolated function mapToolCallsToAssistantMessage(OllamaToolCall[] ollamaToolCalls)
+        returns ChatAssistantMessage {
+        FunctionCall[] toolCalls = from OllamaToolCall toolCall in ollamaToolCalls
             select {
-                role: ASSISTANT,
-                function_call: {
-                    name: toolCall.'function.name,
-                    arguments: toolCall.'function.arguments.toJsonString()
-                }
+                name: toolCall.'function.name,
+                arguments: toolCall.'function.arguments.toJsonString()
             };
+        return {role: ASSISTANT, toolCalls};
     }
 }
 

@@ -16,7 +16,9 @@
 
 import ballerina/test;
 
-@test:Config
+@test:Config {
+    groups: ["agent"]
+}
 function testAgentToolExecution() returns error? {
     string result = check agent->run("What is the sum of the following numbers 78 90 45 23 8?");
     test:assertEquals(result, "Answer is: 244.0");
@@ -26,4 +28,10 @@ function testAgentToolExecution() returns error? {
 
     result = check agent->run("Search for 'random'");
     test:assertEquals(result, "Answer is: No result found on doc for 'random'");
+
+    result = check agent->run("List all mails");
+    test:assertEquals(result, [{body: "Mail Body 1"}, {body: "Mail Body 2"}, {body: "Mail Body 3"}].toString());
+
+    result = check agent->run("I'm John. Greet me once");
+    test:assertEquals(result, {"content":[{"type":"text","text":"Hey John! Welcome to Ballerina!"}]}.toString());
 }

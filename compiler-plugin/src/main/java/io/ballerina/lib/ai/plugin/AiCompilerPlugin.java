@@ -28,6 +28,7 @@ import io.ballerina.projects.plugins.CompilerPluginContext;
 public class AiCompilerPlugin extends CompilerPlugin {
     @Override
     public void init(CompilerPluginContext context) {
+        context.addCodeAnalyzer(new AiCodeAnalyzer());
         context.addCodeModifier(new AiCodeModifier());
     }
 }

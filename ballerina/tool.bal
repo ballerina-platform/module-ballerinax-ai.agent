@@ -24,13 +24,13 @@ type ToolExecutionResult record {|
 
 # This is the tool used by LLMs during reasoning.
 # This tool is same as the Tool record, but it has a clear separation between the variables that should be generated with the help of the LLMs and the constants that are defined by the users. 
-public type AgentTool record {|
+public type Tool record {|
     # Name of the tool
     string name;
     # Description of the tool
     string description;
     # Variables that should be generated with the help of the LLMs
-    JsonInputSchema variables?;
+    map<json> variables?;
     # Constants that are defined by the users
     map<json> constants = {};
     # Function that should be called to execute the tool
@@ -38,7 +38,8 @@ public type AgentTool record {|
 |};
 
 public isolated class ToolStore {
-    public final map<AgentTool> & readonly tools;
+    public final map<Tool> & readonly tools;
+    private map<()> mcpTools = {};
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -47,7 +48,8 @@ public isolated class ToolStore {
     # + return - An error if the tool is already registered
     public isolated function init((BaseToolKit|ToolConfig|FunctionTool)... tools) returns Error? {
         if tools.length() == 0 {
-            return error Error("Initialization failed.", cause = "No tools provided to the agent.");
+            self.tools = {};
+            return;
         }
         ToolConfig[] toolList = [];
         foreach BaseToolKit|ToolConfig|FunctionTool tool in tools {
@@ -56,12 +58,19 @@ public isolated class ToolStore {
                 toolList.push(toolConfig);
             } else if tool is BaseToolKit {
                 ToolConfig[] toolsFromToolKit = tool.getTools(); // TODO remove this after Ballerina fixes nullpointer exception
+                if tool is McpToolKit {
+                    foreach ToolConfig element in toolsFromToolKit {
+                        lock {
+                            self.mcpTools[element.name] = ();
+                        }
+                    }
+                }
                 toolList.push(...toolsFromToolKit);
             } else {
                 toolList.push(tool);
             }
         }
-        map<AgentTool & readonly> toolMap = {};
+        map<Tool & readonly> toolMap = {};
         check registerTool(toolMap, toolList);
         self.tools = toolMap.cloneReadOnly();
     }
@@ -86,7 +95,17 @@ public isolated class ToolStore {
                 inputs = inputs ?: (), instruction = instruction);
         }
         isolated function caller = self.tools.get(name).caller;
-        ToolExecutionResult|error execution = trap callFunction(caller, inputValues);
+        ToolExecutionResult|error execution;
+        lock {
+            execution = trap callFunction(caller, self.mcpTools.hasKey(name) 
+                ? {
+                    params: {
+                        name,
+                        arguments: inputValues.cloneReadOnly()
+                    }
+                }
+                : inputValues.cloneReadOnly());
+        }
         if execution is error {
             return error ToolExecutionError("Tool execution failed.", execution, toolName = name,
                 inputs = inputValues.length() == 0 ? {} : inputValues);
@@ -94,6 +113,11 @@ public isolated class ToolStore {
         any|error observation = execution.result;
         if observation is http:Response {
             observation = observation.getStatusCodeRecord();
+        }
+        if observation is stream<anydata, error?> {
+            anydata[]|error result = from anydata item in observation
+                select item;
+            observation = result;
         }
         if observation is anydata {
             return {value: observation};
@@ -115,9 +139,9 @@ public isolated class ToolStore {
 
 isolated function getToolConfig(FunctionTool tool) returns ToolConfig|Error {
     typedesc<FunctionTool> typedescriptor = typeof tool;
-    ToolAnnotationConfig? config = typedescriptor.@Tool;
+    ToolAnnotationConfig? config = typedescriptor.@AgentTool;
     if config is () {
-        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
+        return error Error("The function '" + getFunctionName(tool) + "' must be annotated with `@ai:AgentTool`.");
     }
     do {
         return {
@@ -153,7 +177,7 @@ isolated function getInputArgumentsOfFunction(FunctionTool tool, map<json> input
     return argsWithDefaultValues.toArray().cloneReadOnly();
 }
 
-isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] tools) returns Error? {
+isolated function registerTool(map<Tool & readonly> toolMap, ToolConfig[] tools) returns Error? {
     foreach ToolConfig tool in tools {
         string name = tool.name;
         if name.toLowerAscii().matches(FINAL_ANSWER_REGEX) {
@@ -170,7 +194,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] t
             return error Error("Duplicated tools. Tool name should be unique.", toolName = name);
         }
 
-        JsonInputSchema|error? variables = tool.parameters.cloneWithType();
+        map<json>|error? variables = tool.parameters.cloneWithType();
         if variables is error {
             return error Error("Unable to regesiter tool", variables);
         }
@@ -180,7 +204,7 @@ isolated function registerTool(map<AgentTool & readonly> toolMap, ToolConfig[] t
             constants = resolveSchema(variables) ?: {};
         }
 
-        AgentTool agentTool = {
+        Tool agentTool = {
             name,
             description: regexp:replaceAll(re `\n`, tool.description, " "),
             variables,
@@ -195,7 +219,7 @@ isolated function resolveSchema(JsonInputSchema schema) returns map<json>? {
     // TODO fix when all values are removed as constant, to use null schema
     if schema is ObjectInputSchema {
         map<JsonSubSchema>? properties = schema.properties;
-        if  properties is () {
+        if properties is () {
             return;
         }
         map<json> values = {};

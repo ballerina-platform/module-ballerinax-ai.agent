@@ -15,6 +15,7 @@
 // under the License.
 
 import ballerina/http;
+import ballerina/mcp;
 
 # Supported HTTP methods.
 public enum HttpMethod {
@@ -120,6 +121,42 @@ public type BaseToolKit distinct object {
     public isolated function getTools() returns ToolConfig[];
 };
 
+# Represents a toolkit for interacting with an MCP server, invoking tools via the MCP protocol.
+public isolated class McpToolKit {
+    *BaseToolKit;
+    private final mcp:Client mcpClient;
+    private final ToolConfig[] & readonly tools;
+
+    public isolated function init(string serverUrl, 
+                                  string[]? permittedTools = (), *mcp:ClientConfiguration config) returns Error? {
+        self.mcpClient = new (serverUrl, config);
+        mcp:ClientError? initializeResult = self.mcpClient->initialize();
+        if initializeResult is error {
+            return error Error("Failed to initialize the MCP client", initializeResult);
+        }
+        mcp:ListToolsResult|error listTools = self.mcpClient->listTools();
+        if listTools is error {
+            return error Error("Failed to get tools from the MCP server", listTools);
+        }
+        mcp:Tool[] filteredTools = filterPermittedTools(listTools.tools, permittedTools);
+        isolated function caller = self.callTool;
+
+        self.tools = from mcp:Tool tool in filteredTools
+            select {
+                name: tool.name,
+                description: tool.description ?: "",
+                parameters: check getInputSchemaValues(tool).cloneReadOnly(),
+                caller
+            };
+    }
+
+    public isolated function callTool(mcp:CallToolParams params) returns mcp:CallToolResult|error {
+        return self.mcpClient->callTool(params);
+    }
+
+    public isolated function getTools() returns ToolConfig[] => self.tools;
+}
+
 # Defines a HTTP tool kit. This is a special type of tool kit that can be used to invoke HTTP resources.
 # Require to initialize the toolkit with the service url and http tools that are belongs to a single API. 
 public isolated class HttpServiceToolKit {
@@ -205,6 +242,7 @@ public isolated class HttpServiceToolKit {
                 name: httpTool.name,
                 description: httpTool.description,
                 parameters: {
+                    'type: OBJECT,
                     properties: {
                         httpInput: parameters
                     },
@@ -212,8 +250,8 @@ public isolated class HttpServiceToolKit {
                 },
                 caller
             });
-            self.tools = tools.cloneReadOnly();
         }
+        self.tools = tools.cloneReadOnly();
     }
 
     # Useful to retrieve the Tools extracted from the HttpTools.
@@ -297,3 +335,20 @@ isolated function handleHttpResourceDespatchError(error e) returns Error {
     }
     return error Error(e.message(), e);
 }
+
+isolated function filterPermittedTools(mcp:Tool[] tools, string[]? permittedTools) returns mcp:Tool[] {
+    if permittedTools is () {
+        return tools;
+    }
+    return from mcp:Tool tool in tools
+        where permittedTools.indexOf(tool.name) is int
+            select tool;
+}
+
+isolated function getInputSchemaValues(mcp:Tool tool) returns map<json>|Error {
+    map<json>|error inputSchema = tool.inputSchema.cloneWithType();
+    if inputSchema is error {
+        return error Error(string `Failed to get the input schema for the tool: ${tool.name}`, inputSchema);
+    }
+    return inputSchema;
+};
