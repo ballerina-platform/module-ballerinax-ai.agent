@@ -127,21 +127,22 @@ public isolated class McpToolKit {
     private final mcp:Client mcpClient;
     private final ToolConfig[] & readonly tools;
 
-    public isolated function init(string serverUrl, 
-                                  string[]? permittedTools = (), *mcp:ClientConfiguration config) returns Error? {
-        self.mcpClient = new (serverUrl, config);
-        mcp:ClientError? initializeResult = self.mcpClient->initialize();
-        if initializeResult is error {
-            return error Error("Failed to initialize the MCP client", initializeResult);
+    public isolated function init(string serverUrl,
+            string[]? permittedTools = (), *mcp:ClientConfiguration config) returns Error? {
+        mcp:Client|mcp:ClientError mcpClient = new (serverUrl, config);
+        if mcpClient is error {
+            return error Error("Failed to initialize the MCP client", mcpClient);
         }
+        self.mcpClient = mcpClient;
+
         mcp:ListToolsResult|error listTools = self.mcpClient->listTools();
         if listTools is error {
             return error Error("Failed to get tools from the MCP server", listTools);
         }
-        mcp:Tool[] filteredTools = filterPermittedTools(listTools.tools, permittedTools);
+        mcp:ToolDefinition[] filteredTools = filterPermittedTools(listTools.tools, permittedTools);
         isolated function caller = self.callTool;
 
-        self.tools = from mcp:Tool tool in filteredTools
+        self.tools = from mcp:ToolDefinition tool in filteredTools
             select {
                 name: tool.name,
                 description: tool.description ?: "",
@@ -336,16 +337,16 @@ isolated function handleHttpResourceDespatchError(error e) returns Error {
     return error Error(e.message(), e);
 }
 
-isolated function filterPermittedTools(mcp:Tool[] tools, string[]? permittedTools) returns mcp:Tool[] {
+isolated function filterPermittedTools(mcp:ToolDefinition[] tools, string[]? permittedTools) returns mcp:ToolDefinition[] {
     if permittedTools is () {
         return tools;
     }
-    return from mcp:Tool tool in tools
+    return from mcp:ToolDefinition tool in tools
         where permittedTools.indexOf(tool.name) is int
-            select tool;
+        select tool;
 }
 
-isolated function getInputSchemaValues(mcp:Tool tool) returns map<json>|Error {
+isolated function getInputSchemaValues(mcp:ToolDefinition tool) returns map<json>|Error {
     map<json>|error inputSchema = tool.inputSchema.cloneWithType();
     if inputSchema is error {
         return error Error(string `Failed to get the input schema for the tool: ${tool.name}`, inputSchema);
