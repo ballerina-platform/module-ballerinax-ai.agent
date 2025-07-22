@@ -249,7 +249,7 @@ type DeepSeekChatCompletionRequest record {|
     DEEPSEEK_MODEL_NAMES model;
     int? max_tokens;
     string?|string[]? stop = ();
-    int? temperature = 1;
+    decimal? temperature = 1;
     DeepseekTool[]? tools = ();
 |};
 
@@ -407,6 +407,8 @@ public isolated client class OpenAiProvider {
     *ModelProvider;
     private final chat:Client llmClient;
     private final string modelType;
+    private final decimal temparature;
+    private final int maxTokens;
 
     # Initializes the OpenAI model with the given connection configuration and model configuration.
     #
@@ -452,6 +454,8 @@ public isolated client class OpenAiProvider {
         }
         self.llmClient = llmClient;
         self.modelType = modelType;
+        self.maxTokens = maxTokens;
+        self.temparature = temperature;
     }
 
     # Sends a chat request to the OpenAI model with the given messages and tools.
@@ -465,7 +469,9 @@ public isolated client class OpenAiProvider {
         chat:CreateChatCompletionRequest request = {
             stop,
             model: self.modelType,
-            messages: self.mapToChatCompletionRequestMessage(messages)
+            messages: self.mapToChatCompletionRequestMessage(messages),
+            max_completion_tokens: self.maxTokens,
+            temperature: self.temparature
         };
         if tools.length() > 0 {
             request.functions = tools;
@@ -515,6 +521,8 @@ public isolated client class AzureOpenAiProvider {
     private final azure_chat:Client llmClient;
     private final string deploymentId;
     private final string apiVersion;
+    private final decimal temparature;
+    private final int maxTokens;
 
     # Initializes the Azure OpenAI model with the given connection configuration and model configuration.
     #
@@ -563,6 +571,8 @@ public isolated client class AzureOpenAiProvider {
         self.llmClient = llmClient;
         self.deploymentId = deploymentId;
         self.apiVersion = apiVersion;
+        self.temparature = temperature;
+        self.maxTokens = maxTokens;
     }
 
     # Sends a chat request to the OpenAI model with the given messages and tools.
@@ -573,7 +583,12 @@ public isolated client class AzureOpenAiProvider {
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
         returns ChatAssistantMessage|LlmError {
-        azure_chat:CreateChatCompletionRequest request = {stop, messages: self.mapToChatCompletionRequestMessage(messages)};
+        azure_chat:CreateChatCompletionRequest request = {
+            stop,
+            messages: self.mapToChatCompletionRequestMessage(messages),
+            temperature: self.temparature,
+            max_tokens: self.maxTokens
+        };
         if tools.length() > 0 {
             request.functions = tools;
         }
@@ -633,6 +648,7 @@ public isolated client class AnthropicProvider {
     private final string modelType;
     private final string apiVersion;
     private final int maxTokens;
+    private final decimal temperature;
 
     # Initializes the Anthropic model with the given connection configuration and model configuration.
     #
@@ -681,6 +697,7 @@ public isolated client class AnthropicProvider {
         self.modelType = modelType;
         self.apiVersion = apiVersion;
         self.maxTokens = maxTokens;
+        self.temperature = temperature;
     }
 
     # Converts standard ChatMessage array to Anthropic's message format
@@ -754,9 +771,10 @@ public isolated client class AnthropicProvider {
 
         // Prepare request payload
         map<json> requestPayload = {
-            "model": self.modelType,
-            "max_tokens": self.maxTokens,
-            "messages": anthropicMessages
+            model: self.modelType,
+            max_tokens: self.maxTokens,
+            messages: anthropicMessages,
+            temperature: self.temperature
         };
 
         if stop is string {
@@ -805,6 +823,8 @@ public isolated client class MistralAiProvider {
     private final mistral:Client llmClient;
     private final string modelType;
     private final string apiKey;
+    private final int maxTokens;
+    private final decimal temperature;
 
     # # Initializes the Mistral AI model with the given connection configuration and model configuration.
     #
@@ -849,6 +869,8 @@ public isolated client class MistralAiProvider {
         self.llmClient = llmClient;
         self.modelType = modelType;
         self.apiKey = apiKey;
+        self.maxTokens = maxTokens;
+        self.temperature = temperature;
     }
 
     # Uses function call API to determine next function to be called
@@ -860,7 +882,13 @@ public isolated client class MistralAiProvider {
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
         returns ChatAssistantMessage|LlmError {
         MistralMessages[] mistralMessages = self.mapToMistralMessageRecords(messages);
-        mistral:ChatCompletionRequest request = {model: self.modelType, stop, messages: mistralMessages};
+        mistral:ChatCompletionRequest request = {
+            model: self.modelType,
+            stop,
+            messages: mistralMessages,
+            maxTokens: self.maxTokens,
+            temperature: self.temperature
+        };
 
         if tools.length() > 0 {
             mistral:Function[] mistralFunctions = [];
@@ -988,6 +1016,7 @@ public isolated client class DeepseekProvider {
     private final http:Client llmClient;
     private final int maxTokens;
     private final DEEPSEEK_MODEL_NAMES modelType;
+    private final decimal temperature;
 
     # Initializes the Deepseek model client with the provided configurations.
     #
@@ -1033,6 +1062,7 @@ public isolated client class DeepseekProvider {
         self.maxTokens = maxTokens;
         self.modelType = modelType;
         self.llmClient = httpClient;
+        self.temperature = temperateure;
     }
 
     # Generates a chat completion message from a Deepseek model
@@ -1049,7 +1079,8 @@ public isolated client class DeepseekProvider {
             messages: deepseekPayloadMessages,
             model: self.modelType,
             max_tokens: self.maxTokens,
-            stop: stop
+            stop: stop,
+            temperature: self.temperature
         };
 
         if tools.length() > 0 {
