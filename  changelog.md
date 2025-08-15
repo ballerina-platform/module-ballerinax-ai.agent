@@ -16,6 +16,7 @@ This file documents all significant changes made to the Ballerina AI package acr
 ### Fixed
 - [Fixed Issue Where Overriding serviceUrl in OpenAIModelProvider Was Not Taking Effect as Expected](https://github.com/ballerina-platform/ballerina-library/issues/7941)
 - [Fix Anthropic API Payload Binding Error for service_tier Field](https://github.com/ballerina-platform/ballerina-library/issues/7954)
+- [Remove Anthropic API Version Parameter and Use Default API Version](https://github.com/ballerina-platform/ballerina-library/issues/7876)
 
 ## [1.1.0]
 
