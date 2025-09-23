@@ -124,16 +124,22 @@ public type BaseToolKit distinct object {
 # Represents a toolkit for interacting with an MCP server, invoking tools via the MCP protocol.
 public isolated class McpToolKit {
     *BaseToolKit;
-    private final mcp:Client mcpClient;
+    private final mcp:StreamableHttpClient mcpClient;
     private final ToolConfig[] & readonly tools;
 
-    public isolated function init(string serverUrl,
-            string[]? permittedTools = (), *mcp:ClientConfiguration config) returns Error? {
-        mcp:Client|mcp:ClientError mcpClient = new (serverUrl, config);
+    public isolated function init(string serverUrl, string[]? permittedTools = (),
+            mcp:Implementation info = {name: "MCP Client", version: "1.0.0"},
+            *mcp:StreamableHttpClientTransportConfig config) returns Error? {
+        mcp:StreamableHttpClient|mcp:ClientError mcpClient = new (serverUrl, config);
         if mcpClient is error {
             return error Error("Failed to initialize the MCP client", mcpClient);
         }
         self.mcpClient = mcpClient;
+
+        mcp:ClientError? initializeRes = self.mcpClient->initialize(info);
+        if initializeRes is error {
+            return error Error("Failed to initialize the MCP client", initializeRes);
+        }
 
         mcp:ListToolsResult|error listTools = self.mcpClient->listTools();
         if listTools is error {
