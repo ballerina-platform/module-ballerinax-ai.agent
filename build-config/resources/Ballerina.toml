@@ -5,7 +5,7 @@ name = "ai"
 version = "@toml.version@"
 license = ["Apache-2.0"]
 authors = ["Ballerina"]
-keywords = ["AI/Agent", "Cost/Freemium", "Agent", "AI"]
+keywords = ["AI/Agent", "Cost/Freemium", "Agent", "AI", "Vendor/Other", "Area/AI", "Type/Other"]
 repository = "https://github.com/ballerina-platform/module-ballerinax-ai"
 
 [platform.java21]
