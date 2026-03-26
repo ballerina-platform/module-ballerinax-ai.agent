@@ -1,8 +1,13 @@
 ## Overview
 
-This module provides APIs for building AI agents using Large Language Models (LLMs).
+The AI Agent connector provides APIs for building AI agents using Large Language Models (LLMs). AI agents use LLMs to process natural language inputs, generate responses, and make decisions based on given instructions. These agents can be designed for various tasks, such as answering questions, automating workflows, or interacting with external systems.
 
-AI agents use LLMs to process natural language inputs, generate responses, and make decisions based on given instructions. These agents can be designed for various tasks, such as answering questions, automating workflows, or interacting with external systems.
+### Key Features
+
+- Support for multiple LLM providers including OpenAI, Azure OpenAI, Anthropic, MistralAI, and Ollama
+- Tool integration to extend agent capabilities beyond text-based responses
+- Memory management for individual user sessions with customizable capacity
+- Function-call based agent architecture with automatic tool dispatch
 
 ## Prerequisites
 
