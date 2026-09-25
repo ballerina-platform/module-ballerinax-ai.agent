@@ -17,7 +17,7 @@
 
 plugins {
     id "com.github.spotbugs-base"
-    id "com.github.johnrengelman.shadow"
+    id "com.gradleup.shadow"
     id "de.undercouch.download"
     id "net.researchgate.release"
 }
@@ -27,6 +27,9 @@ allprojects {
     version = project.version
 
     apply plugin: 'jacoco'
+    jacoco {
+        toolVersion = jacocoVersion
+    }
     apply plugin: 'maven-publish'
 
     repositories {
@@ -74,7 +77,7 @@ release {
     }
 }
 
-task build {
+tasks.named('build') {
     dependsOn(':ai-compiler-plugin:build')
     dependsOn(':ai-native:build')
     dependsOn(':ai-ballerina:build')

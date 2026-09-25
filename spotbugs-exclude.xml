@@ -20,4 +20,12 @@
         <Class name="io.ballerina.lib.ai.plugin.ToolAnnotationAnalysisTask"/>
         <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
     </Match>
+    <!-- getParameterSchema() is a first-party method, not a framework override; it declares a
+         broad throws Exception to re-wrap a caught RuntimeException from schema/type-mapping so
+         callers get a single checked-exception contract, not a framework-imposed constraint. -->
+    <Match>
+        <Class name="io.ballerina.lib.ai.plugin.SchemaUtils"/>
+        <Method name="getParameterSchema"/>
+        <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+    </Match>
 </FindBugsFilter>
